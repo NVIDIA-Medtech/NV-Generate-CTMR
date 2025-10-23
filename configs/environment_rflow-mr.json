@@ -1,0 +1,13 @@
+{
+    "output_dir": "output",
+    "trained_autoencoder_path": "models/autoencoder_v2.pt",
+    "trained_diffusion_path": "models/diff_unet_3d_rflow-mr.pt",
+    "trained_controlnet_path": null,
+    "trained_mask_generation_autoencoder_path": "models/mask_generation_autoencoder.pt",
+    "trained_mask_generation_diffusion_path": "models/mask_generation_diffusion_unet.pt",
+    "all_mask_files_base_dir": null,
+    "all_mask_files_json": null,
+    "all_anatomy_size_conditions_json": null,
+    "label_dict_json": "./configs/label_dict.json",
+    "label_dict_remap_json": "./configs/label_dict_124_to_132.json"
+}
