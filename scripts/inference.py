@@ -64,9 +64,9 @@ def main():
     )
     parser.add_argument(
         "--version",
-        default="maisi3d-rflow",
+        default="rflow-ct",
         type=str,
-        help="generate_version, choose from ['maisi3d-ddpm', 'maisi3d-rflow']",
+        help="generate_version, choose from ['ddpm-ct', 'rflow-ct']",
     )
     args = parser.parse_args()
     # Step 0: configuration

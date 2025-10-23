@@ -1,5 +1,73 @@
-import os
+import os, subprocess, shutil
+from tqdm.auto import tqdm
 from monai.apps import download_url
+from pathlib import Path
+from huggingface_hub import snapshot_download
+from typing import List, Dict, Optional
+
+def fetch_to_hf_path_cmd(
+    items: List[Dict[str, str]],
+    root_dir: str = "./",          # staging dir for CLI output
+    revision: str = "main",
+    overwrite: bool = False,
+    token: Optional[str] = None,      # or rely on env HUGGINGFACE_HUB_TOKEN
+) -> list[str]:
+    """
+    items: list of {"repo_id": "...", "filename": "path/in/repo.ext", "path": "local/target.ext"}
+    Returns list of saved local paths (in the same order as items).
+    """
+    saved = []
+    root = Path(root_dir)
+    root.mkdir(parents=True, exist_ok=True)
+
+    # Env for subprocess; keep Rust fast-path off to avoid notebook progress quirks
+    env = os.environ.copy()
+    if token:
+        env["HUGGINGFACE_HUB_TOKEN"] = token
+    env.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "0")      # safer in Jupyter
+    env.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "0")   # show CLI progress in terminal
+
+    for it in items:
+        repo_id  = it["repo_id"]
+        repo_file = it["filename"]
+        dst = Path(it["path"])
+        dst.parent.mkdir(parents=True, exist_ok=True)
+
+        if dst.exists() and not overwrite:
+            saved.append(str(dst))
+            continue
+
+        # Build command (no shell=True; no quoting issues)
+        cmd = [
+            "huggingface-cli", "download",
+            repo_id,
+            "--include", repo_file,
+            "--revision", revision,
+            "--local-dir", str(root),
+        ]
+        # Run
+        subprocess.run(cmd, check=True, env=env)
+
+        # Source path where CLI placed the file
+        src = root / repo_file
+        if not src.exists():
+            raise FileNotFoundError(
+                f"Expected downloaded file missing: {src}\n"
+                f"Tip: authenticate (`huggingface-cli login` or pass token=...),"
+                f" and avoid shared-IP 429s."
+            )
+
+        # Move to desired target
+        if dst.exists() and overwrite:
+            dst.unlink()
+        if src.resolve() != dst.resolve():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(dst))
+        saved.append(str(dst))
+
+    return saved
+
+
 
 def download_model_data(generate_version,root_dir):
     # TODO: remove the `files` after the files are uploaded to the NGC
@@ -7,99 +75,87 @@ def download_model_data(generate_version,root_dir):
         files = [
             {
                 "path": "models/autoencoder_v1.pt",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai/tutorials"
-                "/model_zoo/model_maisi_autoencoder_epoch273_alternative.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename":"models/autoencoder_v1.pt",
             },
             {
                 "path": "models/mask_generation_autoencoder.pt",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai" "/tutorials/mask_generation_autoencoder.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "models/mask_generation_autoencoder.pt",
             },
             {
                 "path": "models/mask_generation_diffusion_unet.pt",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai"
-                "/tutorials/model_zoo/model_maisi_mask_generation_diffusion_unet_v2.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "models/mask_generation_diffusion_unet.pt",
             },
             {
-                "path": "configs/all_anatomy_size_conditions.json",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai/tutorials/all_anatomy_size_condtions.json",
+                "path": "datasets/all_anatomy_size_conditions.json",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "datasets/all_anatomy_size_conditions.json",
             },
             {
                 "path": "datasets/all_masks_flexible_size_and_spacing_4000.zip",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai"
-                "/tutorials/all_masks_flexible_size_and_spacing_4000.zip",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "datasets/all_masks_flexible_size_and_spacing_4000.zip",
             },
         ]
-    if generate_version == "rflow-mr":
+    elif generate_version == "rflow-mr":
         files = [
             {
                 "path": "models/autoencoder_v2.pt",
-                "url": "https://huggingface.co/nvidia/NV-Generate-MR/blob/main/models/autoencoder_v2.pt"
+                "repo_id": "nvidia/NV-Generate-MR",
+                "filename": "models/autoencoder_v2.pt",
             },
             {
                 "path": "models/diff_unet_3d_rflow-mr.pt",
-                "url": "https://huggingface.co/nvidia/NV-Generate-MR/blob/main/models/diff_unet_3d_rflow-mr.pt"
+                "repo_id": "nvidia/NV-Generate-MR",
+                "filename": "models/diff_unet_3d_rflow-mr.pt",
             }
         ]
+    else:
+        raise ValueError(f"generate_version has to be chosen from ['ddpm-ct', 'rflow-ct', 'rflow-mr'], yet got {generate_version}.")
     if generate_version == "ddpm-ct":
         files += [
             {
                 "path": "models/diff_unet_3d_ddpm-ct.pt",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo"
-                "/model_maisi_input_unet3d_data-all_steps1000size512ddpm_random_current_inputx_v1_alternative.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "models/diff_unet_3d_ddpm-ct.pt",
             },
             {
                 "path": "models/controlnet_3d_ddpm-ct.pt",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo"
-                "/model_maisi_controlnet-20datasets-e20wl100fold0bc_noi_dia_fsize_current_alternative.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "models/controlnet_3d_ddpm-ct.pt",
             },
             {
-                "path": "configs/candidate_masks_flexible_size_and_spacing_3000.json",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai"
-                "/tutorials/candidate_masks_flexible_size_and_spacing_3000.json",
+                "path": "datasets/candidate_masks_flexible_size_and_spacing_3000.json",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "datasets/candidate_masks_flexible_size_and_spacing_3000.json",
             },
         ]
     elif generate_version == "rflow-ct":
         files += [
             {
                 "path": "models/diff_unet_3d_rflow-ct.pt",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai/tutorials/"
-                "diff_unet_ckpt_rflow_epoch19350.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "models/diff_unet_3d_rflow-ct.pt",
             },
             {
                 "path": "models/controlnet_3d_rflow-ct.pt",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai/tutorials/controlnet_rflow_epoch60.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "models/controlnet_3d_rflow-ct.pt",
             },
             {
-                "path": "configs/candidate_masks_flexible_size_and_spacing_4000.json",
-                "url": "https://developer.download.nvidia.com/assets/Clara/monai"
-                "/tutorials/candidate_masks_flexible_size_and_spacing_4000.json",
+                "path": "datasets/candidate_masks_flexible_size_and_spacing_4000.json",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "datasets/candidate_masks_flexible_size_and_spacing_4000.json",
             },
         ]
-    elif generate_version == "rflow-mr":
-        files += [
-            {
-                "path": "models/autoencoder_v2.pt",
-                "url": "https://huggingface.co/nvidia/NV-Generate-MR/blob/main/models/autoencoder_v2.pt",
-            },
-            {
-                "path": "models/diff_unet_3d_rflow-mr.pt",
-                "url": "https://huggingface.co/nvidia/NV-Generate-MR/blob/main/models/diff_unet_3d_rflow-mr.pt",
-            },
-            {
-                "path": "configs/candidate_masks_flexible_size_and_spacing_brats23.json",
-                "url": "https://huggingface.co/nvidia/NV-Generate-MR"
-                "/blob/main/example_data/candidate_masks_flexible_size_and_spacing_brats23.json",
-            },
-            {
-                "path": "datasets/all_masks_flexible_size_and_spacing_brats23.zip",
-                "url": "https://huggingface.co/nvidia/NV-GenerateMR"
-                "/blob/main/example_data/all_masks_flexible_size_and_spacing_brats23.zip",
-            },
-        ]
-    else:
-        raise ValueError(f"generate_version has to be chosen from ['ddpm-ct', 'rflow-ct', 'rflow-mr'], yet got {generate_version}.")
     
     for file in files:
         file["path"] = file["path"] if "datasets/" not in file["path"] else os.path.join(root_dir, file["path"])
-        download_url(url=file["url"], filepath=file["path"])
+        if "repo_id" in file.keys():
+            path = fetch_to_hf_path_cmd([file],root_dir=root_dir, revision="main")
+            print("saved to:", path)
+        else:
+            download_url(url=file["url"], filepath=file["path"])
     return
