@@ -33,10 +33,9 @@ More details can be found in our 2025 report:
 The GUI is only a demo for toy examples. This Github repo is the full version.
 
 **`rflow-mr`:**
-It includes three models:
+It includes two models:
 - A Foundation VAE finetuned on `ddpm-ct` VAE with more MRI.
 - A Foundation Rectified Flow model that can generate MRI volumes up to 512 &times; 512 &times; 128 size, with flexible volume size and voxel size, with same inference speed as `rflow-ct`.
-- An Example Rectified Flow-based ControlNet trained on Brats23.
 
 MR images have much larger variability than CT images. For MRI users, we always recommend finetuning on `rflow-mr` Foundation Rectified Flow model with users' own MRI data.
 
@@ -44,6 +43,11 @@ MR images have much larger variability than CT images. For MRI users, we always 
 GPU requirement depends on the size of the images. For example,
 - for image size of 512x512x128, the minimum GPU memory requirement for training and inference is 16G.
 - for image size of 512x512x512, the minimum GPU memory requirement for training is 40G, for inference is 24G.
+
+#### Quick Experiment:
+Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
+
+Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image.
 
 ## Example Results and Evaluation
 
@@ -214,7 +218,7 @@ python -m scripts.inference -c ./configs/config_network_rflow.json -i ./configs/
 If GPU OOM happens, please increase `autoencoder_tp_num_splits` or reduce `autoencoder_sliding_window_infer_size` in `./configs/config_infer.json`.
 To reduce time cost, please reduce `autoencoder_sliding_window_infer_overlap` in `./configs/config_infer.json`, while monitoring whether stitching artifact occurs.
 
-Please refer to [maisi_inference_tutorial.ipynb](maisi_inference_tutorial.ipynb) for the tutorial for MAISI model inference.
+Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
 
 #### Accelerated Inference with TensorRT:
@@ -237,7 +241,7 @@ We have implemented a quality check function for the generated CT images. The ma
 ### 3. Model Training
 Training data preparation can be found in [./data/README.md](./data/README.md)
 
-#### [3.1 3D Autoencoder Training](./maisi_train_vae_tutorial.ipynb)
+#### [3.1 3D Autoencoder Training](./train_vae_tutorial.ipynb)
 The information for the training hyperparameters and data processing parameters, like learning rate and patch size, are stored in [./configs/config_maisi_vae_train.json](./configs/config_maisi_vae_train.json). The provided configuration works for 16G V100 GPU. Please feel free to tune the parameters for your datasets and device.
 
 Dataset preprocessing:
@@ -260,7 +264,7 @@ Training configs:
 - `"cache"`: float between 0 and 1, dataloader cache, choose small value if CPU memory is small.
 - `"n_epochs"`: int, number of epochs to train. Please adjust it based on the size of your datasets. We used 280 epochs for the released model on 58k data.
 
-Please refer to [maisi_train_vae_tutorial.ipynb](maisi_train_vae_tutorial.ipynb) for the tutorial for MAISI VAE model training.
+Please refer to [train_vae_tutorial.ipynb](train_vae_tutorial.ipynb) for the tutorial for MAISI VAE model training.
 
 #### [3.2 3D Latent Diffusion Training](./scripts/diff_model_train.py)
 
