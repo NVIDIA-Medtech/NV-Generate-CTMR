@@ -2,7 +2,7 @@
 This repo includes the applications of training and validating NV-Generate-CTMR (previously used name: MAISI), 3D Latent Diffusion Models (LDM) capable of generating large CT and MRI images accompanied by corresponding segmentation masks. It supports variable volume size and voxel spacing and allows for the precise control of organ/tumor size.
 
 ## NV-Generate-CTMR Model Highlight
-We release three sets of models: **`ddpm-ct`:**, **`rflow-ct`:**, and **`rflow-mr`:**.
+We release three sets of models: **`ddpm-ct`**, **`rflow-ct`**, and **`rflow-mr`**.
 
 **`ddpm-ct`:**
 It includes three models:
