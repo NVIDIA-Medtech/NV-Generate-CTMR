@@ -52,7 +52,6 @@ def create_transforms(dim: tuple = None, modality: str = 'unknown') -> Compose:
         intensity_transforms = []
     
     if dim:
-        print(f"Generate embeddings assuming data modality is {modality}")
         return Compose(
             [
                 monai.transforms.LoadImaged(keys="image"),
@@ -255,6 +254,7 @@ def diff_model_create_training_data(
         # Build the transform pipeline that includes resizing to new_dim.
         # NOTE: 'modality' is referenced here but not defined in this scope; caller must ensure it's available
         # (or this line will raise a NameError). Left unchanged by request.
+        logger.info(f"Generate embddings assuming the data is {modality}")
         new_transforms = create_transforms(new_dim, modality)
 
         # Run the per-file preprocessing + autoencoder encoding + NIfTI saving.
