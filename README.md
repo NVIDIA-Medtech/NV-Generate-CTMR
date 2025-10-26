@@ -222,8 +222,8 @@ To reduce time cost, please reduce `autoencoder_sliding_window_infer_overlap` in
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
 
-#### Accelerated Inference with TensorRT:
-To run the inference script with TensorRT acceleration, please the code above run:
+**Accelerated Inference with TensorRT**:
+To run the inference script with TensorRT acceleration, please add ` -x ./configs/config_trt.json` to the code above, e.g.:
 ```bash
 export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
 network="rflow"
