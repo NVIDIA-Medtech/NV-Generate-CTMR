@@ -69,7 +69,7 @@ def fetch_to_hf_path_cmd(
 
 
 
-def download_model_data(generate_version,root_dir):
+def download_model_data(generate_version,root_dir, model_only=False):
     # TODO: remove the `files` after the files are uploaded to the NGC
     if generate_version == "ddpm-ct" or generate_version == "rflow-ct":
         files = [
@@ -87,18 +87,20 @@ def download_model_data(generate_version,root_dir):
                 "path": "models/mask_generation_diffusion_unet.pt",
                 "repo_id": "nvidia/NV-Generate-CT",
                 "filename": "models/mask_generation_diffusion_unet.pt",
-            },
-            {
-                "path": "datasets/all_anatomy_size_conditions.json",
-                "repo_id": "nvidia/NV-Generate-CT",
-                "filename": "datasets/all_anatomy_size_conditions.json",
-            },
-            {
-                "path": "datasets/all_masks_flexible_size_and_spacing_4000.zip",
-                "repo_id": "nvidia/NV-Generate-CT",
-                "filename": "datasets/all_masks_flexible_size_and_spacing_4000.zip",
-            },
-        ]
+            }]
+        if not model_only:
+            files += [
+                {
+                    "path": "datasets/all_anatomy_size_conditions.json",
+                    "repo_id": "nvidia/NV-Generate-CT",
+                    "filename": "datasets/all_anatomy_size_conditions.json",
+                },
+                {
+                    "path": "datasets/all_masks_flexible_size_and_spacing_4000.zip",
+                    "repo_id": "nvidia/NV-Generate-CT",
+                    "filename": "datasets/all_masks_flexible_size_and_spacing_4000.zip",
+                },
+            ]
     elif generate_version == "rflow-mr":
         files = [
             {
@@ -125,13 +127,15 @@ def download_model_data(generate_version,root_dir):
                 "path": "models/controlnet_3d_ddpm-ct.pt",
                 "repo_id": "nvidia/NV-Generate-CT",
                 "filename": "models/controlnet_3d_ddpm-ct.pt",
-            },
-            {
-                "path": "datasets/candidate_masks_flexible_size_and_spacing_3000.json",
-                "repo_id": "nvidia/NV-Generate-CT",
-                "filename": "datasets/candidate_masks_flexible_size_and_spacing_3000.json",
-            },
-        ]
+            }]
+        if not model_only:
+            files += [
+                {
+                    "path": "datasets/candidate_masks_flexible_size_and_spacing_3000.json",
+                    "repo_id": "nvidia/NV-Generate-CT",
+                    "filename": "datasets/candidate_masks_flexible_size_and_spacing_3000.json",
+                },
+            ]
     elif generate_version == "rflow-ct":
         files += [
             {
@@ -143,13 +147,15 @@ def download_model_data(generate_version,root_dir):
                 "path": "models/controlnet_3d_rflow-ct.pt",
                 "repo_id": "nvidia/NV-Generate-CT",
                 "filename": "models/controlnet_3d_rflow-ct.pt",
-            },
-            {
-                "path": "datasets/candidate_masks_flexible_size_and_spacing_4000.json",
-                "repo_id": "nvidia/NV-Generate-CT",
-                "filename": "datasets/candidate_masks_flexible_size_and_spacing_4000.json",
-            },
-        ]
+            }]
+        if not model_only:
+            files += [
+                {
+                    "path": "datasets/candidate_masks_flexible_size_and_spacing_4000.json",
+                    "repo_id": "nvidia/NV-Generate-CT",
+                    "filename": "datasets/candidate_masks_flexible_size_and_spacing_4000.json",
+                },
+            ]
     
     for file in files:
         file["path"] = file["path"] if "datasets/" not in file["path"] else os.path.join(root_dir, file["path"])

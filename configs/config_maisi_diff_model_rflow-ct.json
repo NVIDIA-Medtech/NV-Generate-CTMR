@@ -2,7 +2,7 @@
     "diffusion_unet_train": {
         "batch_size": 1,
         "cache_rate": 0,
-        "lr": 0.0001,
+        "lr": 0.00001,
         "n_epochs": 1000
     },
     "diffusion_unet_inference": {
@@ -12,9 +12,9 @@
             128
         ],
         "spacing": [
-            1.0,
-            1.0,
-            0.75
+            1.7,
+            1.7,
+            2
         ],
         "top_region_index": [
             0,

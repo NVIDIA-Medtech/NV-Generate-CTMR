@@ -7,5 +7,5 @@
     "output_dir": "./output",
     "output_prefix": "unet_3d",
     "trained_autoencoder_path": "models/autoencoder_v1.pt",
-    "existing_ckpt_filepath": null
+    "existing_ckpt_filepath": "./models/diff_unet_3d_ddpm-ct.pt"
 }

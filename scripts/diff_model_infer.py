@@ -258,7 +258,7 @@ def save_image(
 
 
 @torch.inference_mode()
-def diff_model_infer(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int, out_index: str) -> None:
+def diff_model_infer(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
     """
     Main function to run the diffusion model inference.
 
@@ -350,14 +350,9 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         paths = [output_path]
         is_rank0 = True
 
-    if is_rank0:
-        os.makedirs(os.path.dirname(out_index), exist_ok=True)
-        with open(out_index, "w") as f:
-            json.dump(paths, f, indent=2)
-        print(f"[rank0] wrote outputs index: {out_index}")
-
     if dist.is_initialized():
         dist.destroy_process_group()
+    return paths
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Diffusion Model Inference")
@@ -365,7 +360,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_config", type=str, required=True)
     parser.add_argument("--model_def", type=str, required=True)
     parser.add_argument("--num_gpus", type=int, default=1)
-    parser.add_argument("--out_index", type=str, required=True, help="JSON file path to write per-rank outputs")
 
     args = parser.parse_args()
-    diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus, args.out_index)
+    diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus)
