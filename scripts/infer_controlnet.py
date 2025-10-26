@@ -185,7 +185,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file"
     )
-    parser.add_argument("--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
+    parser.add_argument(
+        "-g",
+        "--num_gpus", 
+        type=int, 
+        default=1, 
+        help="Number of GPUs to use for training"
+    )
 
     args = parser.parse_args()
     infer_controlnet(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)

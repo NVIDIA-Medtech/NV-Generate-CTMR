@@ -5,6 +5,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR 
 We release three sets of models: **`ddpm-ct`**, **`rflow-ct`**, and **`rflow-mr`**.
 
 **`ddpm-ct`:**
+
 It includes three models:
 - A Foundation Variational Auto-Encoder (VAE) model for latent feature compression that works for both CT and MRI with flexible volume size and voxel size. Tensor parallel is included to reduce GPU memory usage.
 - A Foundation Diffusion model (Denoising Diffusion Probabilistic Models, DDPM) that can generate large CT volumes up to 512 &times; 512 &times; 768 size, with flexible volume size and voxel size
@@ -15,6 +16,7 @@ More details can be found in our WACV 2025 paper:
 [Guo, P., Zhao, C., Yang, D., Xu, Z., Nath, V., Tang, Y., ... & Xu, D. (2024). MAISI: Medical AI for Synthetic Imaging. WACV 2025](https://arxiv.org/pdf/2409.11169)
 
 **`rflow-ct`:**
+
 It includes three models:
 - Same Foundation VAE as `ddpm-ct`.
 - A Foundation Rectified Flow model that can generate large CT volumes up to 512 &times; 512 &times; 768 size, with flexible volume size and voxel size, with **inference speed 33 times faster than `ddpm-ct`**.
@@ -33,6 +35,7 @@ More details can be found in our 2025 report:
 The GUI is only a demo for toy examples. This Github repo is the full version.
 
 **`rflow-mr`:**
+
 It includes two models:
 - A Foundation VAE finetuned on `ddpm-ct` VAE with more MRI.
 - A Foundation Rectified Flow model that can generate MRI volumes up to 512 &times; 512 &times; 128 size, with flexible volume size and voxel size, with same inference speed as `rflow-ct`.
@@ -196,24 +199,22 @@ For example,
 |[512, 512, 128]  | [0.8, 0.8, 2.5] |
 |[512, 512, 512]  | [1.0, 1.0, 1.0] |
 
-#### Execute Inference:
-To run the inference script with MAISI DDPM for CT, please set `"num_inference_steps": 1000` in `./configs/config_infer.json`, and run:
+#### Execute Inference for paired image/mask generation:
+To run the inference script including controlnet with MAISI DDPM for CT, please set `"num_inference_steps": 1000` in `./configs/config_infer.json`, and run:
 ```bash
 export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
-python -m scripts.inference -c ./configs/config_network_ddpm.json -i ./configs/config_infer.json -e ./configs/environment_ddpm-ct.json --random-seed 0 --version ddpm-ct
+network="ddpm"
+generate_version="ddpm-ct"
+python -m scripts.inference -c ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
-To run the inference script with MAISI RFlow for CT, please set `"num_inference_steps": 30` in `./configs/config_infer.json`, and run:
+To run the inference script with MAISI RFlow for CT, please set `"num_inference_steps": 30` in `./configs/config_infer.json`, and run the code above with:
 ```bash
-export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
-python -m scripts.inference -c ./configs/config_network_rflow.json -i ./configs/config_infer.json -e ./configs/environment_rflow-ct.json --random-seed 0 --version rflow-ct
+network="rflow"
+generate_version="rflow-ct"
 ```
 
-To run the inference script with MAISI RFlow for MRI, please set `"num_inference_steps": 30` in `./configs/config_infer.json`, and run:
-```bash
-export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
-python -m scripts.inference -c ./configs/config_network_rflow.json -i ./configs/config_infer_mr.json -e ./configs/environment_rflow-mr_fine_brats23.json --random-seed 0 --version rflow-mr
-```
+Currently we do not have controlnet for MRI, since MR image have very large variability and we did not train a controlnet for whole body MRI.
 
 If GPU OOM happens, please increase `autoencoder_tp_num_splits` or reduce `autoencoder_sliding_window_infer_size` in `./configs/config_infer.json`.
 To reduce time cost, please reduce `autoencoder_sliding_window_infer_overlap` in `./configs/config_infer.json`, while monitoring whether stitching artifact occurs.
@@ -222,17 +223,37 @@ Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inf
 
 
 #### Accelerated Inference with TensorRT:
-To run the inference script with TensorRT acceleration, please run:
+To run the inference script with TensorRT acceleration, please the code above run:
 ```bash
 export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
-python -m scripts.inference -c ./configs/config_maisi3d-ddpm.json -i ./configs/config_infer.json -e ./configs/environment_maisi3d-ddpm.json -x ./configs/config_trt.json --random-seed 0 --version maisi3d-ddpm
+network="rflow"
+generate_version="rflow-ct"
+python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version} -x ./configs/config_trt.json
 ```
 
-```bash
-export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
-python -m scripts.inference -c ./configs/config_maisi3d-rflow.json -i ./configs/config_infer.json -e ./configs/environment_maisi3d-rflow.json -x ./configs/config_trt.json --random-seed 0 --version maisi3d-rflow
-```
 Extra config file,  [./configs/config_trt.json](./configs/config_trt.json) is using `trt_compile()` utility from MONAI to convert select modules to TensorRT by overriding their definitions from [./configs/config_infer.json](./configs/config_infer.json).
+
+#### Execute Inference for image only generation:
+To run the inference script including controlnet with MAISI DDPM for CT, please set `"num_inference_steps": 1000` in `./configs/config_infer.json`, and run:
+```bash
+network="ddpm"
+generate_version="ddpm-ct"
+python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
+```
+
+To run the inference script with MAISI RFlow for CT, please run the code above with:
+```bash
+network="rflow"
+generate_version="rflow-ct"
+```
+
+To run the inference script with MAISI RFlow for MRI, please run the code above with:
+```bash
+network="rflow"
+generate_version="rflow-mr"
+```
+
+Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
 
 #### Quality Check:
@@ -268,9 +289,34 @@ Please refer to [train_vae_tutorial.ipynb](train_vae_tutorial.ipynb) for the tut
 
 #### [3.2 3D Latent Diffusion Training](./scripts/diff_model_train.py)
 
-Please refer to [maisi_train_diff_unet_tutorial.ipynb](maisi_train_diff_unet_tutorial.ipynb) for the tutorial for MAISI diffusion model training.
+Please refer to [train_diff_unet_tutorial.ipynb](train_diff_unet_tutorial.ipynb) for the tutorial for MAISI diffusion model training.
+
+```bash
+export NUM_GPUS_PER_NODE=8
+network="rflow"
+generate_version="rflow-ct"
+torchrun \
+    --nproc_per_node=${NUM_GPUS_PER_NODE} \
+    --nnodes=1 \
+    --master_addr=localhost --master_port=1234 \
+    -m scripts.diff_model_train -t ./configs/config_network_${network}.json -c ./configs/config_maisi_diff_model_${generate_version}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -g ${NUM_GPUS_PER_NODE}
+```
+
+To run the diffusion model training script with MAISI Rectified flow for MRI, please run the code above with:
+```bash
+network="rflow"
+generate_version="rflow-mr"
+```
+
+To run the diffusion model training script with MAISI DDPM for CT, please run the code above with:
+```bash
+network="ddpm"
+generate_version="ddpm-ct"
+```
 
 #### [3.3 3D ControlNet Training](./scripts/train_controlnet.py)
+
+Please refer to [train_controlnet_tutorial.ipynb](train_controlnet_tutorial.ipynb) for the tutorial for MAISI controlnet model training.
 
 We provide a [training config](./configs/config_maisi_controlnet_train.json) executing finetuning for pretrained ControlNet with a new class (i.e., Kidney Tumor).
 When finetuning with other new class names, please update the `weighted_loss_label` in training config
@@ -286,31 +332,35 @@ The training was performed with the following:
 #### Execute Training:
 To train with a single GPU, please run:
 ```bash
-python -m scripts.train_controlnet -c ./configs/config_maisi3d-ddpm.json -t ./configs/config_maisi_controlnet_train.json -e ./configs/environment_maisi_controlnet_train.json -g 1
+network="rflow"
+generate_version="rflow-ct"
+python -m scripts.train_controlnet -t ./configs/config_network_${network}.json -c ./configs/config_maisi_diff_model_${generate_version}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -g 1
 ```
 
+To run the ControlNet model training script with MAISI Rectified flow for MRI, please run the code above with:
 ```bash
-python -m scripts.train_controlnet -c ./configs/config_maisi3d-rflow.json -t ./configs/config_maisi_controlnet_train.json -e ./configs/environment_maisi_controlnet_train.json -g 1
+network="rflow"
+generate_version="rflow-mr"
+```
+
+To run the ControlNet model training script with MAISI DDPM for CT, please run the code above with:
+```bash
+network="ddpm"
+generate_version="ddpm-ct"
 ```
 
 The training script also enables multi-GPU training. For instance, if you are using eight GPUs, you can run the training script with the following command:
 ```bash
 export NUM_GPUS_PER_NODE=8
+network="rflow"
+generate_version="rflow-ct"
 torchrun \
     --nproc_per_node=${NUM_GPUS_PER_NODE} \
     --nnodes=1 \
     --master_addr=localhost --master_port=1234 \
-    -m scripts.train_controlnet -c ./configs/config_maisi3d-ddpm.json -t ./configs/config_maisi_controlnet_train.json -e ./configs/environment_maisi_controlnet_train.json -g ${NUM_GPUS_PER_NODE}
+    -m scripts.train_controlnet -t ./configs/config_network_${network}.json -c ./configs/config_maisi_controlnet_train_${generate_version}.json -e ./configs/environment_maisi_controlnet_train_${generate_version}.json -g ${NUM_GPUS_PER_NODE}
 ```
 
-```bash
-export NUM_GPUS_PER_NODE=8
-torchrun \
-    --nproc_per_node=${NUM_GPUS_PER_NODE} \
-    --nnodes=1 \
-    --master_addr=localhost --master_port=1234 \
-    -m scripts.train_controlnet -c ./configs/config_maisi3d-rflow.json -t ./configs/config_maisi_controlnet_train.json -e ./configs/environment_maisi_controlnet_train.json -g ${NUM_GPUS_PER_NODE}
-```
 Please also check [maisi_train_controlnet_tutorial.ipynb](./maisi_train_controlnet_tutorial.ipynb) for more details about data preparation and training parameters.
 
 ### 4. FID Score Computation

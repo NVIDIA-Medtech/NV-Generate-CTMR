@@ -356,10 +356,16 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Diffusion Model Inference")
-    parser.add_argument("--env_config", type=str, required=True)
-    parser.add_argument("--model_config", type=str, required=True)
-    parser.add_argument("--model_def", type=str, required=True)
-    parser.add_argument("--num_gpus", type=int, default=1)
+    parser.add_argument("-e","--env_config", type=str, required=True)
+    parser.add_argument("-c","--model_config", type=str, required=True)
+    parser.add_argument("-t","--model_def", type=str, required=True)
+    parser.add_argument(
+        "-g",
+        "--num_gpus", 
+        type=int, 
+        default=1, 
+        help="Number of GPUs to use for training"
+    )
 
     args = parser.parse_args()
     diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus)

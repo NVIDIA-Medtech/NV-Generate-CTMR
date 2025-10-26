@@ -39,7 +39,7 @@ def main():
         help="environment json file that stores environment path",
     )
     parser.add_argument(
-        "-c",
+        "-t",
         "--config-file",
         default="./configs/config_maisi.json",
         help="config json file that stores network hyper-parameters",
