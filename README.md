@@ -205,7 +205,7 @@ To run the inference script including controlnet with MAISI DDPM for CT, please 
 export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
 network="ddpm"
 generate_version="ddpm-ct"
-python -m scripts.inference -c ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
+python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
 To run the inference script with MAISI RFlow for CT, please set `"num_inference_steps": 30` in `./configs/config_infer.json`, and run the code above with:
@@ -238,6 +238,7 @@ To run the inference script including controlnet with MAISI DDPM for CT, please 
 ```bash
 network="ddpm"
 generate_version="ddpm-ct"
+python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only    
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 

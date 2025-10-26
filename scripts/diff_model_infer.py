@@ -64,6 +64,7 @@ def load_models(args: argparse.Namespace, device: torch.device, logger: logging.
     if "unet_state_dict" in checkpoint_autoencoder.keys():
         checkpoint_autoencoder = checkpoint_autoencoder["unet_state_dict"]
     autoencoder.load_state_dict(checkpoint_autoencoder)
+    logger.info(f"checkpoints {args.trained_autoencoder_path} loaded.")
 
     unet = define_instance(args, "diffusion_unet_def").to(device)
     checkpoint = torch.load(f"{args.model_dir}/{args.model_filename}", map_location=device, weights_only=False)

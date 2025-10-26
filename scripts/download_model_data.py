@@ -1,4 +1,5 @@
 import os, subprocess, shutil
+import argparse
 from tqdm.auto import tqdm
 from monai.apps import download_url
 from pathlib import Path
@@ -165,3 +166,21 @@ def download_model_data(generate_version,root_dir, model_only=False):
         else:
             download_url(url=file["url"], filepath=file["path"])
     return
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Model downloading")
+    parser.add_argument(
+        "--version",
+        type=str,
+        default="rflow-ct",
+    )
+    parser.add_argument(
+        "--root_dir",
+        type=str,
+        default="./",
+    )
+    parser.add_argument("--model_only", dest="model_only", action="store_true", help="Download model only, not any dataset")
+
+    args = parser.parse_args()
+    download_model_data(args.version, args.root_dir, args.model_only)
