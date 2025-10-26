@@ -1,6 +1,6 @@
 {
     "model_dir": "./models/",
-    "tfevent_path": "./tfevent",
+    "tfevent_path": "./outputs/tfevent",
     "trained_autoencoder_path": "models/autoencoder_v1.pt",
     "finetune": true
 }

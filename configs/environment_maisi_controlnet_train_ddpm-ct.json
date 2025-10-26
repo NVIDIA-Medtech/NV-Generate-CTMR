@@ -1,0 +1,11 @@
+{
+    "model_dir": "./models/",
+    "output_dir": "./outputs",
+    "tfevent_path": "./outputs/tfevent",
+    "trained_autoencoder_path": "./models/autoencoder_v1.pt",
+    "trained_diffusion_path": "./models/diff_unet_3d_ddpm-ct.pt",
+    "existing_ckpt_filepath": "./models/controlnet_3d_ddpm-ct.pt",
+    "exp_name": "controlnet_kits_finetune",
+    "data_base_dir": ["./datasets/C4KC-KiTS_subset"],
+    "json_data_list": ["./datasets/C4KC-KiTS_subset.json"]
+}

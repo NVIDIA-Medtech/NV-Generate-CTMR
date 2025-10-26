@@ -22,6 +22,7 @@ import numpy as np
 import skimage
 import torch
 import torch.distributed as dist
+import monai
 from monai.bundle import ConfigParser
 from monai.config import DtypeLike, NdarrayOrTensor
 from monai.data import CacheDataset, DataLoader, partition_dataset
@@ -270,6 +271,7 @@ def prepare_maisi_controlnet_json_dataloader(
     cache_rate: float = 0.0,
     rank: int = 0,
     world_size: int = 1,
+    modality_mapping: dict = None
 ) -> tuple[DataLoader, DataLoader]:
     """
     Prepare dataloaders for training and validation.
@@ -312,6 +314,10 @@ def prepare_maisi_controlnet_json_dataloader(
         Lambdad(
             keys=["top_region_index", "bottom_region_index", "spacing"], func=lambda x: x * 1e2, allow_missing_keys=True
         ),
+        Lambdad(
+            keys=["modality"], func=lambda x: modality_mapping[x], allow_missing_keys=True
+        ),
+        EnsureTyped(keys=['modality'], dtype=torch.long, allow_missing_keys=True),
     ]
     train_transforms, val_transforms = Compose(common_transform), Compose(common_transform)
 

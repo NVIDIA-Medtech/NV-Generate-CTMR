@@ -18,44 +18,26 @@ from datetime import datetime
 
 import torch
 import torch.distributed as dist
+import monai
 from monai.data import MetaTensor, decollate_batch
 from monai.networks.utils import copy_model_state
 from monai.transforms import SaveImage
 from monai.utils import RankFilter
 
-from .sample import check_input, ldm_conditional_sample_one_image
+from .sample import ldm_conditional_sample_one_image
 from .utils import define_instance, prepare_maisi_controlnet_json_dataloader, setup_ddp
+from .diff_model_setting import load_config
 
 
 @torch.inference_mode()
-def main():
-    parser = argparse.ArgumentParser(description="maisi.controlnet.infer")
-    parser.add_argument(
-        "-e",
-        "--environment-file",
-        default="./configs/environment_maisi_controlnet_train.json",
-        help="environment json file that stores environment path",
-    )
-    parser.add_argument(
-        "-c",
-        "--config-file",
-        default="./configs/config_maisi.json",
-        help="config json file that stores network hyper-parameters",
-    )
-    parser.add_argument(
-        "-t",
-        "--training-config",
-        default="./configs/config_maisi_controlnet_train.json",
-        help="config json file that stores training hyper-parameters",
-    )
-    parser.add_argument("-g", "--gpus", default=1, type=int, help="number of gpus per node")
-
-    args = parser.parse_args()
+def infer_controlnet(
+    env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int
+) -> None:
 
     # Step 0: configuration
     logger = logging.getLogger("maisi.controlnet.infer")
     # whether to use distributed data parallel
-    use_ddp = args.gpus > 1
+    use_ddp = num_gpus > 1
     if use_ddp:
         rank = int(os.environ["LOCAL_RANK"])
         world_size = int(os.environ["WORLD_SIZE"])
@@ -70,19 +52,45 @@ def main():
     logger.info(f"Number of GPUs: {torch.cuda.device_count()}")
     logger.info(f"World_size: {world_size}")
 
-    with open(args.environment_file, "r") as env_file:
-        env_dict = json.load(env_file)
-    with open(args.config_file, "r") as config_file:
-        config_dict = json.load(config_file)
-    with open(args.training_config, "r") as training_config_file:
-        training_config_dict = json.load(training_config_file)
+    args = load_config(env_config_path, model_config_path, model_def_path)
 
-    for k, v in env_dict.items():
-        setattr(args, k, v)
-    for k, v in config_dict.items():
-        setattr(args, k, v)
-    for k, v in training_config_dict.items():
-        setattr(args, k, v)
+    
+
+    # Step 2: define AE, diffusion model and controlnet
+    autoencoder = define_instance(args, "autoencoder_def").to(device)
+    checkpoint_autoencoder = torch.load(args.trained_autoencoder_path)
+    if "unet_state_dict" in checkpoint_autoencoder.keys():
+        checkpoint_autoencoder = checkpoint_autoencoder["unet_state_dict"]
+    autoencoder.load_state_dict(checkpoint_autoencoder)
+    logger.info(f"Load trained VAE model from {args.trained_autoencoder_path}.")
+
+    unet = define_instance(args, "diffusion_unet_def").to(device)
+    checkpoint_diffusion_unet = torch.load(args.trained_diffusion_path, weights_only=False)
+    unet.load_state_dict(checkpoint_diffusion_unet["unet_state_dict"], strict=False)
+    scale_factor = checkpoint_diffusion_unet["scale_factor"].to(device)
+    include_body_region = unet.include_top_region_index_input
+    include_modality = unet.num_class_embeds is not None
+    logger.info(f"Load trained diffusion model from {args.trained_diffusion_path}.")
+
+    controlnet = define_instance(args, "controlnet_def").to(device)
+    checkpoint_controlnet = torch.load(args.trained_controlnet_path, weights_only=False)
+    monai.networks.utils.copy_model_state(controlnet, unet.state_dict())
+    controlnet.load_state_dict(checkpoint_controlnet["controlnet_state_dict"], strict=False)
+    logger.info(f"Load trained controlnet model from {args.trained_controlnet_path}.")
+
+    noise_scheduler = define_instance(args, "noise_scheduler")
+
+    # set data loader
+    if include_modality:
+        if args.modality_mapping_path is not None:
+            if not os.path.exists(args.modality_mapping_path):
+                raise ValueError(f"Please check if {args.modality_mapping_path} exist.")
+        else:
+            raise ValueError(f"'modality_mapping_path' in {env_config_path} cannot be null")
+        with open(args.modality_mapping_path, "r") as f:
+            args.modality_mapping = json.load(f)
+    else:
+        args.modality_mapping = None
 
     # Step 1: set data loader
     _, val_loader = prepare_maisi_controlnet_json_dataloader(
@@ -93,57 +101,8 @@ def main():
         batch_size=args.controlnet_train["batch_size"],
         cache_rate=args.controlnet_train["cache_rate"],
         fold=args.controlnet_train["fold"],
+        modality_mapping=args.modality_mapping
     )
-
-    # Step 2: define AE, diffusion model and controlnet
-    # define AE
-    autoencoder = define_instance(args, "autoencoder_def").to(device)
-    # load trained autoencoder model
-    if args.trained_autoencoder_path is not None:
-        if not os.path.exists(args.trained_autoencoder_path):
-            raise ValueError("Please download the autoencoder checkpoint.")
-        autoencoder_ckpt = torch.load(args.trained_autoencoder_path, weights_only=True)
-        autoencoder.load_state_dict(autoencoder_ckpt)
-        logger.info(f"Load trained diffusion model from {args.trained_autoencoder_path}.")
-    else:
-        logger.info("trained autoencoder model is not loaded.")
-
-    # define diffusion Model
-    unet = define_instance(args, "diffusion_unet_def").to(device)
-    include_body_region = unet.include_top_region_index_input
-    include_modality = unet.num_class_embeds is not None
-
-    # load trained diffusion model
-    if args.trained_diffusion_path is not None:
-        if not os.path.exists(args.trained_diffusion_path):
-            raise ValueError("Please download the trained diffusion unet checkpoint.")
-        diffusion_model_ckpt = torch.load(args.trained_diffusion_path, map_location=device, weights_only=False)
-        unet.load_state_dict(diffusion_model_ckpt["unet_state_dict"])
-        # load scale factor from diffusion model checkpoint
-        scale_factor = diffusion_model_ckpt["scale_factor"]
-        logger.info(f"Load trained diffusion model from {args.trained_diffusion_path}.")
-        logger.info(f"loaded scale_factor from diffusion model ckpt -> {scale_factor}.")
-    else:
-        logger.info("trained diffusion model is not loaded.")
-        scale_factor = 1.0
-        logger.info(f"set scale_factor -> {scale_factor}.")
-
-    # define ControlNet
-    controlnet = define_instance(args, "controlnet_def").to(device)
-    # copy weights from the DM to the controlnet
-    copy_model_state(controlnet, unet.state_dict())
-    # load trained controlnet model if it is provided
-    if args.trained_controlnet_path is not None:
-        if not os.path.exists(args.trained_controlnet_path):
-            raise ValueError("Please download the trained ControlNet checkpoint.")
-        controlnet.load_state_dict(
-            torch.load(args.trained_controlnet_path, map_location=device, weights_only=False)["controlnet_state_dict"]
-        )
-        logger.info(f"load trained controlnet model from {args.trained_controlnet_path}")
-    else:
-        logger.info("trained controlnet is not loaded.")
-
-    noise_scheduler = define_instance(args, "noise_scheduler")
 
     # Step 3: inference
     autoencoder.eval()
@@ -167,8 +126,7 @@ def main():
         dim = batch["dim"]
         output_size = (dim[0].item(), dim[1].item(), dim[2].item())
         latent_shape = (args.latent_channels, output_size[0] // 4, output_size[1] // 4, output_size[2] // 4)
-        # check if output_size and out_spacing are valid.
-        check_input(None, None, None, output_size, out_spacing, None)
+
         # generate a single synthetic image using a latent diffusion model with controlnet.
         synthetic_images, _ = ldm_conditional_sample_one_image(
             autoencoder=autoencoder,
@@ -211,10 +169,23 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        stream=sys.stdout,
-        level=logging.INFO,
-        format="[%(asctime)s.%(msecs)03d][%(levelname)5s](%(name)s) - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+    parser = argparse.ArgumentParser(description="ControlNet Model Training")
+    parser.add_argument(
+        "--env_config_path",
+        type=str,
+        default="./configs/environment_maisi_diff_model.json",
+        help="Path to environment configuration file",
     )
-    main()
+    parser.add_argument(
+        "--model_config_path",
+        type=str,
+        default="./configs/config_maisi_diff_model.json",
+        help="Path to model training/inference configuration",
+    )
+    parser.add_argument(
+        "--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file"
+    )
+    parser.add_argument("--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
+
+    args = parser.parse_args()
+    infer_controlnet(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)

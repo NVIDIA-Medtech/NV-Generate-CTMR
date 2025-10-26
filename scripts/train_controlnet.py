@@ -30,36 +30,15 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 
 from .utils import binarize_labels, define_instance, prepare_maisi_controlnet_json_dataloader, setup_ddp
+from .diff_model_setting import initialize_distributed, load_config, setup_logging
 
-
-def main():
-    parser = argparse.ArgumentParser(description="maisi.controlnet.training")
-    parser.add_argument(
-        "-e",
-        "--environment-file",
-        default="./configs/environment_maisi_controlnet_train.json",
-        help="environment json file that stores environment path",
-    )
-    parser.add_argument(
-        "-c",
-        "--config-file",
-        default="./configs/config_maisi-ddpm.json",
-        help="config json file that stores network hyper-parameters",
-    )
-    parser.add_argument(
-        "-t",
-        "--training-config",
-        default="./configs/config_maisi_controlnet_train.json",
-        help="config json file that stores training hyper-parameters",
-    )
-    parser.add_argument("-g", "--gpus", default=1, type=int, help="number of gpus per node")
-
-    args = parser.parse_args()
-
+def train_controlnet(
+    env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int
+) -> None:
     # Step 0: configuration
     logger = logging.getLogger("maisi.controlnet.training")
     # whether to use distributed data parallel
-    use_ddp = args.gpus > 1
+    use_ddp = num_gpus > 1
     if use_ddp:
         rank = int(os.environ["LOCAL_RANK"])
         world_size = int(os.environ["WORLD_SIZE"])
@@ -74,19 +53,7 @@ def main():
     logger.info(f"Number of GPUs: {torch.cuda.device_count()}")
     logger.info(f"World_size: {world_size}")
 
-    with open(args.environment_file, "r") as env_file:
-        env_dict = json.load(env_file)
-    with open(args.config_file, "r") as config_file:
-        config_dict = json.load(config_file)
-    with open(args.training_config, "r") as training_config_file:
-        training_config_dict = json.load(training_config_file)
-
-    for k, v in env_dict.items():
-        setattr(args, k, v)
-    for k, v in config_dict.items():
-        setattr(args, k, v)
-    for k, v in training_config_dict.items():
-        setattr(args, k, v)
+    args = load_config(env_config_path, model_config_path, model_def_path)
 
     # initialize tensorboard writer
     if rank == 0:
@@ -94,16 +61,6 @@ def main():
         Path(tensorboard_path).mkdir(parents=True, exist_ok=True)
         tensorboard_writer = SummaryWriter(tensorboard_path)
 
-    # Step 1: set data loader
-    train_loader, _ = prepare_maisi_controlnet_json_dataloader(
-        json_data_list=args.json_data_list,
-        data_base_dir=args.data_base_dir,
-        rank=rank,
-        world_size=world_size,
-        batch_size=args.controlnet_train["batch_size"],
-        cache_rate=args.controlnet_train["cache_rate"],
-        fold=args.controlnet_train["fold"],
-    )
 
     # Step 2: define diffusion model and controlnet
     # define diffusion Model
@@ -114,30 +71,28 @@ def main():
     # load trained diffusion model
     if args.trained_diffusion_path is not None:
         if not os.path.exists(args.trained_diffusion_path):
-            raise ValueError("Please download the trained diffusion unet checkpoint.")
+            raise ValueError(f"Please download the trained diffusion unet checkpoint to {args.trained_diffusion_path}.")
         diffusion_model_ckpt = torch.load(args.trained_diffusion_path, map_location=device, weights_only=False)
-        unet.load_state_dict(diffusion_model_ckpt["unet_state_dict"])
+        unet.load_state_dict(diffusion_model_ckpt["unet_state_dict"], strict=False)
         # load scale factor from diffusion model checkpoint
         scale_factor = diffusion_model_ckpt["scale_factor"]
         logger.info(f"Load trained diffusion model from {args.trained_diffusion_path}.")
         logger.info(f"loaded scale_factor from diffusion model ckpt -> {scale_factor}.")
     else:
-        logger.info("trained diffusion model is not loaded.")
-        scale_factor = 1.0
-        logger.info(f"set scale_factor -> {scale_factor}.")
+        raise ValueError(f"'trained_diffusion_path' in {env_config_path} cannot be null.")
 
     # define ControlNet
     controlnet = define_instance(args, "controlnet_def").to(device)
     # copy weights from the DM to the controlnet
     copy_model_state(controlnet, unet.state_dict())
     # load trained controlnet model if it is provided
-    if args.trained_controlnet_path is not None:
-        if not os.path.exists(args.trained_controlnet_path):
+    if args.existing_ckpt_filepath is not None:
+        if not os.path.exists(args.existing_ckpt_filepath):
             raise ValueError("Please download the trained ControlNet checkpoint.")
         controlnet.load_state_dict(
-            torch.load(args.trained_controlnet_path, map_location=device, weights_only=False)["controlnet_state_dict"]
+            torch.load(args.existing_ckpt_filepath, map_location=device, weights_only=False)["controlnet_state_dict"]
         )
-        logger.info(f"load trained controlnet model from {args.trained_controlnet_path}")
+        logger.info(f"load trained controlnet model from {args.existing_ckpt_filepath}")
     else:
         logger.info("train controlnet model from scratch.")
     # we freeze the parameters of the diffusion model.
@@ -148,6 +103,29 @@ def main():
 
     if use_ddp:
         controlnet = DDP(controlnet, device_ids=[device], output_device=rank, find_unused_parameters=True)
+
+    # set data loader
+    if include_modality:
+        if args.modality_mapping_path is not None:
+            if not os.path.exists(args.modality_mapping_path):
+                raise ValueError(f"Please check if {args.modality_mapping_path} exist.")
+        else:
+            raise ValueError(f"'modality_mapping_path' in {env_config_path} cannot be null")
+        with open(args.modality_mapping_path, "r") as f:
+            args.modality_mapping = json.load(f)
+    else:
+        args.modality_mapping = None
+
+    train_loader, _ = prepare_maisi_controlnet_json_dataloader(
+        json_data_list=args.json_data_list,
+        data_base_dir=args.data_base_dir,
+        rank=rank,
+        world_size=world_size,
+        batch_size=args.controlnet_train["batch_size"],
+        cache_rate=args.controlnet_train["cache_rate"],
+        fold=args.controlnet_train["fold"],
+        modality_mapping = args.modality_mapping
+    )
 
     # Step 3: training config
     weighted_loss = args.controlnet_train["weighted_loss"]
@@ -182,7 +160,7 @@ def main():
                 bottom_region_index_tensor = batch["bottom_region_index"].to(device)
             # We trained with only CT in this version
             if include_modality:
-                modality_tensor = torch.ones((len(images),), dtype=torch.long).to(device)
+                modality_tensor = batch["modality"].to(device)
             spacing_tensor = batch["spacing"].to(device)
 
             optimizer.zero_grad(set_to_none=True)
@@ -320,6 +298,7 @@ def main():
                 },
                 f"{args.model_dir}/{args.exp_name}_current.pt",
             )
+            logger.info(f"Save trained model to {args.model_dir}/{args.exp_name}_current.pt")
 
             if epoch_loss < best_loss:
                 best_loss = epoch_loss
@@ -332,6 +311,7 @@ def main():
                     },
                     f"{args.model_dir}/{args.exp_name}_best.pt",
                 )
+                logger.info(f"Save trained model to {args.model_dir}/{args.exp_name}_best.pt")
 
         torch.cuda.empty_cache()
     if use_ddp:
@@ -339,10 +319,24 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        stream=sys.stdout,
-        level=logging.INFO,
-        format="[%(asctime)s.%(msecs)03d][%(levelname)5s](%(name)s) - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+    parser = argparse.ArgumentParser(description="ControlNet Model Training")
+    parser.add_argument(
+        "--env_config_path",
+        type=str,
+        default="./configs/environment_maisi_diff_model.json",
+        help="Path to environment configuration file",
     )
-    main()
+    parser.add_argument(
+        "--model_config_path",
+        type=str,
+        default="./configs/config_maisi_diff_model.json",
+        help="Path to model training/inference configuration",
+    )
+    parser.add_argument(
+        "--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file"
+    )
+    parser.add_argument("--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
+
+    args = parser.parse_args()
+    train_controlnet(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)
+

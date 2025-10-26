@@ -1,0 +1,12 @@
+{
+    "model_dir": "./models/",
+    "output_dir": "./outputs",
+    "tfevent_path": "./outputs/tfevent",
+    "trained_autoencoder_path": "./models/autoencoder_v2.pt",
+    "trained_diffusion_path": "./models/diff_unet_3d_rflow-mr.pt",
+    "existing_ckpt_filepath": null,
+    "exp_name": "controlnet_brats",
+    "data_base_dir": ["./temp_work_dir/demo_train_datasets/Task01_BrainTumour_t1"],
+    "json_data_list": ["./temp_work_dir/Task01_BrainTumour_t1_subset.json"],
+    "modality_mapping_path": "./configs/modality_mapping.json"
+}
