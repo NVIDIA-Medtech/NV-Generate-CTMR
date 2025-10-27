@@ -1,9 +1,26 @@
-# NV-Generate-CTMR 
-This repo includes the applications of training and validating NV-Generate-CTMR (previously used name: MAISI), 3D Latent Diffusion Models (LDM) capable of generating large CT and MRI images accompanied by corresponding segmentation masks. It supports variable volume size and voxel spacing and allows for the precise control of organ/tumor size.
+# NV-Generate-CTMR
 
-## NV-Generate-CTMR Model Highlight
-We release three sets of models: **`ddpm-ct`**, **`rflow-ct`**, and **`rflow-mr`**.
+![Generation Demo](../.github/profile/generate.gif)
 
+This repo includes the applications of training and validating NV-Generate-CTMR, 3D Latent Diffusion Models (LDM) capable of generating large CT and MRI images accompanied by corresponding segmentation masks. It supports variable volume size and voxel spacing and allows for the precise control of organ/tumor size.
+
+**Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR)
+
+## Available Model Variants
+
+This repository provides **three model variants** for medical image generation:
+
+| Model | Modality | Version | Key Features | HuggingFace |
+|-------|----------|---------|--------------|-------------|
+| **DDPM-CT** | CT | v1 | Original DDPM-based model, 1000 inference steps | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
+| **RFLOW-CT** | CT | v2 | Rectified Flow model, **33× faster inference** (30 steps), easier data prep | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
+| **RFLOW-MR** | MRI | v2 | MR generation using v2 architecture, recommend fine-tuning on your MR data | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
+
+**Quick Recommendations**:
+- **For CT projects**: Use RFLOW-CT (v2) - faster and easier to train
+- **For MRI projects**: Use RFLOW-MR (v2) - fine-tune on your own MR 
+
+## Detailed Model Information
 **`ddpm-ct`:**
 
 It includes three models:
@@ -427,3 +444,14 @@ The model weight is released under [NSCLv1 License](./LICENSE.weights).
 - For questions relating to the use of MONAI, please use our [Discussions tab](https://github.com/Project-MONAI/MONAI/discussions) on the main repository of MONAI.
 - For bugs relating to MONAI functionality, please create an issue on the [main repository](https://github.com/Project-MONAI/MONAI/issues).
 - For bugs relating to the running of a tutorial, please create an issue in [this repository](https://github.com/Project-MONAI/Tutorials/issues).
+
+## Resources
+
+- **Pre-trained Model Weights**:
+  - [NV-Generate-CT on HuggingFace](https://huggingface.co/nvidia/NV-Generate-CT) - CT image generation (ddpm-ct, rflow-ct)
+  - [NV-Generate-MR on HuggingFace](https://huggingface.co/nvidia/NV-Generate-MR) - MR image generation (rflow-mr)
+- **Interactive Demo**: [MAISI on build.nvidia.com](https://build.nvidia.com/nvidia/maisi) - Try  examples online
+- **Research Papers**:
+  - [MAISI: Medical AI for Synthetic Imaging (WACV 2025)](https://arxiv.org/pdf/2409.11169)
+  - [MAISI-v2: Accelerated 3D High-Resolution Medical Image Synthesis with Rectified Flow](https://arxiv.org/pdf/2508.05772)
+- **Built with**: [MONAI](https://monai.io/) - Medical Open Network for AI
