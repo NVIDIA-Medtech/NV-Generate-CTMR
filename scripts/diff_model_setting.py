@@ -66,6 +66,7 @@ def load_config(env_config_path: str, model_config_path: str, model_def_path: st
         model_config = json.load(f)
     for k, v in model_config.items():
         setattr(args, k, v)
+        
 
     with open(model_def_path, "r") as f:
         model_def = json.load(f)

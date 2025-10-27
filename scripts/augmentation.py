@@ -354,8 +354,8 @@ def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transfo
     tumor augmentation.
 
     Args:
-        tumor_mask: input 3D tumor mask, [1,1,H,W,D] torch tensor.  
-        organ_mask: input 3D tumor mask, [1,1,H,W,D] torch tensor, binary mask.  
+        tumor_mask: input 3D tumor mask, [1,H,W,D] torch tensor.  
+        organ_mask: input 3D tumor mask, [1,H,W,D] torch tensor, binary mask.  
         aug_transform: tumor augmentation transform       
         spatial_size: output image spatial size, used in random transform.
                       If not defined, will use (H,W,D). If some components are non-positive values,
@@ -374,9 +374,9 @@ def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transfo
         .. code-block:: python
 
             # define a tumor mask
-            tumor_mask = torch.zeros([1,1,128,128,128])
-            tumor_mask[0,0, 90:110, 90:110, 90:110]=1
-            tumor_mask[0,0, 97:103, 97:103, 97:103]=2
+            tumor_mask = torch.zeros([1,128,128,128])
+            tumor_mask[0, 90:110, 90:110, 90:110]=1
+            tumor_mask[0, 97:103, 97:103, 97:103]=2
     """
     # Initialize binary tumor mask
     device = tumor_mask_.device
@@ -487,22 +487,38 @@ def remove_tumors(orig_labels,pseudo_labels=None):
     
     Args:
         orig_labels (torch.Tensor): Original ground-truth labels.
-        pseudo_labels (torch.Tensor): Pseudo labels used for replacement, only used for bone lesion
+        pseudo_labels (torch.Tensor): Pseudo labels used for replacement for tumor region, same size with orig_labels.
 
     Returns:
         torch.Tensor: Modified labels with tumor regions reassigned.
     """
-    x = remap_labels(orig_labels, {26: 1, 24: 4, 27: 62, 401:22, 402:22, 403:22, 176:22})  # hepatic->liver, pancreatic->pancreas, colon primaries->colon, brats tumor->brain
-    # Replace lesion-like classes by pseudo labels (explicit and ordered)
-    x = remove_tumors_majority_vote( # replace lung tumor with majority vote of its immediate neighborhood
-        (x == 23),
-        x,
-        organ_label_lists=(28, 29, 30, 31, 32),
-    )
-    for lesion_id in [128]:  # bone lesion
-        mask = (x == lesion_id)
-        if mask.any() and pseudo_labels!= None:
-            x[mask] = pseudo_labels[mask]
+    # hepatic tumor->liver, pancreatic tumor->pancreas, colon primaries timor->colon, kidney cyst-> kidney
+    if len(orig_labels.shape) not in [3,4]:
+        raise ValueError(f"input has to be 3D/4D, [1,X,Y,Z] or [1,X,Y]. Yet got {orig_labels.shape}.")
+    x = remap_labels(
+        orig_labels, 
+        {26: 1, 24: 4, 27: 62, 116:14, 117:5}
+    ) 
+
+    if pseudo_labels!= None:
+        # replace with pseudo_labels, for lung tumor, bone lesion, brain tumors 
+        for lesion_id in [23,128,401,402,403,176]:  
+            mask = (x == lesion_id)
+            if mask.any():
+                x[mask] = pseudo_labels[mask]
+    else:    
+        # Replace lesion-like classes by pseudo labels (explicit and ordered)
+        # replace lung tumor with majority vote of its immediate neighborhood
+        x = remove_tumors_majority_vote( 
+            (x == 23),
+            x,
+            organ_label_lists=(28, 29, 30, 31, 32),
+        )
+        # replace brain tumors->brain
+        x = remap_labels(
+            x, 
+            {401:22, 402:22, 403:22, 176:22}
+        )
     return x
 
 def remove_tumors_majority_vote(

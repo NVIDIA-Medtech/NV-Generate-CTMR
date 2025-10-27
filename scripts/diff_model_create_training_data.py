@@ -269,21 +269,21 @@ if __name__ == "__main__":
     # CLI entry: parse config paths and GPU count, then generate training data.
     parser = argparse.ArgumentParser(description="Diffusion Model Training Data Creation")
     parser.add_argument(
-        "-e"
+        "-e",
         "--env_config",
         type=str,
         default="./configs/environment_maisi_diff_model_train.json",
         help="Path to environment configuration file",
     )
     parser.add_argument(
-        "-c"
+        "-c",
         "--model_config",
         type=str,
         default="./configs/config_maisi_diff_model_train.json",
         help="Path to model training/inference configuration",
     )
     parser.add_argument(
-        "-t"
+        "-t",
         "--model_def", 
         type=str, 
         default="./configs/config_maisi.json", 

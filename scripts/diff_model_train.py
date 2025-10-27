@@ -535,21 +535,21 @@ def diff_model_train(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Diffusion Model Training")
     parser.add_argument(
-        "-e"
+        "-e",
         "--env_config_path",
         type=str,
         default="./configs/environment_maisi_diff_model.json",
         help="Path to environment configuration file",
     )
     parser.add_argument(
-        "-c"
+        "-c",
         "--model_config_path",
         type=str,
         default="./configs/config_maisi_diff_model.json",
         help="Path to model training/inference configuration",
     )
     parser.add_argument(
-        "-t"
+        "-t",
         "--model_def_path", 
         type=str, 
         default="./configs/config_maisi.json", 

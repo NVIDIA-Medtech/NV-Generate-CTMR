@@ -5,8 +5,11 @@
         "fold": 0,
         "lr": 1e-5,
         "n_epochs": 100,
-        "weighted_loss_label": [129],
-        "weighted_loss": 100
+        "weighted_loss_label": [23],
+        "weighted_loss": 100,
+        "use_region_contrasive_loss": true,
+        "region_contrasive_loss_delta": 2,
+        "region_contrasive_loss_weight": 0.01
     },
     "controlnet_infer": {
        "num_inference_steps": 30,
