@@ -2,6 +2,8 @@
 
 This repo includes the applications of training and validating NV-Generate-CTMR, 3D Latent Diffusion Models (LDM) capable of generating large CT and MRI images accompanied by corresponding segmentation masks. It supports variable volume size and voxel spacing and allows for the precise control of organ/tumor size.
 
+![example_results](assets/example_results.gif)
+
 **Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR)
 
 ## Available Model Variants
