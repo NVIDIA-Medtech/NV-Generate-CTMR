@@ -9,7 +9,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 **Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR)
 
-## Quick Start
+## Quick Start (requires 16G GPU)
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
@@ -72,11 +72,6 @@ MR images have much larger variability than CT images. For MRI users, we always 
 GPU requirement depends on the size of the images. For example,
 - for image size of 512x512x128, the minimum GPU memory requirement for training and inference is 16G.
 - for image size of 512x512x512, the minimum GPU memory requirement for training is 40G, for inference is 24G.
-
-## Quick Start:
-Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
-
-Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
 ## Example Results and Evaluation
 
