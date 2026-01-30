@@ -14,7 +14,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 This repository provides **three model variants** for medical image generation:
 
 | Model | Modality | Architecture Version | Key Features | HuggingFace | Paper |
-|-------|----------|---------|--------------|-------------|
+|-------|----------|---------|--------------|-------------|-------------|
 | **`ddpm-ct`:** | CT | v1 | Original DDPM-based model for CT, 1000 inference steps | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
 | **`rflow-ct`:** | CT | v2 | Rectified Flow model for CT, **33× faster inference** (30 steps) than DDPM, easier data prep | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 |  **`rflow-mr`:** | MRI | v2 | Rectified Flow model for MRI, recommend fine-tuning on your MR data | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
