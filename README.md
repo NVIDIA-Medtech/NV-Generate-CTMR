@@ -14,7 +14,7 @@ Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inf
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
-You can also run it in command line to generates paired CT image and mask.
+You can also run it in command line to generate paired CT image and mask.
 ```bash
 export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
 network="rflow"
