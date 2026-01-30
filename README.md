@@ -4,6 +4,9 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 ![example_results](assets/example_results.gif)
 
+## 🚀 Have A Try: Live Demo for NV-Generate-CTMR (rflow-ct) Model
+[https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi)
+
 **Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR)
 
 ## Available Model Variants
