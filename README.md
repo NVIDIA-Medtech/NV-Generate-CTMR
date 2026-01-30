@@ -14,12 +14,20 @@ Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inf
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
-You can also run it in command line to generate paired CT image and mask.
+You can run it in command line to generate paired CT image and mask.
 ```bash
 export MONAI_DATA_DIRECTORY="./temp_work_dir"
 network="rflow"
 generate_version="rflow-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
+```
+
+You can also run it in command line to generate CT or MR image without mask.
+```bash
+network="rflow"
+generate_version="rflow-mr"
+python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only    
+python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
 ## Available Model Variants
