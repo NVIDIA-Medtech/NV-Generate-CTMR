@@ -16,7 +16,7 @@ Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutoria
 
 You can also run it in command line to generate paired CT image and mask.
 ```bash
-export MONAI_DATA_DIRECTORY="./temp_workspace/"
+export MONAI_DATA_DIRECTORY="./temp_work_dir"
 network="rflow"
 generate_version="rflow-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
