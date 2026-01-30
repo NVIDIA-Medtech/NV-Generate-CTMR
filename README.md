@@ -9,6 +9,11 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 **Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR)
 
+## Quick Start:
+Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
+
+Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
+
 ## Available Model Variants
 
 This repository provides **three model variants** for medical image generation:
@@ -23,12 +28,8 @@ This repository provides **three model variants** for medical image generation:
 - **For CT projects**: Use `rflow-ct` (v2) - faster and easier to train
 - **For MRI projects**: Use `rflow-ct` (v2) - fine-tune on your own MR
 
-## Quick Start:
-Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
-Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
-
-## Detailed Model Information
+### Detailed Model Information
 **`ddpm-ct`:**
 
 It includes three models:
