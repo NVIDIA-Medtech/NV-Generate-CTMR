@@ -14,6 +14,14 @@ Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inf
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
+You can also run it in command line:
+```bash
+export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
+network="rflow"
+generate_version="rflow-ct"
+python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
+```
+
 ## Available Model Variants
 ### Overview of Model Variants:
 This repository provides **three model variants** for medical image generation:
