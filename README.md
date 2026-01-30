@@ -28,7 +28,7 @@ This repository provides **three model variants** for medical image generation:
 - **For CT projects**: Use `rflow-ct` (v2) - faster and easier to train
 - **For MRI projects**: Use `rflow-ct` (v2) - fine-tune on your own MR
 
-**Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb).
+**Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb) and [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb).
 
 
 ### Details of Model Variants:
