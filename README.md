@@ -4,7 +4,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 ![example_results](assets/example_results.gif)
 
-## 🚀 Have A Try: Live Demo to generate CT image and mask pairs, 
+## 🚀 Have A Try: Live Demo to Generate CT Image and Mask Pairs
 
 Online demo, no GPU required:
 [https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi)
