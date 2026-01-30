@@ -52,7 +52,7 @@ Other Differences compared with `ddpm-ct`:
 - For the released model weights, `rflow-ct` can generate images with better quality for head region and small output volumes than `ddpm-ct`; they have comparable quality for other cases.
 - `rflow-ct` added a diffusion model input `modality`, which gives it flexibility to extend to other modalities. We predefined some modalities in [./configs/modality_mapping.json](./configs/modality_mapping.json). Users may also use it to indicate different image categories like hospital sites or scanners.
 
-More details can be found in our 2025 report:
+More details can be found in our AAAI 2026 paper:
 
 [Zhao, C., Guo, P., Yang, D., Tang, Y., ... & Xu, D. (2025). MAISI-v2: Accelerated 3D High-Resolution Medical Image Synthesis with Rectified Flow and Region-specific Contrastive Loss](https://arxiv.org/pdf/2508.05772)
 
