@@ -4,10 +4,10 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 ![example_results](assets/example_results.gif)
 
-## 🚀 Have A Try: Live Demo to generate CT image and mask pairs, online demo, no GPU required
-[https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi)
+## 🚀 Have A Try: Live Demo to generate CT image and mask pairs, 
 
-**Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR)
+Online demo, no GPU required:
+[https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi)
 
 ## Quick Start (requires at least a 16G GPU)
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
@@ -27,6 +27,8 @@ This repository provides **three model variants** for medical image generation:
 **Quick Recommendations**:
 - **For CT projects**: Use `rflow-ct` (v2) - faster and easier to train
 - **For MRI projects**: Use `rflow-ct` (v2) - fine-tune on your own MR
+
+**Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb).
 
 
 ### Details of Model Variants:
