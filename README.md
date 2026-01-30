@@ -54,7 +54,7 @@ Other Differences compared with `ddpm-ct`:
 
 More details can be found in our AAAI 2026 paper:
 
-[Zhao, C., Guo, P., Yang, D., Tang, Y., ... & Xu, D. (2025). MAISI-v2: Accelerated 3D High-Resolution Medical Image Synthesis with Rectified Flow and Region-specific Contrastive Loss](https://arxiv.org/pdf/2508.05772)
+[Zhao, C., Guo, P., Yang, D., Tang, Y., ... & Xu, D. (2025). MAISI-v2: Accelerated 3D High-Resolution Medical Image Synthesis with Rectified Flow and Region-specific Contrastive Loss. AAAI 2026](https://arxiv.org/pdf/2508.05772)
 
 **GUI demo:** Welcome to try our GUI demo at [https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi).
 The GUI is only a demo for toy examples. This Github repo is the full version.
