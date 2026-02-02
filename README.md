@@ -30,7 +30,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json]([configs/config_maisi_diff_model_rflow-mr.json]) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast.
+You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast.
 ```bash
 network="rflow"
 generate_version="rflow-mr"
