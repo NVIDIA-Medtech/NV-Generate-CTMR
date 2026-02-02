@@ -36,13 +36,13 @@ This repository provides **three model variants** for medical image generation:
 
 | Model | Modality | Architecture Version | Key Features | HuggingFace | Paper |
 |-------|----------|---------|--------------|-------------|-------------|
-| **`ddpm-ct`:** | CT | v1 | Original DDPM-based model for CT, 1000 inference steps | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
-| **`rflow-ct`:** | CT | v2 | Rectified Flow model for CT, **33× faster inference** (30 steps) than DDPM, easier data prep | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
-|  **`rflow-mr`:** | MRI | v2 | Rectified Flow model for MRI, recommend fine-tuning on your MR data | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+| **`ddpm-ct`:** | CT | MAISI-v1 | Original DDPM-based model for CT, 1000 inference steps | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
+| **`rflow-ct`:** | CT | MAISI-v2 | Rectified Flow model for CT, **33× faster inference** (30 steps) than DDPM, easier data prep | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+|  **`rflow-mr`:** | MRI | MAISI-v2 | Rectified Flow model for MRI, recommend fine-tuning on your MR data | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 
 **Quick Recommendations**:
 - **For CT projects**: Use `rflow-ct` (v2) - faster and easier to train
-- **For MRI projects**: Use `rflow-ct` (v2) - fine-tune on your own MR
+- **For MRI projects**: Use `rflow-mr` (v2) - fine-tune on your own MR
 
 **Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb) and [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb).
 
