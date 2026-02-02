@@ -41,7 +41,7 @@ This repository provides **three model variants** for medical image generation:
 |  **`rflow-mr`:** | MRI | MAISI-v2 | Rectified Flow model for MRI, recommend fine-tuning on your MR data | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 
 **Quick Recommendations**:
-- **For CT projects**: Use `rflow-ct` - faster and easier to train
+- **For CT projects**: Use `rflow-ct` - ready to inference for whole-body CT
 - **For MRI projects**: Use `rflow-mr` - fine-tune on your own MR
 
 **Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb) and [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb).
