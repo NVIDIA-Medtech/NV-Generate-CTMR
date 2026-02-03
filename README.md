@@ -4,6 +4,8 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 ![example_results](assets/CTMR_example.png)
 
+![example_results with mask](https://developer-blogs.nvidia.com/wp-content/uploads/2024/06/typical-generated-ct-image-corresponding-segmentation-condition.gif)
+
 ## 🚀 Have A Try: Live Demo to Generate CT Image and Mask Pairs
 
 Online demo, no GPU required:
