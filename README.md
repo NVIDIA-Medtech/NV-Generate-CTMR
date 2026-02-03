@@ -2,9 +2,10 @@
 
 This repo includes the applications of training and validating NV-Generate-CTMR, 3D Latent Diffusion Models (LDM) capable of generating large CT and MRI images accompanied by corresponding segmentation masks. It supports variable volume size and voxel spacing and allows for the precise control of organ/tumor size.
 
-![example_results](assets/CTMR_example.png)
-
-![example_results with mask](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif)
+<p align="center">
+  <img src="assets/CTMR_example.png" width="48%">
+  <img src="assets/typical-generated-ct-image-corresponding-segmentation-condition.gif" width="48%">
+</p>
 
 ## 🚀 Have A Try: Live Demo to Generate CT Image and Mask Pairs
 
