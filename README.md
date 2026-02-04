@@ -50,7 +50,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### Example: Adapting NV-Generate-CTMR (`rflow-ct`) for MR-to-CT image synthesis
+### Example: Adapting NV-Generate-CTMR for MR-to-CT image synthesis
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rflow-ct`) is available here:
 [https://github.com/brudfors/maisi-mr-to-ct](https://github.com/brudfors/maisi-mr-to-ct)
 
