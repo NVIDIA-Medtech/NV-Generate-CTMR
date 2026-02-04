@@ -24,7 +24,7 @@ generate_version="rflow-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
-### CT image only generation
+### CT image generation
 You can run it in command line to generate CT image without mask.
 ```bash
 network="rflow"
@@ -33,7 +33,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### MR image only generation
+### MR image generation
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
 You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support T1, T2, and Flair images for brain MRI, T2 images for prostate MRI, T1 image for breast MRI, T1 and T2 image for abdomen MRI. Contrast-enhanced MRI is not supported.
