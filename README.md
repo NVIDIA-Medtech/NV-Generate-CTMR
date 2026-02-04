@@ -13,9 +13,8 @@ Online demo, no GPU required:
 [https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi)
 
 ## Quick Start (requires at least a 16G GPU)
+### CT paired image/mask generation
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
-
-Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
 You can run it in command line to generate paired CT image and mask.
 ```bash
@@ -25,6 +24,7 @@ generate_version="rflow-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
+### CT image only generation
 You can run it in command line to generate CT image without mask.
 ```bash
 network="rflow"
@@ -33,7 +33,10 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support 
+### MR image only generation
+Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
+
+You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support T1, T2, and Flair images for brain MRI, T2 images for prostate MRI, T1 image for breast MRI, T1 and T2 image for abdomen MRI. Contrast-enhanced MRI is not supported.
 ```
 "mri":8,
 "mri_t1":9,
@@ -46,6 +49,12 @@ generate_version="rflow-mr"
 python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only    
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
+
+### Example: Adapting NV-Generate-CTMR (`rflow-ct`) for MR-to-CT image synthesis
+A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rflow-ct`) is available here:
+[https://github.com/brudfors/maisi-mr-to-ct](https://github.com/brudfors/maisi-mr-to-ct)
+
+If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, feel free to open an issue or contact the maintainers — we’d love to link to your repo.
 
 ## Available Model Variants
 ### Overview of Model Variants:
