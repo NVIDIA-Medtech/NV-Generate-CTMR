@@ -22,7 +22,6 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
   - [3.2 Inference Time Cost and GPU Memory Usage](#32-inference-time-cost-and-gpu-memory-usage)
   - [3.3 Training GPU Memory Usage](#33-training-gpu-memory-usage)
 - [4. Architecture Overview](#4-architecture-overview)
-  - [4.1 Network Definition](#41-network-definition)
 - [5. Inference Guide](#5-inference-guide)
   - [5.1 Inference Parameters](#51-inference-parameters)
   - [5.2 Recommended Spacing](#52-recommended-spacing-for-different-output-sizes)
@@ -199,9 +198,7 @@ This model is based on the following papers:
 
 [**Rectified Flow:** Liu, Xingchao, Chengyue Gong, and Qiang Liu. "Flow straight and fast: Learning to generate and transfer data with rectified flow." ICLR 2023](https://arxiv.org/pdf/2209.03003).
 
-### 4.1 Network Definition
-
-Network definition is stored in [./configs/config_network_rflow.json](./configs/config_network_rflow.json) and [./configs/config_network_ddpm.json](./configs/config_network_ddpm.json). Training and inference should use the same config file.
+Network definition is stored in [./configs/config_network_rflow.json](./configs/config_network_rflow.json) and [./configs/config_network_ddpm.json](./configs/config_network_ddpm.json). Training and inference should use the same network definition config file.
 
 ## 5. Inference Guide
 
