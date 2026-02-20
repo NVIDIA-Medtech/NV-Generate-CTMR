@@ -107,7 +107,7 @@ If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and
 
 ## 2. Model Family
 
-This repository provides **three model variants** for medical image generation:
+This repository provides **three model variants** for medical image generation, including `ddpm-ct`, `rflow-ct`, and `rflow-mr`.
 
 |                    | `ddpm-ct`             | `rflow-ct`                          | `rflow-mr`                        |
 |--------------------|----------------------|--------------------------------------|-----------------------------------|
