@@ -1,6 +1,6 @@
 # NV-Generate-CTMR
 
-<h3 align="center"><em>Previously named as MAISI</em></h3>
+<h3 align="center"><em>An upgraded version of MAISI</em></h3>
 
 This repo includes the applications of training and validating NV-Generate-CTMR, 3D Latent Diffusion Models (LDM) capable of generating large CT and MRI images accompanied by corresponding segmentation masks. It supports variable volume size and voxel spacing and allows for the precise control of organ/tumor size.
 
