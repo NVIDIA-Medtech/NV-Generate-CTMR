@@ -74,7 +74,7 @@ This repository provides **three model variants** for medical image generation:
 | **Modality**       | CT                   | CT                                   | MRI                               |
 | **Architecture**   | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         |
 | **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
-| **Network Definition File** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
+| **Network Detail** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
 | **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
 | **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
 | **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation with user specified contrast |
