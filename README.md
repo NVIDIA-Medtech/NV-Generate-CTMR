@@ -72,7 +72,7 @@ This repository provides **three model variants** for medical image generation:
 | **Architecture**   | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         |
 | **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
 | **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
-| **Use Case**       | CT generation        | CT generation, easier data prep      | MRI generation, recommend fine-tuning |
+| **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation, recommend fine-tuning |
 | **HuggingFace**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
 | **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 | **Network Definition File** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
