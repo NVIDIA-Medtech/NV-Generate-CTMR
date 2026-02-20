@@ -9,9 +9,12 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 ## News
 
-- **October 2025** — Released rectified flow models for fast high-resolution 3D MR image generation.  
-- **March 2025** — Released rectified flow models for fast high-resolution 3D CT image generation and paired CT image/mask synthesis. 
-- **August 2024** — Initial release supporting 3D latent diffusion (DDPM) for CT image generation and paired CT image/mask synthesis. 
+- **October 2025** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation.
+- **March 2025** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT image/mask synthesis. Key differences compared with `ddpm-ct`:
+  - `rflow-ct` does not require training images to be labeled with body regions (`"top_region_index"` and `"bottom_region_index"`), making data preparation easier.
+  - `rflow-ct` generates better quality images for the head region and small output volumes; comparable quality for other cases.
+  - `rflow-ct` introduces a `modality` input, enabling flexibility to extend to other modalities (see [modality_mapping.json](./configs/modality_mapping.json)).
+- **August 2024** — Initial release `ddpm-ct` supporting 3D latent diffusion (DDPM) for CT image generation and paired CT image/mask synthesis.
 
 ## 🚀 Have A Try: Live Demo to Generate CT Image and Mask Pairs
 
@@ -72,56 +75,18 @@ This repository provides **three model variants** for medical image generation:
 | **Architecture**   | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         |
 | **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
 | **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
-| **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation, recommend fine-tuning |
-| **HuggingFace**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
+| **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation, always fine-tuning with users' data |
+| **Pre-trained Model Weights (They will be automatically downloaded when running inference script)**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
 | **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 | **Network Definition File** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
+| **Model: Foundation VAE for latent feature compression**     | trained on CT and MR | trained on CT and MR | trained on CT and MR (with additional abdomen MRI) |
+| **Model: Foundation Diffusion Model for flexible body regions**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes modality as input and can generate MRI with different contrasts. MR images have much larger variability than CT images. For MRI users, we always recommend finetuning on `rflow-mr` Foundation Rectified Flow model with users' own MRI data. |
+| **Model: ControlNet**     | generate image/mask pairs, no contrastive loss | generate image/mask pairs, with contrastive loss | N/A |
+
 
 **Quick Recommendations**:
 - **For CT projects**: Use `rflow-ct` - ready to inference for CT covering whole body region
 - **For MRI projects**: Use `rflow-mr` - fine-tune on your own MR
-
-**Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb) and [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb).
-
-
-## Details of Model Variants:
-**`ddpm-ct`:**
-
-It includes three models:
-- A Foundation Variational Auto-Encoder (VAE) model for latent feature compression that works for both CT and MRI with flexible volume size and voxel size. Tensor parallel is included to reduce GPU memory usage.
-- A Foundation Diffusion model (Denoising Diffusion Probabilistic Models, DDPM) that can generate large CT volumes up to 512 &times; 512 &times; 768 size, with flexible volume size and voxel size
-- A DDPM-based ControlNet to generate image/mask pairs that can improve downstream tasks, with controllable organ/tumor size
-
-More details can be found in our WACV 2025 paper:
-
-[Guo, P., Zhao, C., Yang, D., Xu, Z., Nath, V., Tang, Y., ... & Xu, D. (2024). MAISI: Medical AI for Synthetic Imaging. WACV 2025](https://arxiv.org/pdf/2409.11169)
-
-**`rflow-ct`:**
-
-It includes three models:
-- Same Foundation VAE as `ddpm-ct`.
-- A Foundation Rectified Flow model that can generate large CT volumes up to 512 &times; 512 &times; 768 size, with flexible volume size and voxel size, with **inference speed 33 times faster than `ddpm-ct`**.
-- A Rectified Flow-based ControlNet to generate image/mask pairs that can improve downstream tasks, with controllable organ/tumor size
-
-Other Differences compared with `ddpm-ct`:
-- `ddpm-ct` requires training images to be labeled with body regions (`"top_region_index"` and `"bottom_region_index"`), while `rflow-ct` does not have such requirement. In other words, it is easier to prepare training data for `rflow-ct`.
-- For the released model weights, `rflow-ct` can generate images with better quality for head region and small output volumes than `ddpm-ct`; they have comparable quality for other cases.
-- `rflow-ct` added a diffusion model input `modality`, which gives it flexibility to extend to other modalities. We predefined some modalities in [./configs/modality_mapping.json](./configs/modality_mapping.json). Users may also use it to indicate different image categories like hospital sites or scanners.
-
-More details can be found in our AAAI 2026 paper:
-
-[Zhao, C., Guo, P., Yang, D., Tang, Y., ... & Xu, D. (2025). MAISI-v2: Accelerated 3D High-Resolution Medical Image Synthesis with Rectified Flow and Region-specific Contrastive Loss. AAAI 2026](https://arxiv.org/pdf/2508.05772)
-
-**GUI demo:** Welcome to try our GUI demo at [https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi).
-The GUI is only a demo for toy examples. This Github repo is the full version.
-
-**`rflow-mr`:**
-
-It includes two models:
-- A Foundation VAE finetuned on `ddpm-ct` VAE with more MRI.
-- A Foundation Rectified Flow model that can generate MRI volumes up to 512 &times; 512 &times; 128 size, with flexible volume size and voxel size, with same inference speed as `rflow-ct`.
-
-MR images have much larger variability than CT images. For MRI users, we always recommend finetuning on `rflow-mr` Foundation Rectified Flow model with users' own MRI data.
 
 ## Minimum GPU requirement
 GPU requirement depends on the size of the images. For example,
