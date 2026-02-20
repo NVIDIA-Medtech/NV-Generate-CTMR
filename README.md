@@ -14,7 +14,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 - **October 2025** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Moved previous MAISI repo from MONAI tutorial to this NV-Generate-CTMR repo.
 - **March 2025** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT image/mask synthesis. Key differences compared with `ddpm-ct`:
   - `rflow-ct` is much faster. Its diffusion model inference is **33x** faster than `ddpm-ct`.
-  - `rflow-ct` does not require training images to be labeled with body regions (`"top_region_index"` and `"bottom_region_index"`), making data preparation easier.
+  - `rflow-ct` does not require training images to be labeled with body regions (`"top_region_index"` and `"bottom_region_index"`), making training data preparation easier.
   - `rflow-ct` generates better quality images for the head region and small output volumes; comparable quality for other cases.
   - `rflow-ct` introduces a `modality` input, enabling flexibility to extend to other modalities (see [modality_mapping.json](./configs/modality_mapping.json)).
 - **August 2024** — Initial release `ddpm-ct` supporting 3D latent diffusion (DDPM) for CT image generation and paired CT image/mask synthesis.
