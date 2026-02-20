@@ -76,11 +76,11 @@ This repository provides **three model variants** for medical image generation:
 | **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
 | **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
 | **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation, always fine-tuning with users' data |
-| **Pre-trained Model Weights (They will be automatically downloaded when running inference script)**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
+| **Pre-trained Model Weights**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
 | **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 | **Network Definition File** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
-| **Model: Foundation VAE for latent feature compression**     | trained on CT and MR | trained on CT and MR | trained on CT and MR (with additional abdomen MRI) |
-| **Model: Foundation Diffusion Model for flexible body regions**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes modality as input and can generate MRI with different contrasts. MR images have much larger variability than CT images. For MRI users, we always recommend finetuning on `rflow-mr` Foundation Rectified Flow model with users' own MRI data. |
+| **Model: Foundation VAE**     | trained on CT and MR | trained on CT and MR | trained on CT and MR (with additional abdomen MRI) |
+| **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes modality as input and can generate MRI with different contrasts. MR images have much larger variability than CT images. For MRI users, we always recommend finetuning on `rflow-mr` Foundation Rectified Flow model with users' own MRI data. |
 | **Model: ControlNet**     | generate image/mask pairs, no contrastive loss | generate image/mask pairs, with contrastive loss | N/A |
 
 
