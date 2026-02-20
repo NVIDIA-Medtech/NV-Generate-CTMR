@@ -62,7 +62,7 @@ A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rf
 
 If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, feel free to open an issue or contact the maintainers — we’d love to link to your repo.
 
-## Available Model Variants
+## Model Family
 ### Overview of Model Variants:
 This repository provides **three model variants** for medical image generation:
 
@@ -75,6 +75,7 @@ This repository provides **three model variants** for medical image generation:
 | **Use Case**       | CT generation        | CT generation, easier data prep      | MRI generation, recommend fine-tuning |
 | **HuggingFace**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
 | **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+| **Network Definition File** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
 
 **Quick Recommendations**:
 - **For CT projects**: Use `rflow-ct` - ready to inference for CT covering whole body region
