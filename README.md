@@ -114,7 +114,7 @@ This repository provides **three model variants** for medical image generation:
 | **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
 | **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation with user specified contrast |
 | **Model Weights**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
-| **Model: Foundation VAE**     | trained on CT and MR | trained on CT and MR | trained on CT and MR (with additional abdomen MRI) |
+| **Model: Foundation VAE**     | trained on CT and MR | same VAE with `ddpm-ct` | trained on CT and MR (with additional abdomen MRI) |
 | **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data.|
 | **Model: ControlNet**     | generate image/mask pairs, no contrastive loss | generate image/mask pairs, with contrastive loss | N/A |
 
