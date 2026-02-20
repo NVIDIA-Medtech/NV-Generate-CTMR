@@ -217,7 +217,7 @@ The information for the inference input, such as the body region and anatomy to 
 
 
 
-### 5.2 Recommended Spacing for Different Output Sizes
+### 5.2 Recommended Spacing for CT
 According to the statistics of the training data, we have recommended input parameters for the body region that are included in the training data.
 The Recommended `"output_size"` is the median value of the training data, the Recommended `"spacing"` is the median FOV (the product of `"output_size"` and `"spacing"`) divided by the Recommended `"output_size"`.
 |`"body_region"`   |percentage of training data |Recommended `"output_size"`| Recommended `"spacing"` [mm]|
