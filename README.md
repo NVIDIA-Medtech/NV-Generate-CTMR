@@ -305,7 +305,7 @@ Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inf
 
 
 ### 5.5 Quality Check
-We have implemented a quality check function for the generated CT images. The main idea behind this function is to ensure that the Hounsfield units (HU) intensity for each organ in the CT images remains within a defined range. For each training image used in the Diffusion network, we computed the median value for a few major organs. Then we summarize the statistics of these median values and save it to [./configs/image_median_statistics.json](./configs/image_median_statistics.json). During inference, for each generated image, we compute the median HU values for the major organs and check whether they fall within the normal range.
+We have implemented a quality check function for the generated CT images. The main idea behind this function is to ensure that the Hounsfield units (HU) intensity for each organ in the CT images remains within a defined range. For each training image used in the Diffusion network, we computed the median value for a few major organs. Then we summarize the statistics of these median values and save it to [./configs/image_median_statistics_ct.json](./configs/image_median_statistics_ct.json). During inference, for each generated image, we compute the median HU values for the major organs and check whether they fall within the normal range.
 
 ## 6. Training Guide
 
