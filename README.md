@@ -7,6 +7,12 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
   <img src="assets/typical-generated-ct-image-corresponding-segmentation-condition.gif" width="48%">
 </p>
 
+## News
+
+- **October 2025** — Released rectified flow models for fast high-resolution 3D MR image generation.  
+- **March 2025** — Released rectified flow models for fast high-resolution 3D CT image generation and paired CT image/mask synthesis. 
+- **August 2024** — Initial release supporting 3D latent diffusion (DDPM) for CT image generation and paired CT image/mask synthesis. 
+
 ## 🚀 Have A Try: Live Demo to Generate CT Image and Mask Pairs
 
 Online demo, no GPU required:
@@ -60,11 +66,15 @@ If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and
 ### Overview of Model Variants:
 This repository provides **three model variants** for medical image generation:
 
-| Model | Modality | Architecture Version | Key Features | HuggingFace | Paper |
-|-------|----------|---------|--------------|-------------|-------------|
-| **`ddpm-ct`:** | CT | MAISI-v1 | Original DDPM-based model for CT, 1000 inference steps | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
-| **`rflow-ct`:** | CT | MAISI-v2 | Rectified Flow model for CT, **33× faster inference** (30 steps) than DDPM, easier data prep | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
-|  **`rflow-mr`:** | MRI | MAISI-v2 | Rectified Flow model for MRI, recommend fine-tuning on your MR data | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+|                    | `ddpm-ct`             | `rflow-ct`                          | `rflow-mr`                        |
+|--------------------|----------------------|--------------------------------------|-----------------------------------|
+| **Modality**       | CT                   | CT                                   | MRI                               |
+| **Architecture**   | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         |
+| **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
+| **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
+| **Use Case**       | CT generation        | CT generation, easier data prep      | MRI generation, recommend fine-tuning |
+| **HuggingFace**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
+| **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 
 **Quick Recommendations**:
 - **For CT projects**: Use `rflow-ct` - ready to inference for CT covering whole body region
@@ -73,7 +83,7 @@ This repository provides **three model variants** for medical image generation:
 **Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb) and [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb).
 
 
-### Details of Model Variants:
+## Details of Model Variants:
 **`ddpm-ct`:**
 
 It includes three models:
