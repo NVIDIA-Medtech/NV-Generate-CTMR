@@ -511,7 +511,7 @@ We retrained several state-of-the-art diffusion model-based methods using our da
 
 The code is released under Apache 2.0 License.
 
-The model weight is released under [NSCLv1 License](./LICENSE.weights).
+For the license model weights, please check Huggingface [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) and [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
 
 ## 11. Questions and Bugs
 
