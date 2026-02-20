@@ -66,21 +66,21 @@ A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rf
 If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, feel free to open an issue or contact the maintainers — we’d love to link to your repo.
 
 ## Model Family
-### Overview of Model Variants:
+
 This repository provides **three model variants** for medical image generation:
 
 |                    | `ddpm-ct`             | `rflow-ct`                          | `rflow-mr`                        |
 |--------------------|----------------------|--------------------------------------|-----------------------------------|
 | **Modality**       | CT                   | CT                                   | MRI                               |
 | **Architecture**   | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         |
-| **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
-| **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
-| **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation. |
-| **Pre-trained Model Weights**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
 | **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
 | **Network Definition File** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
+| **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
+| **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
+| **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation with user specified contrast |
+| **Pre-trained Model Weights**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
 | **Model: Foundation VAE**     | trained on CT and MR | trained on CT and MR | trained on CT and MR (with additional abdomen MRI) |
-| **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes modality as input and can generate MRI with different contrasts. Recommend finetune with users' own MRI data.|
+| **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes modality as input. Recommend finetune with users' own MRI data.|
 | **Model: ControlNet**     | generate image/mask pairs, no contrastive loss | generate image/mask pairs, with contrastive loss | N/A |
 
 
