@@ -49,7 +49,7 @@ def augment_modality_label(modality_tensor, prob=0.1):
     torch.Tensor: The modified modality tensor with the applied augmentations.
     """
     # Randomly set elements that are smaller than 8 with probability `prob`
-    mask_ct = (modality_tensor <8) and (modality_tensor >=2)
+    mask_ct = (modality_tensor < 8) & (modality_tensor >= 2)
     prob_ct = torch.rand(modality_tensor.size(),device=modality_tensor.device) < prob
     modality_tensor[mask_ct & prob_ct] = 1
     
