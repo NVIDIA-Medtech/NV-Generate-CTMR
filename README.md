@@ -15,7 +15,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
   - [1.1 CT Paired Image/Mask Generation](#11-ct-paired-imagemask-generation)
   - [1.2 CT Image Generation](#12-ct-image-generation)
   - [1.3 MR Image Generation](#13-mr-image-generation)
-  - [1.4 Example: MR-to-CT Synthesis](#14-example-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
+  - [1.4 Example Application: MR-to-CT Synthesis](#14-example-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
 - [2. Model Family](#2-model-family)
 - [3. Time Cost and GPU Memory Usage](#3-time-cost-and-gpu-memory-usage)
   - [3.1 Minimum GPU Requirement](#31-minimum-gpu-requirement)
@@ -95,11 +95,11 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 1.4 Example: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
+### 1.4 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rflow-ct`) is available here:
 [https://github.com/brudfors/maisi-mr-to-ct](https://github.com/brudfors/maisi-mr-to-ct)
 
-If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, feel free to open an issue or contact the maintainers — we’d love to link to your repo.
+If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, please feel free to open an issue or contact the maintainers — we’d love to link to your repo.
 
 ## 2. Model Family
 
@@ -116,7 +116,7 @@ This repository provides **three model variants** for medical image generation:
 | **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation with user specified contrast |
 | **Pre-trained Model Weights**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
 | **Model: Foundation VAE**     | trained on CT and MR | trained on CT and MR | trained on CT and MR (with additional abdomen MRI) |
-| **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes modality as input. Recommend finetune with users' own MRI data.|
+| **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data.|
 | **Model: ControlNet**     | generate image/mask pairs, no contrastive loss | generate image/mask pairs, with contrastive loss | N/A |
 
 
@@ -484,20 +484,20 @@ We retrained several state-of-the-art diffusion model-based methods using our da
 
 ![Generated image examples](https://developer-blogs.nvidia.com/wp-content/uploads/2024/06/generated-medical-image-method-comparison-1.png)
 
-**Figure 1.** Qualitative comparison of generated images between baseline methods<br>(retrained using our large-scale dataset) and our method. The MAISI here refers to `maisi3d-ddpm`.
+**Figure 1.** Qualitative comparison of generated images between baseline methods<br>(retrained using our large-scale dataset) and our method. The MAISI here refers to `ddpm-ct`.
 
 </div>
 
 | Dataset     | Model           | LPIPS ↓ | SSIM ↑ | PSNR ↑  | GPU ↓  |
 |-------------|-----------------|----------|--------|---------|--------|
-| MSD Task07  | MAIS VAE        | **0.038**| **0.978**|**37.266**| **0h** |
+| MSD Task07  | MAISI-v1 VAE        | **0.038**| **0.978**|**37.266**| **0h** |
 |             | Dedicated VAE   | 0.047    | 0.971  | 34.750  | 619h   |
-| MSD Task08  | MAIS VAE        | 0.046    | 0.970  | 36.559  | **0h** |
+| MSD Task08  | MAISI-v1 VAE        | 0.046    | 0.970  | 36.559  | **0h** |
 |             | Dedicated VAE   | **0.041**|**0.973**|**37.110**| 669h   |
-| Brats18     | MAIS VAE        | **0.026**|**0.977**| **39.003**| **0h** |
+| Brats18     | MAISI-v1 VAE        | **0.026**|**0.977**| **39.003**| **0h** |
 |             | Dedicated VAE   | 0.030    | 0.975 | 38.971  | 672h   |
 
-**Table 2:** Performance comparison of the `MAIS VAE` model on out-of-distribution datasets (i.e., unseen during MAISI VAE training) versus `Dedicated VAE` models (i.e., train from scratch on in-distribution data). The "GPU" column shows additional GPU hours for training with one 32G V100 GPU. MAISI VAE model achieved comparable results without additional GPU resource expenditure on unseen datasets.
+**Table 2:** Performance comparison of the `MAISI-v1 VAE` model on out-of-distribution datasets (i.e., unseen during MAISI-v1 VAE training) versus `Dedicated VAE` models (i.e., train from scratch on in-distribution data). The "GPU" column shows additional GPU hours for training with one 32G V100 GPU. MAISI VAE model achieved comparable results without additional GPU resource expenditure on unseen datasets.
 
 ## 9. Resources
 
