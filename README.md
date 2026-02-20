@@ -7,6 +7,40 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
   <img src="assets/typical-generated-ct-image-corresponding-segmentation-condition.gif" width="48%">
 </p>
 
+## 📋 Table of Contents
+
+- [News](#news)
+- [🚀 Live Demo](#-have-a-try-live-demo-to-generate-ct-image-and-mask-pairs)
+- [Quick Start](#quick-start-requires-at-least-a-16g-gpu)
+  - [CT Paired Image/Mask Generation](#ct-paired-imagemask-generation)
+  - [CT Image Generation](#ct-image-generation)
+  - [MR Image Generation](#mr-image-generation)
+  - [Example: MR-to-CT Synthesis](#example-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
+- [Model Family](#model-family)
+- [Minimum GPU Requirement](#minimum-gpu-requirement)
+- [Example Results and Evaluation](#example-results-and-evaluation)
+- [Time Cost and GPU Memory Usage](#time-cost-and-gpu-memory-usage)
+  - [Inference](#inference-time-cost-and-gpu-memory-usage)
+  - [Training](#training-gpu-memory-usage)
+- [MAISI Model Workflow](#maisi-model-workflow)
+  - [1. Network Definition](#1-network-definition)
+  - [2. Model Inference](#2-model-inference)
+    - [Inference Parameters](#inference-parameters)
+    - [Recommended Spacing](#recommended-spacing-for-different-output-sizes)
+    - [Execute Inference (Paired Image/Mask)](#execute-inference-for-paired-imagemask-generation)
+    - [Execute Inference (Image Only)](#execute-inference-for-image-only-generation)
+    - [Quality Check](#quality-check)
+  - [3. Model Training](#3-model-training)
+    - [3.1 VAE Training](#31-3d-autoencoder-training)
+    - [3.2 Diffusion Model Training](#32-3d-latent-diffusion-training)
+    - [3.3 ControlNet Training](#33-3d-controlnet-training)
+    - [Training Configuration](#training-configuration)
+    - [Execute Training](#execute-training)
+  - [4. FID Score Computation](#4-fid-score-computation)
+  - [5. License](#5-license)
+  - [6. Questions and Bugs](#6-questions-and-bugs)
+- [Resources](#resources)
+
 ## News
 
 - **October 2025** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation.
