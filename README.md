@@ -14,8 +14,8 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
     </td>
   </tr>
   <tr>
-    <td align="center"><em>MR brain synthesis example</em></td>
-    <td align="center"><em>Generated CT with segmentation conditioning</em></td>
+    <td align="center"><em>MR T2 prostate and T1 brain synthesis example</em></td>
+    <td align="center"><em>Generated CT image/mask pair</em></td>
   </tr>
 </table>
 
