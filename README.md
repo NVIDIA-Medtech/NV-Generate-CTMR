@@ -14,7 +14,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
     </td>
   </tr>
   <tr>
-    <td align="center"><em>Gnerated MR T2w prostate and T1w brain image</em></td>
+    <td align="center"><em>Generated MR T2w prostate and T1w brain image</em></td>
     <td align="center"><em>Generated CT image/mask pair</em></td>
   </tr>
 </table>
