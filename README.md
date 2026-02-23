@@ -1,19 +1,78 @@
 # NV-Generate-CTMR
 
+<h3 align="center"><em>An upgraded version of MAISI</em></h3>
+
 This repo includes the applications of training and validating NV-Generate-CTMR, 3D Latent Diffusion Models (LDM) capable of generating large CT and MRI images accompanied by corresponding segmentation masks. It supports variable volume size and voxel spacing and allows for the precise control of organ/tumor size.
 
-<p align="center">
-  <img src="assets/MR_example.png" width="48%">
-  <img src="assets/typical-generated-ct-image-corresponding-segmentation-condition.gif" width="48%">
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="48%">
+      <img src="assets/MR_example.png" width="100%">
+    </td>
+    <td align="center" width="48%">
+      <img src="assets/typical-generated-ct-image-corresponding-segmentation-condition.gif" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><em>Generated MR T2w prostate and T1w brain image</em></td>
+    <td align="center"><em>Generated CT image/mask pair</em></td>
+  </tr>
+</table>
+
+## News
+
+- **October 2025** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI repo to this NV-Generate-CTMR repo.
+- **March 2025** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT image/mask synthesis. Key differences compared with `ddpm-ct`:
+  - `rflow-ct` is much faster. Its diffusion model inference is **33x** faster than `ddpm-ct`.
+  - `rflow-ct` does not require training images to be labeled with body regions (`"top_region_index"` and `"bottom_region_index"`), making training data preparation easier.
+  - `rflow-ct` generates better quality images for the head region and small output volumes; comparable quality for other cases.
+  - `rflow-ct` introduces a `modality` input, enabling flexibility to extend to other modalities (see [modality_mapping.json](./configs/modality_mapping.json)).
+- **August 2024** — Initial release `ddpm-ct` supporting 3D latent diffusion (DDPM) for CT image generation and paired CT image/mask synthesis.
 
 ## 🚀 Have A Try: Live Demo to Generate CT Image and Mask Pairs
 
 Online demo, no GPU required:
 [https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi)
 
-## Quick Start (requires at least a 16G GPU)
-### CT paired image/mask generation
+## 📋 Table of Contents
+
+- [News](#news)
+- [🚀 Live Demo](#-have-a-try-live-demo-to-generate-ct-image-and-mask-pairs)
+- [1. Quick Start](#1-quick-start-requires-at-least-a-16g-gpu)
+  - [1.1 CT Paired Image/Mask Generation](#11-ct-paired-imagemask-generation)
+  - [1.2 CT Image Generation](#12-ct-image-generation)
+  - [1.3 MR Image Generation](#13-mr-image-generation)
+  - [1.4 Example Application: MR-to-CT Synthesis](#14-example-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
+- [2. Model Family](#2-model-family)
+- [3. Time Cost and GPU Memory Usage](#3-time-cost-and-gpu-memory-usage)
+  - [3.1 Minimum GPU Requirement](#31-minimum-gpu-requirement)
+  - [3.2 Inference Time Cost and GPU Memory Usage](#32-inference-time-cost-and-gpu-memory-usage)
+  - [3.3 Training GPU Memory Usage](#33-training-gpu-memory-usage)
+- [4. Architecture Overview](#4-architecture-overview)
+- [5. Inference Guide](#5-inference-guide)
+  - [5.1 Inference Parameters](#51-inference-parameters)
+  - [5.2 Recommended Spacing](#52-recommended-spacing-for-ct)
+  - [5.3 Execute Inference (Paired Image/Mask)](#53-execute-inference-for-paired-imagemask-generation)
+  - [5.4 Execute Inference (Image Only)](#54-execute-inference-for-image-only-generation)
+  - [5.5 Quality Check](#55-quality-check)
+- [6. Training Guide](#6-training-guide)
+  - [6.1 VAE Training](#61-3d-autoencoder-training)
+  - [6.2 Diffusion Model Training](#62-3d-latent-diffusion-training)
+  - [6.3 ControlNet Training](#63-3d-controlnet-training)
+    - [6.3.1 Training Configuration](#631-training-configuration)
+    - [6.3.2 Execute Training](#632-execute-training)
+- [7. Evaluation Tool: FID Score](#7-evaluation-tool-fid-score)
+  - [7.1 Key Features](#71-key-features)
+  - [7.2 Usage Example](#72-usage-example)
+- [8. Results and Evaluation](#8-results-and-evaluation)
+- [9. Resources](#9-resources)
+- [10. License](#10-license)
+- [11. Questions and Bugs](#11-questions-and-bugs)
+
+
+
+## 1. Quick Start (requires at least a 16G GPU)
+### 1.1 CT Paired Image/Mask Generation
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
 You can run it in command line to generate paired CT image and mask.
@@ -24,7 +83,7 @@ generate_version="rflow-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
-### CT image generation
+### 1.2 CT Image Generation
 You can run it in command line to generate CT image without mask.
 ```bash
 network="rflow"
@@ -33,7 +92,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### MR image generation
+### 1.3 MR Image Generation
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
 You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support T1 and thick-slice T2 images for brain MRI, Flair for skull-stripped brain MRI, T2 images for prostate MRI, T1 image for breast MRI, T1 and T2 image for abdomen MRI. Contrast-enhanced MRI is not supported.
@@ -50,114 +109,44 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### Example: Adapting NV-Generate-CTMR for MR-to-CT image synthesis
+### 1.4 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rflow-ct`) is available here:
 [https://github.com/brudfors/maisi-mr-to-ct](https://github.com/brudfors/maisi-mr-to-ct)
 
-If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, feel free to open an issue or contact the maintainers — we’d love to link to your repo.
+If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, please feel free to open an issue or contact the maintainers — we’d love to link to your repo.
 
-## Available Model Variants
-### Overview of Model Variants:
-This repository provides **three model variants** for medical image generation:
+## 2. Model Family
 
-| Model | Modality | Architecture Version | Key Features | HuggingFace | Paper |
-|-------|----------|---------|--------------|-------------|-------------|
-| **`ddpm-ct`:** | CT | MAISI-v1 | Original DDPM-based model for CT, 1000 inference steps | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
-| **`rflow-ct`:** | CT | MAISI-v2 | Rectified Flow model for CT, **33× faster inference** (30 steps) than DDPM, easier data prep | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
-|  **`rflow-mr`:** | MRI | MAISI-v2 | Rectified Flow model for MRI, recommend fine-tuning on your MR data | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+This repository provides **three model variants** for medical image generation, including `ddpm-ct`, `rflow-ct`, and `rflow-mr`.
+
+|                    | `ddpm-ct`             | `rflow-ct`                          | `rflow-mr`                        |
+|--------------------|----------------------|--------------------------------------|-----------------------------------|
+| **Modality**       | CT                   | CT                                   | MRI                               |
+| **Model Weights**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
+| **Architecture**   | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         |
+| **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+| **Network Detail** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
+| **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
+| **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
+| **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation with user specified contrast |
+| **Model: Foundation VAE**     | trained on CT and MR | same VAE with `ddpm-ct` | trained on CT and MR (with additional abdomen MRI) |
+| **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data.|
+| **Model: ControlNet**     | generate image/mask pairs, no contrastive loss | generate image/mask pairs, with contrastive loss | N/A |
+
 
 **Quick Recommendations**:
 - **For CT projects**: Use `rflow-ct` - ready to inference for CT covering whole body region
 - **For MRI projects**: Use `rflow-mr` - fine-tune on your own MR
 
-**Pre-trained Model Weights**: Available on HuggingFace - [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR). They will be automatically downloaded when running [inference_tutorial.ipynb](inference_tutorial.ipynb) and [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb).
+## 3. Time Cost and GPU Memory Usage
 
+### 3.1 Minimum GPU Requirement
 
-### Details of Model Variants:
-**`ddpm-ct`:**
-
-It includes three models:
-- A Foundation Variational Auto-Encoder (VAE) model for latent feature compression that works for both CT and MRI with flexible volume size and voxel size. Tensor parallel is included to reduce GPU memory usage.
-- A Foundation Diffusion model (Denoising Diffusion Probabilistic Models, DDPM) that can generate large CT volumes up to 512 &times; 512 &times; 768 size, with flexible volume size and voxel size
-- A DDPM-based ControlNet to generate image/mask pairs that can improve downstream tasks, with controllable organ/tumor size
-
-More details can be found in our WACV 2025 paper:
-
-[Guo, P., Zhao, C., Yang, D., Xu, Z., Nath, V., Tang, Y., ... & Xu, D. (2024). MAISI: Medical AI for Synthetic Imaging. WACV 2025](https://arxiv.org/pdf/2409.11169)
-
-**`rflow-ct`:**
-
-It includes three models:
-- Same Foundation VAE as `ddpm-ct`.
-- A Foundation Rectified Flow model that can generate large CT volumes up to 512 &times; 512 &times; 768 size, with flexible volume size and voxel size, with **inference speed 33 times faster than `ddpm-ct`**.
-- A Rectified Flow-based ControlNet to generate image/mask pairs that can improve downstream tasks, with controllable organ/tumor size
-
-Other Differences compared with `ddpm-ct`:
-- `ddpm-ct` requires training images to be labeled with body regions (`"top_region_index"` and `"bottom_region_index"`), while `rflow-ct` does not have such requirement. In other words, it is easier to prepare training data for `rflow-ct`.
-- For the released model weights, `rflow-ct` can generate images with better quality for head region and small output volumes than `ddpm-ct`; they have comparable quality for other cases.
-- `rflow-ct` added a diffusion model input `modality`, which gives it flexibility to extend to other modalities. We predefined some modalities in [./configs/modality_mapping.json](./configs/modality_mapping.json). Users may also use it to indicate different image categories like hospital sites or scanners.
-
-More details can be found in our AAAI 2026 paper:
-
-[Zhao, C., Guo, P., Yang, D., Tang, Y., ... & Xu, D. (2025). MAISI-v2: Accelerated 3D High-Resolution Medical Image Synthesis with Rectified Flow and Region-specific Contrastive Loss. AAAI 2026](https://arxiv.org/pdf/2508.05772)
-
-**GUI demo:** Welcome to try our GUI demo at [https://build.nvidia.com/nvidia/maisi](https://build.nvidia.com/nvidia/maisi).
-The GUI is only a demo for toy examples. This Github repo is the full version.
-
-**`rflow-mr`:**
-
-It includes two models:
-- A Foundation VAE finetuned on `ddpm-ct` VAE with more MRI.
-- A Foundation Rectified Flow model that can generate MRI volumes up to 512 &times; 512 &times; 128 size, with flexible volume size and voxel size, with same inference speed as `rflow-ct`.
-
-MR images have much larger variability than CT images. For MRI users, we always recommend finetuning on `rflow-mr` Foundation Rectified Flow model with users' own MRI data.
-
-## Minimum GPU requirement
 GPU requirement depends on the size of the images. For example,
 - for image size of 512x512x128, the minimum GPU memory requirement for training and inference is 16G.
 - for image size of 512x512x512, the minimum GPU memory requirement for training is 40G, for inference is 24G.
 
-## Example Results and Evaluation
-
-We retrained several state-of-the-art diffusion model-based methods using our dataset. The results in the table and figure below show that our method outperforms previous methods on an unseen dataset ([autoPET 2023](https://www.nature.com/articles/s41597-022-01718-3)). Our method shows superior performance to previous methods based on all [Fréchet Inception Distance (FID)](https://papers.nips.cc/paper/2017/hash/8a1d694707eb0fefe65871369074926d-Abstract.html) scores on different 2D planes. Here we compared the generated images with real images of size 512 &times; 512 &times; 512 and spacing 1.0 &times; 1.0 &times; 1.0 mm<sup>3</sup>.
-
-<div align="center">
-
-| Method | FID (XY Plane) ↓ | FID (YZ Plane) ↓ | FID (ZX Plane) ↓ | FID (Average) ↓ |
-|--------|:----------------:|:----------------:|:----------------:|:---------------:|
-| [DDPM](https://proceedings.neurips.cc/paper_files/paper/2020/file/4c5bcfec8584af0d967f1ab10179ca4b-Paper.pdf)   |      18.524       |      23.696      |      25.604      |      22.608     |
-| [LDM](https://openaccess.thecvf.com/content/CVPR2022/papers/Rombach_High-Resolution_Image_Synthesis_With_Latent_Diffusion_Models_CVPR_2022_paper.pdf)    |      16.853       |      10.191      |      10.093      |      12.379     |
-| [HA-GAN](https://ieeexplore.ieee.org/document/9770375) |      17.432       |      10.266      |      13.572      |      13.757     |
-| MAISI (`ddpm-ct`)  |       3.301       |       5.838      |      9.109       |      6.083      |
-| MAISI (`rflow-ct`)  |       2.685       |       4.723      |      7.963       |      5.124      |
-
-**Table 1.** Comparison of Fréchet Inception Distance scores between our foundation model and retrained baseline methods<br>using the unseen public dataset [autoPET 2023](https://www.nature.com/articles/s41597-022-01718-3) as the reference.
-
-</div>
-
-<div align="center">
-
-![Generated image examples](https://developer-blogs.nvidia.com/wp-content/uploads/2024/06/generated-medical-image-method-comparison-1.png)
-
-**Figure 1.** Qualitative comparison of generated images between baseline methods<br>(retrained using our large-scale dataset) and our method. The MAISI here refers to `maisi3d-ddpm`.
-
-</div>
-
-| Dataset     | Model           | LPIPS ↓ | SSIM ↑ | PSNR ↑  | GPU ↓  |
-|-------------|-----------------|----------|--------|---------|--------|
-| MSD Task07  | MAIS VAE        | **0.038**| **0.978**|**37.266**| **0h** |
-|             | Dedicated VAE   | 0.047    | 0.971  | 34.750  | 619h   |
-| MSD Task08  | MAIS VAE        | 0.046    | 0.970  | 36.559  | **0h** |
-|             | Dedicated VAE   | **0.041**|**0.973**|**37.110**| 669h   |
-| Brats18     | MAIS VAE        | **0.026**|**0.977**| **39.003**| **0h** |
-|             | Dedicated VAE   | 0.030    | 0.975 | 38.971  | 672h   |
-
-**Table 2:** Performance comparison of the `MAIS VAE` model on out-of-distribution datasets (i.e., unseen during MAISI VAE training) versus `Dedicated VAE` models (i.e., train from scratch on in-distribution data). The “GPU” column shows additional GPU hours for training with one 32G V100 GPU. MAISI VAE model achieved comparable results without additional GPU resource expenditure on unseen datasets.
-
-
-## Time Cost and GPU Memory Usage
-
-### Inference Time Cost and GPU Memory Usage
+### 3.2 Inference Time Cost and GPU Memory Usage
 | `output_size` | Peak Memory | VAE Time + DM Time (`maisi3d-ddpm`) | VAE Time + DM Time (`maisi3d-rflow`) | latent size | `autoencoder_sliding_window_infer_size` | `autoencoder_tp_num_splits` | VAE Time | DM Time (`maisi3d-ddpm`) | DM Time (`maisi3d-rflow`) |
 |---------------|:-----------:|:------------------------:|:------------------------:|:--------------------------------------:|:--------------------------------------:|:---------------------------:|:--------:|:---------------:|:---------------:|
 | [256x256x128](./configs/config_infer_16g_256x256x128.json)   | 15.0G      | 58s                      | 3s                       | 4x64x64x32 | >=[64,64,32], not used                 | 2                           | 1s       | 57s     | 2s               |
@@ -182,7 +171,7 @@ Increasing `autoencoder_tp_num_splits` has a smaller impact on the generated ima
 When `autoencoder_sliding_window_infer_size` is equal to or larger than the latent feature size, the sliding window will not be used, and the time and memory costs remain the same.
 
 
-### Training GPU Memory Usage
+### 3.3 Training GPU Memory Usage
 The VAE is trained on patches and can be trained using a 16G GPU if the patch size is set to a small value, such as [64, 64, 64]. Users can adjust the patch size to fit the available GPU memory. For the released model, we initially trained the autoencoder on 16G V100 GPUs with a small patch size of [64, 64, 64], and then continued training on 32G V100 GPUs with a larger patch size of [128, 128, 128].
 
 The DM and ControlNet are trained on whole images rather than patches. The GPU memory usage during training depends on the size of the input images. There is no big difference on memory usage between `maisi3d-ddpm` and `maisi3d-rflow`.
@@ -200,32 +189,35 @@ The DM and ControlNet are trained on whole images rather than patches. The GPU m
 
 
 
-## MAISI Model Workflow
-The training and inference workflows of MAISI are depicted in the figure below. It begins by training an autoencoder in pixel space to encode images into latent features. Following that, it trains a diffusion model in the latent space to denoise the noisy latent features. During inference, it first generates latent features from random noise by applying multiple denoising steps using the trained diffusion model. Finally, it decodes the denoised latent features into images using the trained autoencoder.
+## 4. Architecture Overview
+
+The training and inference workflows are depicted in the figures below. It begins by training an autoencoder in pixel space to encode images into latent features. Following that, it trains a diffusion model in the latent space to denoise the noisy latent features. During inference, it first generates latent features from random noise by applying multiple denoising steps using the trained diffusion model. Finally, it decodes the denoised latent features into images using the trained autoencoder.
+
 <p align="center">
   <img src="./figures/maisi_train.png" alt="MAISI training scheme">
   <br>
-  <em>Figure 1: MAISI training scheme</em>
+  <em>Figure 2: MAISI training scheme</em>
 </p>
 
 <p align="center">
-  <img src="./figures/maisi_infer.png" alt="MAISI inference scheme")
+  <img src="./figures/maisi_infer.png" alt="MAISI inference scheme">
   <br>
-  <em>Figure 2: MAISI inference scheme</em>
+  <em>Figure 3: MAISI inference scheme</em>
 </p>
-MAISI is based on the following papers:
+
+This model is based on the following papers:
 
 [**Latent Diffusion:** Rombach, Robin, et al. "High-resolution image synthesis with latent diffusion models." CVPR 2022.](https://openaccess.thecvf.com/content/CVPR2022/papers/Rombach_High-Resolution_Image_Synthesis_With_Latent_Diffusion_Models_CVPR_2022_paper.pdf)
 
-[**ControlNet:**  Lvmin Zhang, Anyi Rao, Maneesh Agrawala; “Adding Conditional Control to Text-to-Image Diffusion Models.” ICCV 2023.](https://openaccess.thecvf.com/content/ICCV2023/papers/Zhang_Adding_Conditional_Control_to_Text-to-Image_Diffusion_Models_ICCV_2023_paper.pdf)
+[**ControlNet:**  Lvmin Zhang, Anyi Rao, Maneesh Agrawala; "Adding Conditional Control to Text-to-Image Diffusion Models." ICCV 2023.](https://openaccess.thecvf.com/content/ICCV2023/papers/Zhang_Adding_Conditional_Control_to_Text-to-Image_Diffusion_Models_ICCV_2023_paper.pdf)
 
 [**Rectified Flow:** Liu, Xingchao, Chengyue Gong, and Qiang Liu. "Flow straight and fast: Learning to generate and transfer data with rectified flow." ICLR 2023](https://arxiv.org/pdf/2209.03003).
 
-### 1. Network Definition
-Network definition is stored in [./configs/config_network_rflow.json](./configs/config_network_rflow.json) and [./configs/config_network_ddpm.json](./configs/config_network_ddpm.json). Training and inference should use the same config file.
+Network definition is stored in [./configs/config_network_rflow.json](./configs/config_network_rflow.json) and [./configs/config_network_ddpm.json](./configs/config_network_ddpm.json). Training and inference should use the same network definition config file.
 
-### 2. Model Inference
-#### Inference parameters:
+## 5. Inference Guide
+
+### 5.1 Inference Parameters
 The information for the inference input, such as the body region and anatomy to generate, is stored in [./configs/config_infer.json](./configs/config_infer.json). Feel free to experiment with it. Below are the details of the parameters:
 
 - `"num_output_samples"`: An integer specifying the number of output image/mask pairs to generate.
@@ -240,7 +232,7 @@ The information for the inference input, such as the body region and anatomy to 
 
 
 
-#### Recommended spacing for different output sizes:
+### 5.2 Recommended Spacing for CT
 According to the statistics of the training data, we have recommended input parameters for the body region that are included in the training data.
 The Recommended `"output_size"` is the median value of the training data, the Recommended `"spacing"` is the median FOV (the product of `"output_size"` and `"spacing"`) divided by the Recommended `"output_size"`.
 |`"body_region"`   |percentage of training data |Recommended `"output_size"`| Recommended `"spacing"` [mm]|
@@ -264,7 +256,7 @@ For example,
 |[512, 512, 128]  | [0.8, 0.8, 2.5] |
 |[512, 512, 512]  | [1.0, 1.0, 1.0] |
 
-#### Execute Inference for paired image/mask generation:
+### 5.3 Execute Inference for Paired Image/Mask Generation
 To run the inference script including controlnet with MAISI DDPM for CT, please set `"num_inference_steps": 1000` in `./configs/config_infer.json`, and run:
 ```bash
 export MONAI_DATA_DIRECTORY=<dir_you_will_download_data>
@@ -298,7 +290,7 @@ python -m scripts.inference -t ./configs/config_network_${network}.json -i ./con
 
 Extra config file,  [./configs/config_trt.json](./configs/config_trt.json) is using `trt_compile()` utility from MONAI to convert select modules to TensorRT by overriding their definitions from [./configs/config_infer.json](./configs/config_infer.json).
 
-#### Execute Inference for image only generation:
+### 5.4 Execute Inference for Image-Only Generation
 To run the inference script including controlnet with MAISI DDPM for CT, please set `"num_inference_steps": 1000` in `./configs/config_infer.json`, and run:
 ```bash
 network="ddpm"
@@ -322,13 +314,14 @@ generate_version="rflow-mr"
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
 
-#### Quality Check:
-We have implemented a quality check function for the generated CT images. The main idea behind this function is to ensure that the Hounsfield units (HU) intensity for each organ in the CT images remains within a defined range. For each training image used in the Diffusion network, we computed the median value for a few major organs. Then we summarize the statistics of these median values and save it to [./configs/image_median_statistics.json](./configs/image_median_statistics.json). During inference, for each generated image, we compute the median HU values for the major organs and check whether they fall within the normal range.
+### 5.5 Quality Check
+We have implemented a quality check function for the generated CT images. The main idea behind this function is to ensure that the Hounsfield units (HU) intensity for each organ in the CT images remains within a defined range. For each training image used in the Diffusion network, we computed the median value for a few major organs. Then we summarize the statistics of these median values and save it to [./configs/image_median_statistics_ct.json](./configs/image_median_statistics_ct.json). During inference, for each generated image, we compute the median HU values for the major organs and check whether they fall within the normal range.
 
-### 3. Model Training
+## 6. Training Guide
+
 Training data preparation can be found in [./data/README.md](./data/README.md)
 
-#### [3.1 3D Autoencoder Training](./train_vae_tutorial.ipynb)
+### [6.1 3D Autoencoder Training](./train_vae_tutorial.ipynb)
 The information for the training hyperparameters and data processing parameters, like learning rate and patch size, are stored in [./configs/config_maisi_vae_train.json](./configs/config_maisi_vae_train.json). The provided configuration works for 16G V100 GPU. Please feel free to tune the parameters for your datasets and device.
 
 Dataset preprocessing:
@@ -353,7 +346,7 @@ Training configs:
 
 Please refer to [train_vae_tutorial.ipynb](train_vae_tutorial.ipynb) for the tutorial for MAISI VAE model training.
 
-#### [3.2 3D Latent Diffusion Training](./scripts/diff_model_train.py)
+### [6.2 3D Latent Diffusion Training](./scripts/diff_model_train.py)
 
 Please refer to [train_diff_unet_tutorial.ipynb](train_diff_unet_tutorial.ipynb) for the tutorial for MAISI diffusion model training.
 
@@ -380,7 +373,7 @@ network="ddpm"
 generate_version="ddpm-ct"
 ```
 
-#### [3.3 3D ControlNet Training](./scripts/train_controlnet.py)
+### [6.3 3D ControlNet Training](./scripts/train_controlnet.py)
 
 Please refer to [train_controlnet_tutorial.ipynb](train_controlnet_tutorial.ipynb) for the tutorial for MAISI controlnet model training.
 
@@ -389,13 +382,13 @@ When finetuning with other new class names, please update the `weighted_loss_lab
 and [label_dict.json](./configs/label_dict.json) accordingly. There are 8 dummy labels as deletable placeholders in default `label_dict.json` that can be used for finetuning. Users may apply any placeholder labels for fine-tuning purpose. If there are more than 8 new labels needed in finetuning, users can freely define numeric label indices less than 256. The current ControlNet implementation can support up to 256 labels (0~255).
 Preprocessed dataset for ControlNet training and more details anout data preparation can be found in the [README](./data/README.md).
 
-#### Training Configuration
+#### 6.3.1 Training Configuration
 The training was performed with the following:
 - GPU: at least 60GB GPU memory for 512 &times; 512 &times; 512 volume
 - Actual Model Input (the size of 3D image feature in latent space) for the latent diffusion model: 128 &times; 128 &times; 128 for 512 &times; 512 &times; 512 volume
 - AMP: True
 
-#### Execute Training:
+#### 6.3.2 Execute Training
 To train with a single GPU, please run:
 ```bash
 network="rflow"
@@ -429,11 +422,11 @@ torchrun \
 
 Please also check [maisi_train_controlnet_tutorial.ipynb](./maisi_train_controlnet_tutorial.ipynb) for more details about data preparation and training parameters.
 
-### 4. FID Score Computation
+## 7. Evaluation Tool: FID Score
 
 We provide the `compute_fid_2-5d_ct.py` script that calculates the Frechet Inception Distance (FID) between two 3D medical datasets (e.g., **real** vs. **synthetic** images). It uses a **2.5D** feature-extraction approach across three orthogonal planes (XY, YZ, ZX) and leverages **distributed GPU processing** (via PyTorch’s `torch.distributed` and NCCL) for efficient, large-scale computations.
 
-#### Key Features
+### 7.1 Key Features
 
 - **Distributed Processing**
   Scales to multiple GPUs and larger datasets by splitting the workload across devices.
@@ -444,7 +437,7 @@ We provide the `compute_fid_2-5d_ct.py` script that calculates the Frechet Incep
 - **Flexible Preprocessing**
   Supports optional center-cropping, padding, and resampling to target shapes or voxel spacings.
 
-#### Usage Example
+### 7.2 Usage Example
 
 Suppose your **real** dataset root is `path/to/real_images`, and you have a `real_filelist.txt` that lists filenames line by line, such as:
 ```
@@ -481,19 +474,44 @@ This command will:
 
 For more details, see the in-code docstring in [`compute_fid_2-5d_ct.py`](./scripts/compute_fid_2-5d_ct.py) or consult our documentation for a deeper dive into function arguments and the underlying implementation.
 
-### 5. License
+## 8. Results and Evaluation
 
-The code is released under Apache 2.0 License.
+We retrained several state-of-the-art diffusion model-based methods using our dataset. The results in the table and figure below show that our method outperforms previous methods on an unseen dataset ([autoPET 2023](https://www.nature.com/articles/s41597-022-01718-3)). Our method shows superior performance to previous methods based on all [Fréchet Inception Distance (FID)](https://papers.nips.cc/paper/2017/hash/8a1d694707eb0fefe65871369074926d-Abstract.html) scores on different 2D planes. Here we compared the generated images with real images of size 512 &times; 512 &times; 512 and spacing 1.0 &times; 1.0 &times; 1.0 mm<sup>3</sup>.
 
-The model weight is released under [NSCLv1 License](./LICENSE.weights).
+<div align="center">
 
-### 6. Questions and Bugs
+| Method | FID (XY Plane) ↓ | FID (YZ Plane) ↓ | FID (ZX Plane) ↓ | FID (Average) ↓ |
+|--------|:----------------:|:----------------:|:----------------:|:---------------:|
+| [DDPM](https://proceedings.neurips.cc/paper_files/paper/2020/file/4c5bcfec8584af0d967f1ab10179ca4b-Paper.pdf)   |      18.524       |      23.696      |      25.604      |      22.608     |
+| [LDM](https://openaccess.thecvf.com/content/CVPR2022/papers/Rombach_High-Resolution_Image_Synthesis_With_Latent_Diffusion_Models_CVPR_2022_paper.pdf)    |      16.853       |      10.191      |      10.093      |      12.379     |
+| [HA-GAN](https://ieeexplore.ieee.org/document/9770375) |      17.432       |      10.266      |      13.572      |      13.757     |
+| MAISI (`ddpm-ct`)  |       3.301       |       5.838      |      9.109       |      6.083      |
+| MAISI (`rflow-ct`)  |       2.685       |       4.723      |      7.963       |      5.124      |
 
-- For questions relating to the use of MONAI, please use our [Discussions tab](https://github.com/Project-MONAI/MONAI/discussions) on the main repository of MONAI.
-- For bugs relating to MONAI functionality, please create an issue on the [main repository](https://github.com/Project-MONAI/MONAI/issues).
-- For bugs relating to the running of a tutorial, please create an issue in [this repository](https://github.com/Project-MONAI/Tutorials/issues).
+**Table 1.** Comparison of Fréchet Inception Distance scores between our foundation model and retrained baseline methods<br>using the unseen public dataset [autoPET 2023](https://www.nature.com/articles/s41597-022-01718-3) as the reference.
 
-## Resources
+</div>
+
+<div align="center">
+
+![Generated image examples](https://developer-blogs.nvidia.com/wp-content/uploads/2024/06/generated-medical-image-method-comparison-1.png)
+
+**Figure 1.** Qualitative comparison of generated images between baseline methods<br>(retrained using our large-scale dataset) and our method. The MAISI here refers to `ddpm-ct`.
+
+</div>
+
+| Dataset     | Model           | LPIPS ↓ | SSIM ↑ | PSNR ↑  | GPU ↓  |
+|-------------|-----------------|----------|--------|---------|--------|
+| MSD Task07  | MAISI-v1 VAE        | **0.038**| **0.978**|**37.266**| **0h** |
+|             | Dedicated VAE   | 0.047    | 0.971  | 34.750  | 619h   |
+| MSD Task08  | MAISI-v1 VAE        | 0.046    | 0.970  | 36.559  | **0h** |
+|             | Dedicated VAE   | **0.041**|**0.973**|**37.110**| 669h   |
+| Brats18     | MAISI-v1 VAE        | **0.026**|**0.977**| **39.003**| **0h** |
+|             | Dedicated VAE   | 0.030    | 0.975 | 38.971  | 672h   |
+
+**Table 2:** Performance comparison of the `MAISI-v1 VAE` model on out-of-distribution datasets (i.e., unseen during MAISI-v1 VAE training) versus `Dedicated VAE` models (i.e., train from scratch on in-distribution data). The "GPU" column shows additional GPU hours for training with one 32G V100 GPU. MAISI VAE model achieved comparable results without additional GPU resource expenditure on unseen datasets.
+
+## 9. Resources
 
 - **Pre-trained Model Weights**:
   - [NV-Generate-CT on HuggingFace](https://huggingface.co/nvidia/NV-Generate-CT) - CT image generation (ddpm-ct, rflow-ct)
@@ -503,3 +521,15 @@ The model weight is released under [NSCLv1 License](./LICENSE.weights).
   - [MAISI: Medical AI for Synthetic Imaging (WACV 2025)](https://arxiv.org/pdf/2409.11169)
   - [MAISI-v2: Accelerated 3D High-Resolution Medical Image Synthesis with Rectified Flow](https://arxiv.org/pdf/2508.05772)
 - **Built with**: [MONAI](https://monai.io/) - Medical Open Network for AI
+
+## 10. License
+
+The code is released under Apache 2.0 License.
+
+For the license model weights, please check Huggingface [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) and [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
+
+## 11. Questions and Bugs
+
+- For questions relating to the use of MONAI, please use our [Discussions tab](https://github.com/Project-MONAI/MONAI/discussions) on the main repository of MONAI.
+- For bugs relating to MONAI functionality, please create an issue on the [main repository](https://github.com/Project-MONAI/MONAI/issues).
+- For bugs relating to the running of a tutorial, please create an issue in [this repository](https://github.com/Project-MONAI/Tutorials/issues).
