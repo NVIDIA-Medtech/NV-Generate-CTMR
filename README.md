@@ -51,7 +51,7 @@ Online demo, no GPU required:
 - [4. Architecture Overview](#4-architecture-overview)
 - [5. Inference Guide](#5-inference-guide)
   - [5.1 Inference Parameters](#51-inference-parameters)
-  - [5.2 Recommended Spacing](#52-recommended-spacing-for-different-output-sizes)
+  - [5.2 Recommended Spacing](#52-recommended-spacing-for-ct)
   - [5.3 Execute Inference (Paired Image/Mask)](#53-execute-inference-for-paired-imagemask-generation)
   - [5.4 Execute Inference (Image Only)](#54-execute-inference-for-image-only-generation)
   - [5.5 Quality Check](#55-quality-check)
