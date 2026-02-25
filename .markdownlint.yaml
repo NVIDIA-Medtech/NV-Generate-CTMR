@@ -1,0 +1,7 @@
+# Markdownlint config for NV-Generate-CTMR
+# Relaxed for existing docs (READMEs with tables, HTML, long lines).
+# Re-enable rules as you clean up docs or for new files.
+
+# Line length: allow long lines common in docs (tables, code, links)
+MD013:
+  line_length: 700
