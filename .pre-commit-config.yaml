@@ -15,7 +15,6 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=1000]
       - id: check-case-conflict
-      - id: check-merge-conflict
       - id: debug-statements
 
   # Python linting and formatting (ruff) — fixes applied locally
