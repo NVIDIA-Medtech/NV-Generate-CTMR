@@ -32,6 +32,7 @@ from torch.nn.parallel import DistributedDataParallel
 from .diff_model_setting import initialize_distributed, load_config, setup_logging
 from .utils import define_instance
 
+
 def augment_modality_label(modality_tensor, prob=0.1):
     """
     Augments the modality tensor by randomly modifying certain elements based on a given probability.
@@ -50,20 +51,19 @@ def augment_modality_label(modality_tensor, prob=0.1):
     """
     # Randomly set elements that are smaller than 8 with probability `prob`
     mask_ct = (modality_tensor < 8) & (modality_tensor >= 2)
-    prob_ct = torch.rand(modality_tensor.size(),device=modality_tensor.device) < prob
+    prob_ct = torch.rand(modality_tensor.size(), device=modality_tensor.device) < prob
     modality_tensor[mask_ct & prob_ct] = 1
-    
+
     # Randomly set elements larger than 9 with probability `prob`
-    mask_mri = (modality_tensor >= 9)
-    prob_mri = torch.rand(modality_tensor.size(),device=modality_tensor.device) < prob
+    mask_mri = modality_tensor >= 9
+    prob_mri = torch.rand(modality_tensor.size(), device=modality_tensor.device) < prob
     modality_tensor[mask_mri & prob_mri] = 8
 
     # Randomly set a proportion (prob) of the elements to 0
-    mask_zero = torch.rand(modality_tensor.size(),device=modality_tensor.device) > prob
+    mask_zero = torch.rand(modality_tensor.size(), device=modality_tensor.device) > prob
     modality_tensor = modality_tensor * mask_zero.long()
-    
-    return modality_tensor
 
+    return modality_tensor
 
 
 def load_filenames(data_list_path: str) -> list:
@@ -76,22 +76,13 @@ def load_filenames(data_list_path: str) -> list:
     Returns:
         list: List of filenames.
     """
-    with open(data_list_path, "r") as file:
+    with open(data_list_path) as file:
         json_data = json.load(file)
     filenames_train = json_data["training"]
     return [_item["image"].replace(".nii.gz", "_emb.nii.gz") for _item in filenames_train]
 
 
-def prepare_data(
-    train_files: list,
-    device: torch.device,
-    cache_rate: float,
-    num_workers: int = 2,
-    batch_size: int = 1,
-    include_body_region: bool = False,
-    include_modality: bool = True,
-    modality_mapping: dict = None
-) -> DataLoader:
+def prepare_data(train_files: list, device: torch.device, cache_rate: float, num_workers: int = 2, batch_size: int = 1, include_body_region: bool = False, include_modality: bool = True, modality_mapping: dict = None) -> DataLoader:
     """
     Prepare training data.
 
@@ -107,7 +98,7 @@ def prepare_data(
         DataLoader: Data loader for training.
     """
 
-    def _load_data_from_file(file_path, key, convert_to_float = True):
+    def _load_data_from_file(file_path, key, convert_to_float=True):
         with open(file_path) as f:
             if convert_to_float:
                 return torch.FloatTensor(json.load(f)[key])
@@ -122,27 +113,19 @@ def prepare_data(
     ]
     if include_body_region:
         train_transforms_list += [
-            monai.transforms.Lambdad(
-                keys="top_region_index", func=lambda x: _load_data_from_file(x, "top_region_index")
-            ),
-            monai.transforms.Lambdad(
-                keys="bottom_region_index", func=lambda x: _load_data_from_file(x, "bottom_region_index")
-            ),
+            monai.transforms.Lambdad(keys="top_region_index", func=lambda x: _load_data_from_file(x, "top_region_index")),
+            monai.transforms.Lambdad(keys="bottom_region_index", func=lambda x: _load_data_from_file(x, "bottom_region_index")),
             monai.transforms.Lambdad(keys="top_region_index", func=lambda x: x * 1e2),
             monai.transforms.Lambdad(keys="bottom_region_index", func=lambda x: x * 1e2),
         ]
     if include_modality:
-         train_transforms_list += [ 
-             monai.transforms.Lambdad(
-                keys="modality", func=lambda x: modality_mapping[_load_data_from_file(x, "modality", False)]
-             ),
-             monai.transforms.EnsureTyped(keys=['modality'], dtype=torch.long),
-         ]
+        train_transforms_list += [
+            monai.transforms.Lambdad(keys="modality", func=lambda x: modality_mapping[_load_data_from_file(x, "modality", False)]),
+            monai.transforms.EnsureTyped(keys=["modality"], dtype=torch.long),
+        ]
     train_transforms = Compose(train_transforms_list)
 
-    train_ds = monai.data.CacheDataset(
-        data=train_files, transform=train_transforms, cache_rate=cache_rate, num_workers=num_workers
-    )
+    train_ds = monai.data.CacheDataset(data=train_files, transform=train_transforms, cache_rate=cache_rate, num_workers=num_workers)
 
     return DataLoader(train_ds, num_workers=6, batch_size=batch_size, shuffle=True)
 
@@ -169,7 +152,7 @@ def load_unet(args: argparse.Namespace, device: torch.device, logger: logging.Lo
         logger.info("Training from scratch.")
     else:
         checkpoint_unet = torch.load(f"{args.existing_ckpt_filepath}", map_location=device, weights_only=False)
-        
+
         if dist.is_initialized():
             unet.module.load_state_dict(checkpoint_unet["unet_state_dict"], strict=False)
         else:
@@ -293,7 +276,7 @@ def train_one_epoch(
             top_region_index_tensor = train_data["top_region_index"].to(device)
             bottom_region_index_tensor = train_data["bottom_region_index"].to(device)
         if include_modality:
-            modality_tensor = train_data["modality"].to(device)     
+            modality_tensor = train_data["modality"].to(device)
             modality_tensor = augment_modality_label(modality_tensor).to(device)
 
         spacing_tensor = train_data["spacing"].to(device)
@@ -363,11 +346,7 @@ def train_one_epoch(
         loss_torch[1] += 1.0
 
         if local_rank == 0:
-            logger.info(
-                "[{0}] epoch {1}, iter {2}/{3}, loss: {4:.4f}, lr: {5:.12f}.".format(
-                    str(datetime.now())[:19], epoch + 1, _iter, len(train_loader), loss.item(), current_lr
-                )
-            )
+            logger.info(f"[{str(datetime.now())[:19]}] epoch {epoch + 1}, iter {_iter}/{len(train_loader)}, loss: {loss.item():.4f}, lr: {current_lr:.12f}.")
 
     if dist.is_initialized():
         dist.all_reduce(loss_torch, op=torch.distributed.ReduceOp.SUM)
@@ -409,9 +388,7 @@ def save_checkpoint(
     )
 
 
-def diff_model_train(
-    env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int, amp: bool = True
-) -> None:
+def diff_model_train(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int, amp: bool = True) -> None:
     """
     Main function to train a diffusion model.
 
@@ -441,9 +418,9 @@ def diff_model_train(
     unet = load_unet(args, device, logger)
     noise_scheduler = define_instance(args, "noise_scheduler")
     include_body_region = unet.include_top_region_index_input
-    include_modality = (unet.num_class_embeds is not None)
+    include_modality = unet.num_class_embeds is not None
     if include_modality:
-        with open(args.modality_mapping_path, "r") as f:
+        with open(args.modality_mapping_path) as f:
             args.modality_mapping = json.load(f)
     else:
         args.modality_mapping = None
@@ -467,26 +444,14 @@ def diff_model_train(
             train_files_i["modality"] = str_info
         train_files.append(train_files_i)
     if dist.is_initialized():
-        train_files = partition_dataset(
-            data=train_files, shuffle=True, num_partitions=dist.get_world_size(), even_divisible=True
-        )[local_rank]
+        train_files = partition_dataset(data=train_files, shuffle=True, num_partitions=dist.get_world_size(), even_divisible=True)[local_rank]
 
-    train_loader = prepare_data(
-        train_files,
-        device,
-        args.diffusion_unet_train["cache_rate"],
-        batch_size=args.diffusion_unet_train["batch_size"],
-        include_body_region=include_body_region,
-        include_modality=include_modality,
-        modality_mapping = args.modality_mapping
-    )
+    train_loader = prepare_data(train_files, device, args.diffusion_unet_train["cache_rate"], batch_size=args.diffusion_unet_train["batch_size"], include_body_region=include_body_region, include_modality=include_modality, modality_mapping=args.modality_mapping)
 
     scale_factor = calculate_scale_factor(train_loader, device, logger)
     optimizer = create_optimizer(unet, args.diffusion_unet_train["lr"])
 
-    total_steps = (args.diffusion_unet_train["n_epochs"] * len(train_loader.dataset)) / args.diffusion_unet_train[
-        "batch_size"
-    ]
+    total_steps = (args.diffusion_unet_train["n_epochs"] * len(train_loader.dataset)) / args.diffusion_unet_train["batch_size"]
     lr_scheduler = create_lr_scheduler(optimizer, total_steps)
     loss_pt = torch.nn.L1Loss()
     scaler = GradScaler("cuda")
@@ -548,20 +513,8 @@ if __name__ == "__main__":
         default="./configs/config_maisi_diff_model.json",
         help="Path to model training/inference configuration",
     )
-    parser.add_argument(
-        "-t",
-        "--model_def_path", 
-        type=str, 
-        default="./configs/config_maisi.json", 
-        help="Path to model definition file"
-    )
-    parser.add_argument(
-        "-g",
-        "--num_gpus", 
-        type=int, 
-        default=1, 
-        help="Number of GPUs to use for training"
-    )
+    parser.add_argument("-t", "--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file")
+    parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
     parser.add_argument("--no_amp", dest="amp", action="store_false", help="Disable automatic mixed precision training")
 
     args = parser.parse_args()

@@ -99,24 +99,21 @@ Function Arguments (main):
         Target shape as "XxYxZ" for padding, cropping, or resampling operations.
 """
 
-
 from __future__ import annotations
 
+import logging
 import os
 import sys
-import torch
-import fire
-import monai
-import re
-import torch.distributed as dist
-import torch.nn.functional as F
-
 from datetime import timedelta
 from pathlib import Path
+
+import fire
+import monai
+import torch
+import torch.distributed as dist
+import torch.nn.functional as F
 from monai.metrics.fid import FIDMetric
 from monai.transforms import Compose
-
-import logging
 
 # ------------------------------------------------------------------------------
 # Create logger
@@ -499,9 +496,7 @@ def main(
     # Load feature extraction model
     # -------------------------------------------------------------------------
     if model_name == "radimagenet_resnet50":
-        feature_network = torch.hub.load(
-            "Warvito/radimagenet-models", model="radimagenet_resnet50", verbose=True, trust_repo=True
-        )
+        feature_network = torch.hub.load("Warvito/radimagenet-models", model="radimagenet_resnet50", verbose=True, trust_repo=True)
         suffix = "radimagenet_resnet50"
     else:
         import torchvision
@@ -536,29 +531,25 @@ def main(
     # Prepare Real Dataset
     # -------------------------------------------------------------------------
     output_root_real = os.path.join(output_root, real_features_dir)
-    with open(real_filelist, "r") as rf:
+    with open(real_filelist) as rf:
         real_lines = [l.strip() for l in rf.readlines()]
     real_lines.sort()
     real_lines = real_lines[:num_images]
 
     real_filenames = [{"image": os.path.join(real_dataset_root, f)} for f in real_lines]
-    real_filenames = monai.data.partition_dataset(
-        data=real_filenames, shuffle=False, num_partitions=world_size, even_divisible=False
-    )[local_rank]
+    real_filenames = monai.data.partition_dataset(data=real_filenames, shuffle=False, num_partitions=world_size, even_divisible=False)[local_rank]
 
     # -------------------------------------------------------------------------
     # Prepare Synthetic Dataset
     # -------------------------------------------------------------------------
     output_root_synth = os.path.join(output_root, synth_features_dir)
-    with open(synth_filelist, "r") as sf:
+    with open(synth_filelist) as sf:
         synth_lines = [l.strip() for l in sf.readlines()]
     synth_lines.sort()
     synth_lines = synth_lines[:num_images]
 
     synth_filenames = [{"image": os.path.join(synth_dataset_root, f)} for f in synth_lines]
-    synth_filenames = monai.data.partition_dataset(
-        data=synth_filenames, shuffle=False, num_partitions=world_size, even_divisible=False
-    )[local_rank]
+    synth_filenames = monai.data.partition_dataset(data=synth_filenames, shuffle=False, num_partitions=world_size, even_divisible=False)[local_rank]
 
     # -------------------------------------------------------------------------
     # Build MONAI transforms
@@ -573,18 +564,12 @@ def main(
         transform_list.append(monai.transforms.Spacingd(keys=["image"], pixdim=rs_spacing_tuple, mode=["bilinear"]))
 
     if enable_padding:
-        transform_list.append(
-            monai.transforms.SpatialPadd(keys=["image"], spatial_size=target_shape_tuple, mode="constant", value=-1000)
-        )
+        transform_list.append(monai.transforms.SpatialPadd(keys=["image"], spatial_size=target_shape_tuple, mode="constant", value=-1000))
 
     if enable_center_cropping:
         transform_list.append(monai.transforms.CenterSpatialCropd(keys=["image"], roi_size=target_shape_tuple))
 
-    transform_list.append(
-        monai.transforms.ScaleIntensityRanged(
-            keys=["image"], a_min=-1000, a_max=1000, b_min=-1000, b_max=1000, clip=True
-        )
-    )
+    transform_list.append(monai.transforms.ScaleIntensityRanged(keys=["image"], a_min=-1000, a_max=1000, b_min=-1000, b_max=1000, clip=True))
     transforms = Compose(transform_list)
 
     # -------------------------------------------------------------------------
@@ -632,9 +617,7 @@ def main(
     real_features_xy = torch.vstack(real_features_xy)
     real_features_yz = torch.vstack(real_features_yz)
     real_features_zx = torch.vstack(real_features_zx)
-    logger.info(
-        f"Real feature shapes: {real_features_xy.shape}, " f"{real_features_yz.shape}, {real_features_zx.shape}"
-    )
+    logger.info(f"Real feature shapes: {real_features_xy.shape}, " f"{real_features_yz.shape}, {real_features_zx.shape}")
 
     # -------------------------------------------------------------------------
     # Extract features for Synthetic Dataset
@@ -672,9 +655,7 @@ def main(
     synth_features_xy = torch.vstack(synth_features_xy)
     synth_features_yz = torch.vstack(synth_features_yz)
     synth_features_zx = torch.vstack(synth_features_zx)
-    logger.info(
-        f"Synth feature shapes: {synth_features_xy.shape}, " f"{synth_features_yz.shape}, {synth_features_zx.shape}"
-    )
+    logger.info(f"Synth feature shapes: {synth_features_xy.shape}, " f"{synth_features_yz.shape}, {synth_features_zx.shape}")
 
     # -------------------------------------------------------------------------
     # All-reduce / gather features across ranks

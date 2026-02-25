@@ -11,11 +11,12 @@
 
 from __future__ import annotations
 
-import os
 import argparse
 import json
 import logging
-import subprocess, tempfile
+import os
+import subprocess
+import tempfile
 
 import torch
 import torch.distributed as dist
@@ -57,18 +58,17 @@ def load_config(env_config_path: str, model_config_path: str, model_def_path: st
     """
     args = argparse.Namespace()
 
-    with open(env_config_path, "r") as f:
+    with open(env_config_path) as f:
         env_config = json.load(f)
     for k, v in env_config.items():
         setattr(args, k, v)
 
-    with open(model_config_path, "r") as f:
+    with open(model_config_path) as f:
         model_config = json.load(f)
     for k, v in model_config.items():
         setattr(args, k, v)
-        
 
-    with open(model_def_path, "r") as f:
+    with open(model_def_path) as f:
         model_def = json.load(f)
     for k, v in model_def.items():
         setattr(args, k, v)
@@ -94,6 +94,7 @@ def initialize_distributed(num_gpus: int) -> tuple:
     torch.cuda.set_device(device)
     return local_rank, world_size, device
 
+
 def run_torchrun(module, module_args, num_gpus=1):
     num_nodes = 1
 
@@ -104,18 +105,18 @@ def run_torchrun(module, module_args, num_gpus=1):
 
         cmd = [
             "torchrun",
-            "--nproc_per_node", str(num_gpus),
-            "--nnodes", str(num_nodes),
-            "-m", module,
+            "--nproc_per_node",
+            str(num_gpus),
+            "--nnodes",
+            str(num_nodes),
+            "-m",
+            module,
         ] + full_args
 
         env = os.environ.copy()
         env["OMP_NUM_THREADS"] = "1"
 
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, env=env
-        )
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
 
         try:
             # stream stdout

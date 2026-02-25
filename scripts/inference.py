@@ -19,15 +19,11 @@ import tempfile
 
 import monai
 import torch
-from monai.apps import download_url
-from monai.config import print_config
-from monai.transforms import LoadImage, Orientation
 from monai.utils import set_determinism
 
+from scripts.download_model_data import download_model_data
 from scripts.sample import LDMSampler, check_input_ct, check_input_mr
 from scripts.utils import define_instance
-from scripts.utils_plot import find_label_center_loc, get_xyz_plot, show_image
-from scripts.download_model_data import download_model_data
 
 
 def main():
@@ -75,9 +71,6 @@ def main():
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128,expandable_segments:True")
     generate_version = args.version
 
-    
-
-
     # ## Set deterministic training for reproducibility
     if args.random_seed is not None:
         set_determinism(seed=args.random_seed)
@@ -93,11 +86,11 @@ def main():
     root_dir = tempfile.mkdtemp() if directory is None else directory
     print(root_dir)
 
-    download_model_data(generate_version,root_dir)
+    download_model_data(generate_version, root_dir)
 
     # ## Read in environment setting, including data directory, model directory, and output directory
     # The information for data directory, model directory, and output directory are saved in ./configs/environment.json
-    env_dict = json.load(open(args.environment_file, "r"))
+    env_dict = json.load(open(args.environment_file))
     for k, v in env_dict.items():
         # Update the path to the downloaded dataset in MONAI_DATA_DIRECTORY
         val = v if "datasets/" not in v else os.path.join(root_dir, v)
@@ -109,12 +102,12 @@ def main():
     #
     # The information for the inference input, like body region and anatomy to generate, is stored in "./configs/config_infer.json".
     # Please refer to README.md for the details.
-    config_dict = json.load(open(args.config_file, "r"))
+    config_dict = json.load(open(args.config_file))
     for k, v in config_dict.items():
         setattr(args, k, v)
 
     # check the format of inference inputs
-    config_infer_dict = json.load(open(args.inference_file, "r"))
+    config_infer_dict = json.load(open(args.inference_file))
     # override num_split if asked
     if "autoencoder_tp_num_splits" in config_infer_dict:
         args.autoencoder_def["num_splits"] = config_infer_dict["autoencoder_tp_num_splits"]
@@ -128,11 +121,11 @@ def main():
     #
     #
     if args.extra_config_file is not None:
-        extra_config_dict = json.load(open(args.extra_config_file, "r"))
+        extra_config_dict = json.load(open(args.extra_config_file))
         for k, v in extra_config_dict.items():
             setattr(args, k, v)
             print(f"{k}: {v}")
-    if args.modality>=1 and args.modality<=7:
+    if args.modality >= 1 and args.modality <= 7:
         check_input_ct(
             args.body_region,
             args.anatomy_list,
@@ -141,7 +134,7 @@ def main():
             args.spacing,
             args.controllable_anatomy_size,
         )
-    elif args.modality>=8 and args.modality<=20:
+    elif args.modality >= 8 and args.modality <= 20:
         check_input_mr(
             args.body_region,
             args.anatomy_list,
@@ -177,15 +170,11 @@ def main():
     controlnet.load_state_dict(checkpoint_controlnet["controlnet_state_dict"], strict=False)
 
     mask_generation_autoencoder = define_instance(args, "mask_generation_autoencoder").to(device)
-    checkpoint_mask_generation_autoencoder = torch.load(
-        args.trained_mask_generation_autoencoder_path, weights_only=True
-    )
+    checkpoint_mask_generation_autoencoder = torch.load(args.trained_mask_generation_autoencoder_path, weights_only=True)
     mask_generation_autoencoder.load_state_dict(checkpoint_mask_generation_autoencoder)
 
     mask_generation_diffusion_unet = define_instance(args, "mask_generation_diffusion").to(device)
-    checkpoint_mask_generation_diffusion_unet = torch.load(
-        args.trained_mask_generation_diffusion_path, weights_only=False
-    )
+    checkpoint_mask_generation_diffusion_unet = torch.load(args.trained_mask_generation_diffusion_path, weights_only=False)
     mask_generation_diffusion_unet.load_state_dict(checkpoint_mask_generation_diffusion_unet["unet_state_dict"])
     mask_generation_scale_factor = checkpoint_mask_generation_diffusion_unet["scale_factor"]
 
@@ -224,7 +213,7 @@ def main():
         random_seed=args.random_seed,
         autoencoder_sliding_window_infer_size=args.autoencoder_sliding_window_infer_size,
         autoencoder_sliding_window_infer_overlap=args.autoencoder_sliding_window_infer_overlap,
-        cfg_guidance_scale = args.cfg_guidance_scale
+        cfg_guidance_scale=args.cfg_guidance_scale,
     )
 
     print(f"The generated image/mask pairs will be saved in {args.output_dir}.")

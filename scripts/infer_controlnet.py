@@ -13,27 +13,22 @@ import argparse
 import json
 import logging
 import os
-import sys
 from datetime import datetime
 
+import monai
 import torch
 import torch.distributed as dist
-import monai
 from monai.data import MetaTensor, decollate_batch
-from monai.networks.utils import copy_model_state
 from monai.transforms import SaveImage
 from monai.utils import RankFilter
 
+from .diff_model_setting import load_config
 from .sample import ldm_conditional_sample_one_image
 from .utils import define_instance, prepare_maisi_controlnet_json_dataloader, setup_ddp
-from .diff_model_setting import load_config
 
 
 @torch.inference_mode()
-def infer_controlnet(
-    env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int
-) -> None:
-
+def infer_controlnet(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
     # Step 0: configuration
     logger = logging.getLogger("maisi.controlnet.infer")
     # whether to use distributed data parallel
@@ -53,8 +48,6 @@ def infer_controlnet(
     logger.info(f"World_size: {world_size}")
 
     args = load_config(env_config_path, model_config_path, model_def_path)
-
-    
 
     # Step 2: define AE, diffusion model and controlnet
     autoencoder = define_instance(args, "autoencoder_def").to(device)
@@ -87,21 +80,14 @@ def infer_controlnet(
                 raise ValueError(f"Please check if {args.modality_mapping_path} exist.")
         else:
             raise ValueError(f"'modality_mapping_path' in {env_config_path} cannot be null")
-        with open(args.modality_mapping_path, "r") as f:
+        with open(args.modality_mapping_path) as f:
             args.modality_mapping = json.load(f)
     else:
         args.modality_mapping = None
 
     # Step 1: set data loader
     _, val_loader = prepare_maisi_controlnet_json_dataloader(
-        json_data_list=args.json_data_list,
-        data_base_dir=args.data_base_dir,
-        rank=rank,
-        world_size=world_size,
-        batch_size=args.controlnet_train["batch_size"],
-        cache_rate=args.controlnet_train["cache_rate"],
-        fold=args.controlnet_train["fold"],
-        modality_mapping=args.modality_mapping
+        json_data_list=args.json_data_list, data_base_dir=args.data_base_dir, rank=rank, world_size=world_size, batch_size=args.controlnet_train["batch_size"], cache_rate=args.controlnet_train["cache_rate"], fold=args.controlnet_train["fold"], modality_mapping=args.modality_mapping
     )
 
     # Step 3: inference
@@ -182,16 +168,8 @@ if __name__ == "__main__":
         default="./configs/config_maisi_diff_model.json",
         help="Path to model training/inference configuration",
     )
-    parser.add_argument(
-        "--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file"
-    )
-    parser.add_argument(
-        "-g",
-        "--num_gpus", 
-        type=int, 
-        default=1, 
-        help="Number of GPUs to use for training"
-    )
+    parser.add_argument("--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file")
+    parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
 
     args = parser.parse_args()
     infer_controlnet(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)
