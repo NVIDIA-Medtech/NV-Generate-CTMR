@@ -9,35 +9,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
 import json
 import logging
-import math
 import os
 import random
 import time
-from datetime import datetime
 import warnings
-import gc
+from datetime import datetime
 
 import monai
 import torch
 from monai.data import MetaTensor
-from monai.inferers.inferer import DiffusionInferer
+from monai.inferers.inferer import DiffusionInferer, SlidingWindowInferer
+from monai.networks.schedulers import DDPMScheduler, RFlowScheduler
 from monai.transforms import Compose, SaveImage
 from monai.utils import set_determinism
 from tqdm import tqdm
-from monai.inferers.inferer import SlidingWindowInferer
-from monai.networks.schedulers import RFlowScheduler, DDPMScheduler
 
 from .augmentation import augmentation, remove_tumors
 from .find_masks import find_masks
 from .quality_check import is_outlier
 from .utils import (
     binarize_labels,
+    dynamic_infer,
     general_mask_generation_post_process,
     get_body_region_index_from_mask,
     remap_labels,
-    dynamic_infer,
 )
 
 
@@ -202,7 +200,7 @@ def ldm_conditional_sample_one_image(
     num_inference_steps=1000,
     autoencoder_sliding_window_infer_size=[96, 96, 96],
     autoencoder_sliding_window_infer_overlap=0.6667,
-    cfg_guidance_scale = 0
+    cfg_guidance_scale=0,
 ):
     """
     Generate a single synthetic image using a latent diffusion model with controlnet.
@@ -230,7 +228,7 @@ def ldm_conditional_sample_one_image(
     Returns:
         tuple: A tuple containing the synthetic image and its corresponding label.
     """
-    if modality_tensor<=7:
+    if modality_tensor <= 7:
         # CT image intensity range
         a_min = -1000
         a_max = 1000
@@ -255,11 +253,7 @@ def ldm_conditional_sample_one_image(
         start_time = time.time()
         # generate segmentation mask
         combine_label = combine_label_or.to(device)
-        if (
-            output_size[0] != combine_label.shape[2]
-            or output_size[1] != combine_label.shape[3]
-            or output_size[2] != combine_label.shape[4]
-        ):
+        if output_size[0] != combine_label.shape[2] or output_size[1] != combine_label.shape[3] or output_size[2] != combine_label.shape[4]:
             logging.info(
                 "output_size is not a desired value. Need to interpolate the mask to match with output_size. The result image will be very low quality."
             )
@@ -297,7 +291,9 @@ def ldm_conditional_sample_one_image(
             total=min(len(all_timesteps), len(all_next_timesteps)),
         )
         if cfg_guidance_scale > 0:
-            combine_label_no_tumor = torch.nn.functional.interpolate(remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(), size=output_size, mode="nearest").to(combine_label.dtype)
+            combine_label_no_tumor = torch.nn.functional.interpolate(
+                remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(), size=output_size, mode="nearest"
+            ).to(combine_label.dtype)
             controlnet_cond_vis_no_tumor = binarize_labels(combine_label_no_tumor.as_tensor().long()).half()
             del combine_label_no_tumor
         for t, next_t in progress_bar:
@@ -318,11 +314,11 @@ def ldm_conditional_sample_one_image(
                 for k in controlnet_inputs.keys():
                     if k == "class_labels":
                         controlnet_inputs[k] = torch.cat([modality_tensor, torch.zeros_like(modality_tensor)])
-                    elif k == "controlnet_cond":                        
+                    elif k == "controlnet_cond":
                         controlnet_inputs[k] = torch.cat([controlnet_cond_vis, controlnet_cond_vis_no_tumor])
                     else:
                         controlnet_inputs[k] = torch.cat([controlnet_inputs[k]] * 2)
-                                                
+
             down_block_res_samples, mid_block_res_sample = controlnet(**controlnet_inputs)
 
             # get diffusion network output
@@ -350,7 +346,7 @@ def ldm_conditional_sample_one_image(
                 )
             if cfg_guidance_scale > 0:
                 for k in unet_inputs.keys():
-                    if k in ["down_block_additional_residuals","mid_block_additional_residual"]:
+                    if k in ["down_block_additional_residuals", "mid_block_additional_residual"]:
                         pass
                     elif k != "class_labels":
                         unet_inputs[k] = torch.cat([unet_inputs[k]] * 2)
@@ -358,7 +354,7 @@ def ldm_conditional_sample_one_image(
                         unet_inputs[k] = torch.cat([unet_inputs[k], torch.zeros_like(modality_tensor)])
             if cfg_guidance_scale == 0:
                 model_output = diffusion_unet(**unet_inputs)
-            else:                
+            else:
                 model_t, model_uncond = diffusion_unet(**unet_inputs).chunk(2)
                 model_output = model_uncond + cfg_guidance_scale * (model_t - model_uncond)
 
@@ -393,7 +389,7 @@ def ldm_conditional_sample_one_image(
             device=torch.device("cpu"),
         )
         synthetic_images = dynamic_infer(inferer, recon_model, latents)
-        if modality_tensor<=7:
+        if modality_tensor <= 7:
             synthetic_images = torch.clip(synthetic_images, b_min, b_max).cpu()
         else:
             synthetic_images = torch.clip(synthetic_images, b_min, None).cpu()
@@ -486,18 +482,16 @@ def check_input_ct(
     if spacing[0] != spacing[1]:
         raise ValueError(f"The first two components of spacing need to be equal, yet got {spacing}.")
     if spacing[0] < 0.5 or spacing[0] > 3.0 or spacing[2] < 0.5 or spacing[2] > 5.0:
-        raise ValueError(
-            f"spacing[0] have to be between 0.5 and 3.0 mm, spacing[2] have to be between 0.5 and 5.0 mm, yet got {spacing}."
-        )
+        raise ValueError(f"spacing[0] have to be between 0.5 and 3.0 mm, spacing[2] have to be between 0.5 and 5.0 mm, yet got {spacing}.")
 
     if output_size[0] * spacing[0] < 256:
-        FOV = [output_size[axis] * spacing[axis] for axis in range(3)]
+        FOV = [output_size[axis] * spacing[axis] for axis in range(3)]  # noqa: N806
         raise ValueError(
             f"`'spacing'({spacing}mm) and 'output_size'({output_size}) together decide the output field of view (FOV). The FOV will be {FOV}mm. We recommend the FOV in x and y axis to be at least 256mm for head, and at least 384mm for other body regions like abdomen. There is no such restriction for z-axis."
         )
 
-    if controllable_anatomy_size == None:
-        logging.info(f"`controllable_anatomy_size` is not provided.")
+    if controllable_anatomy_size is None:
+        logging.info("`controllable_anatomy_size` is not provided.")
         return
 
     # check controllable_anatomy_size format
@@ -561,21 +555,18 @@ def check_input_ct(
         ]
         for region in body_region:
             if region not in available_body_region:
-                raise ValueError(
-                    f"The components in body_region have to be chosen from {available_body_region}, yet got {region}."
-                )
+                raise ValueError(f"The components in body_region have to be chosen from {available_body_region}, yet got {region}.")
 
         # check anatomy_list format
         with open(label_dict_json) as f:
             label_dict = json.load(f)
         for anatomy in anatomy_list:
             if anatomy not in label_dict.keys():
-                raise ValueError(
-                    f"The components in anatomy_list have to be chosen from {label_dict.keys()}, yet got {anatomy}."
-                )
+                raise ValueError(f"The components in anatomy_list have to be chosen from {label_dict.keys()}, yet got {anatomy}.")
     logging.info(f"The generate results will have voxel size to be {spacing}mm, volume size to be {output_size}.")
 
     return
+
 
 def check_input_mr(
     body_region,
@@ -604,36 +595,32 @@ def check_input_mr(
         raise ValueError(f"At least two components of output_size need to be equal, yet got {output_size}.")
     if output_size[2] == 128:
         if output_size[0] != output_size[1]:
-            raise ValueError(f"Two first components of output_size need to be equal when the third size is 128, yet got {output_size}.")        
+            raise ValueError(f"Two first components of output_size need to be equal when the third size is 128, yet got {output_size}.")
         if output_size[0] not in [128, 256, 384, 512]:
-            raise ValueError(
-                f"The output_size[0] have to be chosen from [128, 256, 384, 512] when output_size[2]=128, yet got {output_size}."
-            )
+            raise ValueError(f"The output_size[0] have to be chosen from [128, 256, 384, 512] when output_size[2]=128, yet got {output_size}.")
     elif output_size[2] == 256:
-        if (output_size[0] == 128 and output_size[1]==256) or (output_size[0] == 256 and output_size[1]==128) or (output_size[0] == 256 and output_size[1]==256):
+        if (
+            (output_size[0] == 128 and output_size[1] == 256)
+            or (output_size[0] == 256 and output_size[1] == 128)
+            or (output_size[0] == 256 and output_size[1] == 256)
+        ):
             pass
         else:
             raise ValueError(
                 f"The output_size can only be [128,256,256] or [256,128,256], or [256,256,256] when output_size[2]=256, yet got {output_size}."
             )
     else:
-        raise ValueError(
-                f"The output_size[2] have to be chosen from [128, 256], yet got {output_size}."
-            )
+        raise ValueError(f"The output_size[2] have to be chosen from [128, 256], yet got {output_size}.")
 
     if any(spacing) < 0.4 or any(spacing) > 5.0:
-        raise ValueError(
-            f"spacing have to be between 0.4 and 5.0 mm, yet got {spacing}."
-        )
+        raise ValueError(f"spacing have to be between 0.4 and 5.0 mm, yet got {spacing}.")
 
     # check anatomy_list format
     with open(label_dict_json) as f:
         label_dict = json.load(f)
     for anatomy in anatomy_list:
         if anatomy not in label_dict.keys():
-            raise ValueError(
-                f"The components in anatomy_list have to be chosen from {label_dict.keys()}, yet got {anatomy}."
-            )
+            raise ValueError(f"The components in anatomy_list have to be chosen from {label_dict.keys()}, yet got {anatomy}.")
     logging.info(f"The generate results will have voxel size to be {spacing}mm, volume size to be {output_size}.")
 
     return
@@ -681,7 +668,7 @@ class LDMSampler:
         random_seed=None,
         autoencoder_sliding_window_infer_size=[96, 96, 96],
         autoencoder_sliding_window_infer_overlap=0.6667,
-        cfg_guidance_scale=0.0
+        cfg_guidance_scale=0.0,
     ) -> None:
         """
         Initialize the LDMSampler with various parameters and models.
@@ -693,7 +680,7 @@ class LDMSampler:
         if random_seed is not None:
             set_determinism(seed=random_seed)
 
-        with open(label_dict_json, "r") as f:
+        with open(label_dict_json) as f:
             label_dict = json.load(f)
         self.all_anatomy_size_conditions_json = all_anatomy_size_conditions_json
 
@@ -728,14 +715,10 @@ class LDMSampler:
         self.label_output_ext = label_output_ext
         # Set the default value for number of inference steps to 1000
         self.num_inference_steps = num_inference_steps if num_inference_steps is not None else 1000
-        self.mask_generation_num_inference_steps = (
-            mask_generation_num_inference_steps if mask_generation_num_inference_steps is not None else 1000
-        )
+        self.mask_generation_num_inference_steps = mask_generation_num_inference_steps if mask_generation_num_inference_steps is not None else 1000
 
         if any(size % 16 != 0 for size in autoencoder_sliding_window_infer_size):
-            raise ValueError(
-                f"autoencoder_sliding_window_infer_size must be divisible by 16.\n Got {autoencoder_sliding_window_infer_size}"
-            )
+            raise ValueError(f"autoencoder_sliding_window_infer_size must be divisible by 16.\n Got {autoencoder_sliding_window_infer_size}")
         if not (0 <= autoencoder_sliding_window_infer_overlap <= 1):
             raise ValueError(
                 f"Value of autoencoder_sliding_window_infer_overlap must be between 0 and 1.\n Got {autoencoder_sliding_window_infer_overlap}"
@@ -745,7 +728,7 @@ class LDMSampler:
 
         # quality check args
         self.max_try_time = 2  # if not pass quality check, will try self.max_try_time times
-        with open(real_img_median_statistics, "r") as json_file:
+        with open(real_img_median_statistics) as json_file:
             self.median_statistics = json.load(json_file)
         self.label_int_dict = {
             "liver": [1],
@@ -831,10 +814,8 @@ class LDMSampler:
             logging.info(f"Images will be generated based on {selected_mask_files}.")
             if len(selected_mask_files) < num_img:
                 raise ValueError(
-                    (
-                        f"len(selected_mask_files) ({len(selected_mask_files)}) < num_img ({num_img}). "
-                        "This should not happen. Please revisit function select_mask(self, candidate_mask_files, num_img)."
-                    )
+                    f"len(selected_mask_files) ({len(selected_mask_files)}) < num_img ({num_img}). "
+                    "This should not happen. Please revisit function select_mask(self, candidate_mask_files, num_img)."
                 )
 
         num_generated_img = 0
@@ -870,9 +851,6 @@ class LDMSampler:
             end_time = time.time()
             logging.info(f"---- Mask preparation time: {end_time - start_time} seconds ----")
             torch.cuda.empty_cache()
-            # generate image/label pairs
-            to_generate = True
-            try_time = 0
             # start generation
             synthetic_images, synthetic_labels = self.sample_one_pair(
                 combine_label_or,
@@ -883,8 +861,9 @@ class LDMSampler:
             )
             # synthetic image quality check
             pass_quality_check = self.quality_check_ct(
-                synthetic_images.cpu().detach().numpy(), combine_label_or.cpu().detach().numpy(),
-                perform_quality_check=(modality_tensor<=7 and modality_tensor>=1)
+                synthetic_images.cpu().detach().numpy(),
+                combine_label_or.cpu().detach().numpy(),
+                perform_quality_check=(modality_tensor <= 7 and modality_tensor >= 1),
             )
             if pass_quality_check or (num_img - num_generated_img) >= (len(selected_mask_files) - index_s):
                 if not pass_quality_check:
@@ -904,9 +883,7 @@ class LDMSampler:
                     separate_folder=False,
                 )
                 img_saver(synthetic_images[0])
-                synthetic_images_filename = os.path.join(
-                    self.output_dir, "sample_" + output_postfix + "_image" + self.image_output_ext
-                )
+                synthetic_images_filename = os.path.join(self.output_dir, "sample_" + output_postfix + "_image" + self.image_output_ext)
                 # filter out the organs that are not in anatomy_list
                 synthetic_labels = filter_mask_with_organs(synthetic_labels, self.anatomy_list)
                 label_saver = SaveImage(
@@ -916,11 +893,8 @@ class LDMSampler:
                     separate_folder=False,
                 )
                 label_saver(synthetic_labels[0])
-                synthetic_labels_filename = os.path.join(
-                    self.output_dir, "sample_" + output_postfix + "_label" + self.label_output_ext
-                )
+                synthetic_labels_filename = os.path.join(self.output_dir, "sample_" + output_postfix + "_label" + self.label_output_ext)
                 output_filenames.append([synthetic_images_filename, synthetic_labels_filename])
-                to_generate = False
             else:
                 logging.info("Generated image/label pair did not pass quality check, will re-generate another pair.")
         return output_filenames
@@ -984,7 +958,7 @@ class LDMSampler:
             num_inference_steps=self.num_inference_steps,
             autoencoder_sliding_window_infer_size=self.autoencoder_sliding_window_infer_size,
             autoencoder_sliding_window_infer_overlap=self.autoencoder_sliding_window_infer_overlap,
-            cfg_guidance_scale = self.cfg_guidance_scale
+            cfg_guidance_scale=self.cfg_guidance_scale,
         )
         return synthetic_images, synthetic_labels
 
@@ -1019,7 +993,7 @@ class LDMSampler:
             anatomy_name, anatomy_size = element
             provide_anatomy_size[anatomy_size_idx[anatomy_name]] = anatomy_size
 
-        with open(self.all_anatomy_size_conditions_json, "r") as f:
+        with open(self.all_anatomy_size_conditions_json) as f:
             all_anatomy_size_conditions = json.load(f)
 
         # loop through the database and find closest combinations
@@ -1203,9 +1177,7 @@ class LDMSampler:
                     include_c = False
                     break
                 # check diff in FOV, major metric
-                diff += abs(
-                    (abs(c["dim"][axis] * c["spacing"][axis]) - self.output_size[axis] * self.spacing[axis]) / 10
-                )
+                diff += abs((abs(c["dim"][axis] * c["spacing"][axis]) - self.output_size[axis] * self.spacing[axis]) / 10)
                 # check diff in dim
                 diff += abs((abs(c["dim"][axis]) - self.output_size[axis]) / 100)
                 # check diff in spacing

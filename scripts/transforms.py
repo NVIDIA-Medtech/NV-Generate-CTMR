@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import warnings
-from typing import List, Optional
 
 import torch
 from monai.transforms import (
@@ -43,7 +42,7 @@ from monai.transforms import (
 SUPPORT_MODALITIES = ["ct", "mri"]
 
 
-def define_fixed_intensity_transform(modality: str, image_keys: List[str] = ["image"]) -> List:
+def define_fixed_intensity_transform(modality: str, image_keys: list[str] = ["image"]) -> list:
     """
     Define fixed intensity transform based on the modality.
 
@@ -62,9 +61,7 @@ def define_fixed_intensity_transform(modality: str, image_keys: List[str] = ["im
     modality = modality.lower()  # Normalize modality to lowercase
 
     intensity_transforms = {
-        "mri": [
-            ScaleIntensityRangePercentilesd(keys=image_keys, lower=0.0, upper=99.5, b_min=0.0, b_max=1, clip=False)
-        ],
+        "mri": [ScaleIntensityRangePercentilesd(keys=image_keys, lower=0.0, upper=99.5, b_min=0.0, b_max=1, clip=False)],
         "ct": [ScaleIntensityRanged(keys=image_keys, a_min=-1000, a_max=1000, b_min=0.0, b_max=1.0, clip=True)],
     }
 
@@ -74,7 +71,7 @@ def define_fixed_intensity_transform(modality: str, image_keys: List[str] = ["im
     return intensity_transforms[modality]
 
 
-def define_random_intensity_transform(modality: str, image_keys: List[str] = ["image"]) -> List:
+def define_random_intensity_transform(modality: str, image_keys: list[str] = ["image"]) -> list:
     """
     Define random intensity transform based on the modality.
 
@@ -109,14 +106,14 @@ def define_vae_transform(
     modality: str,
     random_aug: bool,
     k: int = 4,
-    patch_size: List[int] = [128, 128, 128],
-    val_patch_size: Optional[List[int]] = None,
+    patch_size: list[int] = [128, 128, 128],
+    val_patch_size: list[int] | None = None,
     output_dtype: torch.dtype = torch.float32,
     spacing_type: str = "original",
-    spacing: Optional[List[float]] = None,
-    image_keys: List[str] = ["image"],
-    label_keys: List[str] = [],
-    additional_keys: List[str] = [],
+    spacing: list[float] | None = None,
+    image_keys: list[str] = ["image"],
+    label_keys: list[str] = [],
+    additional_keys: list[str] = [],
     select_channel: int = 0,
 ) -> tuple:
     """
@@ -165,19 +162,14 @@ def define_vae_transform(
     common_transform.extend(define_fixed_intensity_transform(modality, image_keys=image_keys))
 
     if spacing_type == "fixed":
-        common_transform.append(
-            Spacingd(keys=image_keys + label_keys, allow_missing_keys=True, pixdim=spacing, mode=interp_mode)
-        )
+        common_transform.append(Spacingd(keys=image_keys + label_keys, allow_missing_keys=True, pixdim=spacing, mode=interp_mode))
 
     random_transform = []
     if is_train and random_aug:
         random_transform.extend(define_random_intensity_transform(modality, image_keys=image_keys))
         random_transform.extend(
             [RandFlipd(keys=keys, allow_missing_keys=True, prob=0.5, spatial_axis=axis) for axis in range(3)]
-            + [
-                RandRotate90d(keys=keys, allow_missing_keys=True, prob=0.5, spatial_axes=axes)
-                for axes in [(0, 1), (1, 2), (0, 2)]
-            ]
+            + [RandRotate90d(keys=keys, allow_missing_keys=True, prob=0.5, spatial_axes=axes) for axes in [(0, 1), (1, 2), (0, 2)]]
             + [
                 RandScaleIntensityd(keys=image_keys, allow_missing_keys=True, prob=0.3, factors=(0.9, 1.1)),
                 RandShiftIntensityd(keys=image_keys, allow_missing_keys=True, prob=0.3, offsets=0.05),
@@ -212,9 +204,7 @@ def define_vae_transform(
     if is_train:
         train_crop = [
             SpatialPadd(keys=keys, spatial_size=patch_size, allow_missing_keys=True),
-            RandSpatialCropd(
-                keys=keys, roi_size=patch_size, allow_missing_keys=True, random_size=False, random_center=True
-            ),
+            RandSpatialCropd(keys=keys, roi_size=patch_size, allow_missing_keys=True, random_size=False, random_center=True),
         ]
     else:
         val_crop = (
@@ -227,9 +217,7 @@ def define_vae_transform(
 
     if is_train:
         train_transforms = Compose(
-            common_transform + random_transform + train_crop + final_transform
-            if random_aug
-            else common_transform + train_crop + final_transform
+            common_transform + random_transform + train_crop + final_transform if random_aug else common_transform + train_crop + final_transform
         )
         return train_transforms
     else:
@@ -237,7 +225,7 @@ def define_vae_transform(
         return val_transforms
 
 
-class VAE_Transform:
+class VAE_Transform:  # noqa: N801
     """
     A class to handle MAISI VAE transformations for different modalities.
     """
@@ -247,14 +235,14 @@ class VAE_Transform:
         is_train: bool,
         random_aug: bool,
         k: int = 4,
-        patch_size: List[int] = [128, 128, 128],
-        val_patch_size: Optional[List[int]] = None,
+        patch_size: list[int] = [128, 128, 128],
+        val_patch_size: list[int] | None = None,
         output_dtype: torch.dtype = torch.float32,
         spacing_type: str = "original",
-        spacing: Optional[List[float]] = None,
-        image_keys: List[str] = ["image"],
-        label_keys: List[str] = [],
-        additional_keys: List[str] = [],
+        spacing: list[float] | None = None,
+        image_keys: list[str] = ["image"],
+        label_keys: list[str] = [],
+        additional_keys: list[str] = [],
         select_channel: int = 0,
     ):
         """
@@ -275,9 +263,7 @@ class VAE_Transform:
             select_channel (int, optional): Channel to select for multi-channel MRI. Defaults to 0.
         """
         if spacing_type not in ["original", "fixed", "rand_zoom"]:
-            raise ValueError(
-                f"spacing_type has to be chosen from ['original', 'fixed', 'rand_zoom']. Got {spacing_type}."
-            )
+            raise ValueError(f"spacing_type has to be chosen from ['original', 'fixed', 'rand_zoom']. Got {spacing_type}.")
 
         self.is_train = is_train
         self.transform_dict = {}
@@ -299,7 +285,7 @@ class VAE_Transform:
                 select_channel=select_channel,
             )
 
-    def __call__(self, img: dict, fixed_modality: Optional[str] = None) -> dict:
+    def __call__(self, img: dict, fixed_modality: str | None = None) -> dict:
         """
         Apply the appropriate transform to the input image.
 

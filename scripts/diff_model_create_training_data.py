@@ -22,16 +22,15 @@ import nibabel as nib
 import numpy as np
 import torch
 import torch.distributed as dist
-from monai.transforms import Compose
-from monai.utils import set_determinism
 from monai.inferers.inferer import SlidingWindowInferer
+from monai.transforms import Compose
 
 from .diff_model_setting import initialize_distributed, load_config, setup_logging
-from .transforms import define_fixed_intensity_transform, SUPPORT_MODALITIES
+from .transforms import SUPPORT_MODALITIES, define_fixed_intensity_transform
 from .utils import define_instance, dynamic_infer
 
 
-def create_transforms(dim: tuple = None, modality: str = 'unknown') -> Compose:
+def create_transforms(dim: tuple = None, modality: str = "unknown") -> Compose:
     """
     Create a set of MONAI transforms for preprocessing.
 
@@ -41,24 +40,26 @@ def create_transforms(dim: tuple = None, modality: str = 'unknown') -> Compose:
     Returns:
         Compose: Composed MONAI transforms.
     """
-    if 'mri' in modality:
-        modality = 'mri'
-    if 'ct' in modality:
-        modality = 'ct'
-    
-    if modality in SUPPORT_MODALITIES:        
-        intensity_transforms = define_fixed_intensity_transform(modality=modality)        
+    if "mri" in modality:
+        modality = "mri"
+    if "ct" in modality:
+        modality = "ct"
+
+    if modality in SUPPORT_MODALITIES:
+        intensity_transforms = define_fixed_intensity_transform(modality=modality)
     else:
         intensity_transforms = []
-    
+
     if dim:
         return Compose(
             [
                 monai.transforms.LoadImaged(keys="image"),
                 monai.transforms.EnsureChannelFirstd(keys="image"),
                 monai.transforms.Orientationd(keys="image", axcodes="RAS"),
-                monai.transforms.EnsureTyped(keys="image", dtype=torch.float32)
-            ]+intensity_transforms+[
+                monai.transforms.EnsureTyped(keys="image", dtype=torch.float32),
+            ]
+            + intensity_transforms
+            + [
                 monai.transforms.Resized(keys="image", spatial_size=dim, mode="trilinear"),
             ]
         )
@@ -68,7 +69,8 @@ def create_transforms(dim: tuple = None, modality: str = 'unknown') -> Compose:
                 monai.transforms.LoadImaged(keys="image"),
                 monai.transforms.EnsureChannelFirstd(keys="image"),
                 monai.transforms.Orientationd(keys="image", axcodes="RAS"),
-            ] +intensity_transforms
+            ]
+            + intensity_transforms
         )
 
 
@@ -112,7 +114,7 @@ def process_file(
     device: torch.device,
     plain_transforms: Compose,
     new_transforms: Compose,
-    logger: logging.Logger
+    logger: logging.Logger,
 ) -> None:
     """
     Process a single file to create training data.
@@ -179,7 +181,7 @@ def process_file(
                 device=device,
             )
             z = dynamic_infer(inferer, autoencoder.encode_stage_2_inputs, pt_nda)
-        
+
             # z = autoencoder.encode_stage_2_inputs(pt_nda)
             logger.info(f"z: {z.size()}, {z.dtype}")
 
@@ -193,9 +195,7 @@ def process_file(
 
 
 @torch.inference_mode()
-def diff_model_create_training_data(
-    env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int
-) -> None:
+def diff_model_create_training_data(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
     """
     Create training data for the diffusion model.
 
@@ -225,7 +225,7 @@ def diff_model_create_training_data(
     Path(args.embedding_base_dir).mkdir(parents=True, exist_ok=True)
 
     # Discover all training image file paths from JSON list.
-    with open(args.json_data_list, "r") as file:
+    with open(args.json_data_list) as file:
         json_data = json.load(file)
     # Expecting a MONAI-style list dict with "training": [{"image": "..."}]
     files_raw = json_data["training"]
@@ -245,10 +245,7 @@ def diff_model_create_training_data(
 
         # Compute rounded target dims (multiples of 128) from the original image metadata.
         new_dim = tuple(
-            round_number(
-                int(plain_transforms({"image": os.path.join(args.data_base_dir, filepath)})["image"].meta["dim"][_i])
-            )
-            for _i in range(1, 4)
+            round_number(int(plain_transforms({"image": os.path.join(args.data_base_dir, filepath)})["image"].meta["dim"][_i])) for _i in range(1, 4)
         )
 
         # Build the transform pipeline that includes resizing to new_dim.
@@ -282,19 +279,8 @@ if __name__ == "__main__":
         default="./configs/config_maisi_diff_model_train.json",
         help="Path to model training/inference configuration",
     )
-    parser.add_argument(
-        "-t",
-        "--model_def", 
-        type=str, 
-        default="./configs/config_maisi.json", 
-        help="Path to model definition file")
-    parser.add_argument(
-        "-g",
-        "--num_gpus", 
-        type=int, 
-        default=1, 
-        help="Number of GPUs to use for training"
-    )
+    parser.add_argument("-t", "--model_def", type=str, default="./configs/config_maisi.json", help="Path to model definition file")
+    parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
 
     args = parser.parse_args()
     diff_model_create_training_data(args.env_config, args.model_config, args.model_def, args.num_gpus)

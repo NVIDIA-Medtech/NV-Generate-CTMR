@@ -2,8 +2,20 @@
 
 Disclaimer: We are not the hosts of the data. Please make sure to read the requirements and usage policies of the data and give credit to the authors of the datasets!
 
-### 1 VAE training Data
-For the released Foundation autoencoder model weights in MAISI, we used 37243 CT training data and 1963 CT validation data from chest, abdomen, head and neck region; and 17887 MRI training data and 940 MRI validation data from brain, skull-stripped brain, chest, and below-abdomen region.  The training data come from [TCIA Covid 19 Chest CT](https://wiki.cancerimagingarchive.net/display/Public/CT+Images+in+COVID-19#70227107b92475d33ae7421a9b9c426f5bb7d5b3), [TCIA Colon Abdomen CT](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=3539213), [MSD03 Liver Abdomen CT](http://medicaldecathlon.com/), [LIDC chest CT](https://www.cancerimagingarchive.net/collection/lidc-idri/), [TCIA Stony Brook Covid Chest CT](https://www.cancerimagingarchive.net/collection/covid-19-ny-sbu/), [NLST Chest CT](https://www.cancerimagingarchive.net/collection/nlst/), [TCIA Upenn GBM Brain MR](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=70225642), [Aomic Brain MR](https://openneuro.org/datasets/ds003097/versions/1.2.1), [QTIM Brain MR](https://openneuro.org/datasets/ds004169/versions/1.0.7), [TCIA Acrin Chest MR](https://www.cancerimagingarchive.net/collection/acrin-contralateral-breast-mr/), [TCIA Prostate MR Below-Abdomen MR](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=68550661#68550661a2c52df5969d435eae49b9669bea21a6).
+## 1 VAE training Data
+
+For the released Foundation autoencoder model weights in MAISI, we used 37243 CT training data and 1963 CT validation data from chest, abdomen, head and neck region; and 17887 MRI training data and 940 MRI validation data from brain, skull-stripped brain, chest, and below-abdomen region.  The training data come from
+[TCIA Covid 19 Chest CT](https://wiki.cancerimagingarchive.net/display/Public/CT+Images+in+COVID-19#70227107b92475d33ae7421a9b9c426f5bb7d5b3),
+[TCIA Colon Abdomen CT](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=3539213),
+[MSD03 Liver Abdomen CT](http://medicaldecathlon.com/),
+[LIDC chest CT](https://www.cancerimagingarchive.net/collection/lidc-idri/),
+[TCIA Stony Brook Covid Chest CT](https://www.cancerimagingarchive.net/collection/covid-19-ny-sbu/),
+[NLST Chest CT](https://www.cancerimagingarchive.net/collection/nlst/),
+[TCIA Upenn GBM Brain MR](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=70225642),
+[Aomic Brain MR](https://openneuro.org/datasets/ds003097/versions/1.2.1),
+[QTIM Brain MR](https://openneuro.org/datasets/ds004169/versions/1.0.7),
+[TCIA Acrin Chest MR](https://www.cancerimagingarchive.net/collection/acrin-contralateral-breast-mr/),
+[TCIA Prostate MR Below-Abdomen MR](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=68550661#68550661a2c52df5969d435eae49b9669bea21a6).
 
 In total, we included:
 | Index | Dataset Name                                   | Number of Training Data | Number of Validation Data |
@@ -24,8 +36,7 @@ In total, we included:
 |       | Total CT                                       | 37243                   | 1963                      |
 |       | Total MRI                                      | 17887                   | 940                       |
 
-
-### 2 Diffusion model training Data
+## 2 Diffusion model training Data
 
 The training dataset for the Diffusion model used in MAISI comprises 10,277 CT volumes from 24 distinct datasets, encompassing various body regions and disease patterns.
 
@@ -66,7 +77,7 @@ We provide the preprocessed subset of [C4KC-KiTS](https://www.cancerimagingarchi
 
 The structure of example folder in the preprocessed dataset is:
 
-```
+```text
             |-*arterial*.nii.gz               # original image
             |-*arterial_emb*.nii.gz           # encoded image embedding
 KiTS-000* --|-mask*.nii.gz                    # original labels
@@ -82,6 +93,7 @@ Please note that the label of Kidney Tumor is mapped to index `129` in this prep
 The training workflow requires one JSON file to specify the image embedding and segmentation pairs. The example file is located in the `maisi/dataset/C4KC-KiTS_subset.json`.
 
 The JSON file has the following structure:
+
 ```python
 {
     "training": [
@@ -101,6 +113,7 @@ The JSON file has the following structure:
 ```
 
 #### 3.2 Controlnet full training datasets
+
 The ControlNet training dataset used in MAISI contains 6330 CT volumes (5058 and 1272 volumes are used for training and validation, respectively) across 20 datasets and covers different body regions and diseases.
 
 The table below summarizes the number of volumes for each dataset.
@@ -110,7 +123,7 @@ The table below summarizes the number of volumes for each dataset.
 1 | AbdomenCT-1K | 789
 2 | AeroPath | 15
 3 | AMOS22 | 240
-4 | Bone-Lesion	| 237
+4 | Bone-Lesion | 237
 5 | BTCV | 48
 6 | CT-ORG | 94
 7 | CTPelvic1K-CLINIC | 94
@@ -135,4 +148,5 @@ The table below summarizes the number of volumes for each dataset.
 - For bugs relating to the running of a tutorial, please create an issue in [this repository](https://github.com/Project-MONAI/Tutorials/issues).
 
 ### Reference
+
 [1] [Rombach, Robin, et al. "High-resolution image synthesis with latent diffusion models." CVPR 2022.](https://openaccess.thecvf.com/content/CVPR2022/papers/Rombach_High-Resolution_Image_Synthesis_With_Latent_Diffusion_Models_CVPR_2022_paper.pdf)

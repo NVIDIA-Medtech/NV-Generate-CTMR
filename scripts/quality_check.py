@@ -41,8 +41,7 @@ def get_masked_data(label_data, image_data, labels):
     # Check if the shapes of image_data and label_data match
     if image_data.shape != label_data.shape:
         raise ValueError(
-            f"Shape mismatch: image_data has shape {image_data.shape}, "
-            f"but label_data has shape {label_data.shape}. They must be the same."
+            f"Shape mismatch: image_data has shape {image_data.shape}, but label_data has shape {label_data.shape}. They must be the same."
         )
 
     if not labels:

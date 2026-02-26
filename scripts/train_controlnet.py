@@ -13,7 +13,6 @@ import argparse
 import json
 import logging
 import os
-import sys
 import time
 from datetime import timedelta
 from pathlib import Path
@@ -21,22 +20,23 @@ from pathlib import Path
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-from monai.networks.utils import copy_model_state
-from monai.utils import RankFilter
-from monai.transforms.utils_morphological_ops import dilate
 from monai.networks.schedulers import RFlowScheduler
 from monai.networks.schedulers.ddpm import DDPMPredictionType
+from monai.networks.utils import copy_model_state
+from monai.transforms.utils_morphological_ops import dilate
+from monai.utils import RankFilter
 from torch.amp import GradScaler, autocast
-from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.nn.parallel import DistributedDataParallel as DDP  # noqa: N817
 from torch.utils.tensorboard import SummaryWriter
 
-from .utils import binarize_labels, define_instance, prepare_maisi_controlnet_json_dataloader, setup_ddp
-from .diff_model_setting import initialize_distributed, load_config, setup_logging
 from .augmentation import remove_tumors
+from .diff_model_setting import load_config
+from .utils import binarize_labels, define_instance, prepare_maisi_controlnet_json_dataloader, setup_ddp
+
 
 def remove_roi(labels):
     """
-    Remove ROI voxels from a label tensor. 
+    Remove ROI voxels from a label tensor.
     Users need to define their own function of remove_roi.
     Here we use scripts.augmentation.remove_tumors as default
 
@@ -50,16 +50,20 @@ def remove_roi(labels):
     """
     labels_roi_free = []
     for b in range(labels.shape[0]):
-        labels_roi_free_b = remove_tumors(labels[b,...])
+        labels_roi_free_b = remove_tumors(labels[b, ...])
         labels_roi_free.append(labels_roi_free_b)
-    labels_roi_free = torch.cat(labels_roi_free,dim=0)
+    labels_roi_free = torch.cat(labels_roi_free, dim=0)
     return labels_roi_free
-    
+
+
 def compute_region_contrasive_loss(
-    model_output,model_output_roi_free,model_gt,
-    roi_contrastive,roi_contrastive_bg,
+    model_output,
+    model_output_roi_free,
+    model_gt,
+    roi_contrastive,
+    roi_contrastive_bg,
     max_region_contrasive_loss=2,
-    loss_contrastive = torch.nn.L1Loss(reduction = 'none')
+    loss_contrastive=torch.nn.L1Loss(reduction="none"),
 ):
     """
     Compute region-wise contrastive losses between the model output with and
@@ -100,27 +104,39 @@ def compute_region_contrasive_loss(
             - loss_region_contrasive (scalar tensor): foreground contrastive loss.
             - loss_region_bg (scalar tensor): background similarity loss.
     """
-    if roi_contrastive.shape[1]!=1 or roi_contrastive_bg.shape[1]!=1:
-        raise ValueError(f"Assert roi_contrastive.shape[1]==1 or roi_contrastive_bg.shape[1]==1, yet got {roi_contrastive.shape} and {roi_contrastive_bg.shape}.")
-        
-    roi_contrastive = F.interpolate(roi_contrastive, size=model_output.shape[2:], mode="nearest")  
-    roi_contrastive = roi_contrastive.repeat(1, model_output.shape[1], 1, 1, 1)    
-    loss_region_contrasive = -(loss_contrastive(model_output, model_output_roi_free)*roi_contrastive).sum()/(torch.sum(roi_contrastive>0)+1e-5)
-    loss_region_contrasive = F.relu(loss_region_contrasive+max_region_contrasive_loss)-max_region_contrasive_loss # we do not need it to be extreme           
-    
+    if roi_contrastive.shape[1] != 1 or roi_contrastive_bg.shape[1] != 1:
+        raise ValueError(
+            f"Assert roi_contrastive.shape[1]==1 or roi_contrastive_bg.shape[1]==1, yet got {roi_contrastive.shape} and {roi_contrastive_bg.shape}."
+        )
+
+    roi_contrastive = F.interpolate(roi_contrastive, size=model_output.shape[2:], mode="nearest")
+    roi_contrastive = roi_contrastive.repeat(1, model_output.shape[1], 1, 1, 1)
+    loss_region_contrasive = -(loss_contrastive(model_output, model_output_roi_free) * roi_contrastive).sum() / (
+        torch.sum(roi_contrastive > 0) + 1e-5
+    )
+    loss_region_contrasive = (
+        F.relu(loss_region_contrasive + max_region_contrasive_loss) - max_region_contrasive_loss
+    )  # we do not need it to be extreme
+
     roi_contrastive_bg = F.interpolate(roi_contrastive_bg, size=model_output.shape[2:], mode="nearest").to(torch.long)
-    roi_contrastive_bg = roi_contrastive_bg.repeat(1, model_output.shape[1], 1, 1, 1)    
-    loss_region_bg = (loss_contrastive(model_output_roi_free, model_gt)*roi_contrastive_bg).sum()/(torch.sum(roi_contrastive_bg>0)+1e-5)
+    roi_contrastive_bg = roi_contrastive_bg.repeat(1, model_output.shape[1], 1, 1, 1)
+    loss_region_bg = (loss_contrastive(model_output_roi_free, model_gt) * roi_contrastive_bg).sum() / (torch.sum(roi_contrastive_bg > 0) + 1e-5)
     return loss_region_contrasive, loss_region_bg
 
+
 def compute_model_output(
-    images,labels,noise,timesteps,noise_scheduler,
-    controlnet,unet,
+    images,
+    labels,
+    noise,
+    timesteps,
+    noise_scheduler,
+    controlnet,
+    unet,
     spacing_tensor,
     modality_tensor=None,
     top_region_index_tensor=None,
     bottom_region_index_tensor=None,
-    return_controlnet_blocks=False
+    return_controlnet_blocks=False,
 ):
     """
     Run ControlNet + U-Net to obtain the denoising network output (and optionally
@@ -167,8 +183,8 @@ def compute_model_output(
             - mid_block_res_sample (optional): ControlNet mid-block feature if requested, else None.
     """
     # generate random noise
-    include_modality = ( modality_tensor is not None )
-    include_body_region = ( top_region_index_tensor is not None) and (bottom_region_index_tensor is not None)
+    include_modality = modality_tensor is not None
+    include_body_region = (top_region_index_tensor is not None) and (bottom_region_index_tensor is not None)
 
     # use binary encoding to encode segmentation mask
     controlnet_cond = binarize_labels(labels.as_tensor().to(torch.long)).float()
@@ -220,9 +236,8 @@ def compute_model_output(
     else:
         return model_output, None, None
 
-def train_controlnet(
-    env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int
-) -> None:
+
+def train_controlnet(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
     # Step 0: configuration
     logger = logging.getLogger("maisi.controlnet.training")
     # whether to use distributed data parallel
@@ -248,25 +263,24 @@ def train_controlnet(
         args.use_region_contrasive_loss = args.controlnet_train["use_region_contrasive_loss"]
         for k in ["region_contrasive_loss_delta", "region_contrasive_loss_weight"]:
             if k not in args.controlnet_train.keys():
-                raise ValueError(f"Since 'use_region_contrasive_loss' is in 'controlnet_train' of {model_config_path}, we need 'region_contrasive_loss_delta' and 'region_contrasive_loss_weight' also be in it.")
-    
+                raise ValueError(
+                    f"Since 'use_region_contrasive_loss' is in 'controlnet_train' of {model_config_path}, we need 'region_contrasive_loss_delta' and 'region_contrasive_loss_weight' also be in it."
+                )
+
     logger.info(f"use_region_contrasive_loss: {args.use_region_contrasive_loss}")
     if args.use_region_contrasive_loss:
         logger.warning(f"User sets 'use_region_contrasive_loss' as true in {model_config_path}.")
         logger.warning("********************")
         logger.warning(
-            "Please check remove_roi() in train_controlnet.py to ensure ROI is removed as intended; "
-            "default logic will not match your requirement."
+            "Please check remove_roi() in train_controlnet.py to ensure ROI is removed as intended; default logic will not match your requirement."
         )
         logger.warning("********************")
-
 
     # initialize tensorboard writer
     if rank == 0:
         tensorboard_path = os.path.join(args.tfevent_path, args.exp_name)
         Path(tensorboard_path).mkdir(parents=True, exist_ok=True)
         tensorboard_writer = SummaryWriter(tensorboard_path)
-
 
     # Step 2: define diffusion model and controlnet
     # define diffusion Model
@@ -295,9 +309,7 @@ def train_controlnet(
     if args.existing_ckpt_filepath is not None:
         if not os.path.exists(args.existing_ckpt_filepath):
             raise ValueError("Please download the trained ControlNet checkpoint.")
-        controlnet.load_state_dict(
-            torch.load(args.existing_ckpt_filepath, map_location=device, weights_only=False)["controlnet_state_dict"]
-        )
+        controlnet.load_state_dict(torch.load(args.existing_ckpt_filepath, map_location=device, weights_only=False)["controlnet_state_dict"])
         logger.info(f"load trained controlnet model from {args.existing_ckpt_filepath}")
     else:
         logger.info("train controlnet model from scratch.")
@@ -317,7 +329,7 @@ def train_controlnet(
                 raise ValueError(f"Please check if {args.modality_mapping_path} exist.")
         else:
             raise ValueError(f"'modality_mapping_path' in {env_config_path} cannot be null")
-        with open(args.modality_mapping_path, "r") as f:
+        with open(args.modality_mapping_path) as f:
             args.modality_mapping = json.load(f)
     else:
         args.modality_mapping = None
@@ -330,7 +342,7 @@ def train_controlnet(
         batch_size=args.controlnet_train["batch_size"],
         cache_rate=args.controlnet_train["cache_rate"],
         fold=args.controlnet_train["fold"],
-        modality_mapping = args.modality_mapping
+        modality_mapping=args.modality_mapping,
     )
 
     # Step 3: training config
@@ -387,21 +399,20 @@ def train_controlnet(
                 if isinstance(noise_scheduler, RFlowScheduler):
                     timesteps = noise_scheduler.sample_timesteps(images)
                 else:
-                    timesteps = torch.randint(
-                        0, noise_scheduler.num_train_timesteps, (images.shape[0],), device=images.device
-                    ).long()
-                (
-                    model_output, 
-                    model_block1_output, 
-                    model_block2_output
-                ) = compute_model_output(
-                    images,labels,noise,timesteps,noise_scheduler,
-                    controlnet,unet,
+                    timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (images.shape[0],), device=images.device).long()
+                (model_output, model_block1_output, model_block2_output) = compute_model_output(
+                    images,
+                    labels,
+                    noise,
+                    timesteps,
+                    noise_scheduler,
+                    controlnet,
+                    unet,
                     spacing_tensor,
                     modality_tensor,
                     top_region_index_tensor,
                     bottom_region_index_tensor,
-                    return_controlnet_blocks=False
+                    return_controlnet_blocks=False,
                 )
                 if args.use_region_contrasive_loss:
                     (
@@ -409,15 +420,19 @@ def train_controlnet(
                         model_block1_output_roi_free,
                         model_block2_output_roi_free,
                     ) = compute_model_output(
-                        images,labels_roi_free,noise,timesteps,noise_scheduler,
-                        controlnet,unet,
+                        images,
+                        labels_roi_free,
+                        noise,
+                        timesteps,
+                        noise_scheduler,
+                        controlnet,
+                        unet,
                         spacing_tensor,
                         modality_tensor,
                         top_region_index_tensor,
                         bottom_region_index_tensor,
-                        return_controlnet_blocks=False
+                        return_controlnet_blocks=False,
                     )
-                
 
                 if noise_scheduler.prediction_type == DDPMPredictionType.EPSILON:
                     # predict noise
@@ -433,7 +448,7 @@ def train_controlnet(
                         "noise scheduler prediction type has to be chosen from ",
                         f"[{DDPMPredictionType.EPSILON},{DDPMPredictionType.SAMPLE},{DDPMPredictionType.V_PREDICTION}]",
                     )
-    
+
                 if weighted_loss > 1.0:
                     weights = torch.ones_like(images).to(images.device)
                     roi = torch.zeros([noise_shape[0]] + [1] + noise_shape[2:]).to(images.device)
@@ -445,21 +460,23 @@ def train_controlnet(
                     loss = (F.l1_loss(model_output.float(), model_gt.float(), reduction="none") * weights).mean()
                 else:
                     loss = F.l1_loss(model_output.float(), model_gt.float())
-    
-    
+
                 if args.use_region_contrasive_loss:
                     roi_contrastive = (labels_roi_free != labels).to(torch.uint8)  # 0/1 mask
                     roi_contrastive_bg = 1 - dilate(roi_contrastive, filter_size=3).to(torch.uint8)
                     loss_region_contrasive, loss_region_bg = compute_region_contrasive_loss(
-                        model_output,model_output_roi_free,model_gt,
-                        roi_contrastive,roi_contrastive_bg,
+                        model_output,
+                        model_output_roi_free,
+                        model_gt,
+                        roi_contrastive,
+                        roi_contrastive_bg,
                         max_region_contrasive_loss=args.controlnet_train["region_contrasive_loss_delta"],
-                        loss_contrastive = torch.nn.L1Loss(reduction = 'none')
+                        loss_contrastive=torch.nn.L1Loss(reduction="none"),
                     )
                     final_loss_region_contrasive = loss_region_contrasive + loss_region_bg
                     logger.info(f"loss_region_contrasive: {loss_region_contrasive}")
                     logger.info(f"loss_region_bg: {loss_region_bg}")
-                    loss += args.controlnet_train["region_contrasive_loss_weight"]*final_loss_region_contrasive
+                    loss += args.controlnet_train["region_contrasive_loss_weight"] * final_loss_region_contrasive
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -469,24 +486,14 @@ def train_controlnet(
 
             if rank == 0:
                 # write train loss for each batch into tensorboard
-                tensorboard_writer.add_scalar(
-                    "train/train_controlnet_loss_iter", loss.detach().cpu().item(), total_step
-                )
+                tensorboard_writer.add_scalar("train/train_controlnet_loss_iter", loss.detach().cpu().item(), total_step)
                 batches_done = step + 1
                 batches_left = len(train_loader) - batches_done
                 time_left = timedelta(seconds=batches_left * (time.time() - prev_time))
                 prev_time = time.time()
                 logger.info(
-                    "\r[Epoch %d/%d] [Batch %d/%d] [LR: %.8f] [loss: %.4f] ETA: %s "
-                    % (
-                        epoch + 1,
-                        n_epochs,
-                        step + 1,
-                        len(train_loader),
-                        lr_scheduler.get_last_lr()[0],
-                        loss.detach().cpu().item(),
-                        time_left,
-                    )
+                    f"\r[Epoch {epoch + 1}/{n_epochs}] [Batch {step + 1}/{len(train_loader)}] "
+                    f"[LR: {lr_scheduler.get_last_lr()[0]:.8f}] [loss: {loss.detach().cpu().item():.4f}] ETA: {time_left} "
                 )
             epoch_loss_ += loss.detach()
 
@@ -544,21 +551,8 @@ if __name__ == "__main__":
         default="./configs/config_maisi_diff_model.json",
         help="Path to model training/inference configuration",
     )
-    parser.add_argument(
-        "-t",
-        "--model_def_path", 
-        type=str, 
-        default="./configs/config_maisi.json", 
-        help="Path to model definition file"
-    )
-    parser.add_argument(
-        "-g",
-        "--num_gpus", 
-        type=int, 
-        default=1, 
-        help="Number of GPUs to use for training"
-    )
+    parser.add_argument("-t", "--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file")
+    parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
 
     args = parser.parse_args()
     train_controlnet(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)
-

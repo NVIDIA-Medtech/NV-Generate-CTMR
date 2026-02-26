@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os, json
+import os
 import random
 from datetime import datetime
 
@@ -21,7 +21,6 @@ import nibabel as nib
 import numpy as np
 import torch
 import torch.distributed as dist
-from monai.inferers import sliding_window_inference
 from monai.inferers.inferer import SlidingWindowInferer
 from monai.networks.schedulers import RFlowScheduler
 from monai.utils import set_determinism
@@ -95,9 +94,7 @@ def prepare_tensors(args: argparse.Namespace, device: torch.device) -> tuple:
     top_region_index_tensor = torch.from_numpy(top_region_index_tensor[np.newaxis, :]).half().to(device)
     bottom_region_index_tensor = torch.from_numpy(bottom_region_index_tensor[np.newaxis, :]).half().to(device)
     spacing_tensor = torch.from_numpy(spacing_tensor[np.newaxis, :]).half().to(device)
-    modality_tensor = args.diffusion_unet_inference["modality"] * torch.ones(
-        (len(spacing_tensor)), dtype=torch.long
-    ).to(device)
+    modality_tensor = args.diffusion_unet_inference["modality"] * torch.ones((len(spacing_tensor)), dtype=torch.long).to(device)
 
     return top_region_index_tensor, bottom_region_index_tensor, spacing_tensor, modality_tensor
 
@@ -205,10 +202,10 @@ def run_inference(
                         unet_inputs[k] = torch.cat([unet_inputs[k], torch.zeros_like(modality_tensor)])
             if cfg_guidance_scale == 0:
                 model_output = unet(**unet_inputs)
-            else:                
+            else:
                 model_t, model_uncond = unet(**unet_inputs).chunk(2)
                 model_output = model_uncond + cfg_guidance_scale * (model_t - model_uncond)
-            
+
             if not isinstance(noise_scheduler, RFlowScheduler):
                 image, _ = noise_scheduler.step(model_output, t, image)  # type: ignore
             else:
@@ -272,9 +269,7 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
     local_rank, world_size, device = initialize_distributed(num_gpus)
     logger = setup_logging("inference")
     random_seed = set_random_seed(
-        args.diffusion_unet_inference["random_seed"] + local_rank
-        if "random_seed" in args.diffusion_unet_inference.keys()
-        else None
+        args.diffusion_unet_inference["random_seed"] + local_rank if "random_seed" in args.diffusion_unet_inference.keys() else None
     )
     logger.info(f"Using {device} of {world_size} with random seed: {random_seed}")
 
@@ -291,7 +286,7 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         logger.info(f"[config] out_spacing -> {out_spacing}.")
 
     modality = args.diffusion_unet_inference["modality"]
-    if modality>=1 and modality<=7:
+    if modality >= 1 and modality <= 7:
         check_input_ct(None, None, None, output_size, out_spacing, None)
     args.cfg_guidance_scale = args.diffusion_unet_inference["cfg_guidance_scale"]
 
@@ -324,20 +319,7 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
     )
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_path = "{0}/{1}_seed{2}_size{3:d}x{4:d}x{5:d}_spacing{6:.2f}x{7:.2f}x{8:.2f}_{9}_rank{10}_modality{11}.nii.gz".format(
-        args.output_dir,
-        output_prefix,
-        random_seed,
-        output_size[0],
-        output_size[1],
-        output_size[2],
-        out_spacing[0],
-        out_spacing[1],
-        out_spacing[2],
-        timestamp,
-        local_rank,
-        modality
-    )
+    output_path = f"{args.output_dir}/{output_prefix}_seed{random_seed}_size{output_size[0]:d}x{output_size[1]:d}x{output_size[2]:d}_spacing{out_spacing[0]:.2f}x{out_spacing[1]:.2f}x{out_spacing[2]:.2f}_{timestamp}_rank{local_rank}_modality{modality}.nii.gz"
     save_image(data, output_size, out_spacing, output_path, logger)
 
     # ---- gather & persist ----
@@ -346,27 +328,20 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         world = dist.get_world_size()
         paths = [None] * world
         dist.all_gather_object(paths, output_path)
-        is_rank0 = (local_rank == 0)
     else:
         paths = [output_path]
-        is_rank0 = True
 
     if dist.is_initialized():
         dist.destroy_process_group()
     return paths
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Diffusion Model Inference")
-    parser.add_argument("-e","--env_config", type=str, required=True)
-    parser.add_argument("-c","--model_config", type=str, required=True)
-    parser.add_argument("-t","--model_def", type=str, required=True)
-    parser.add_argument(
-        "-g",
-        "--num_gpus", 
-        type=int, 
-        default=1, 
-        help="Number of GPUs to use for training"
-    )
+    parser.add_argument("-e", "--env_config", type=str, required=True)
+    parser.add_argument("-c", "--model_config", type=str, required=True)
+    parser.add_argument("-t", "--model_def", type=str, required=True)
+    parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
 
     args = parser.parse_args()
     diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus)

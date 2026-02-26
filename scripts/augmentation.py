@@ -18,6 +18,8 @@ from torch import Tensor
 
 from .utils import dilate_one_img, erode_one_img
 
+MAX_COUNT = 1000  # maximum augmentation retries before raising an error
+
 
 def erode3d(input_tensor, erosion=3):
     # Define the structuring element
@@ -205,13 +207,7 @@ def augmentation_tumor_lung(pt_nda, output_size, random_seed=None):
             # random distor mask
             real_l_volume = elastic(real_l_volume, spatial_size=tuple(output_size)).as_tensor().cuda()
             # get lung mask v2 (133 order)
-            lung_mask = (
-                (volume == 28).float()
-                + (volume == 29).float()
-                + (volume == 30).float()
-                + (volume == 31).float()
-                + (volume == 32).float()
-            )
+            lung_mask = (volume == 28).float() + (volume == 29).float() + (volume == 30).float() + (volume == 31).float() + (volume == 32).float()
 
             lung_mask = dilate3d(lung_mask.squeeze(0), erosion=5)
             lung_mask = erode3d(lung_mask, erosion=5).unsqueeze(0)
@@ -349,14 +345,22 @@ def augmentation_body(pt_nda, random_seed=None):
     pt_nda = volume.unsqueeze(0)
     return pt_nda
 
-def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transform, spatial_size: tuple[int, int, int] | int | None = None, tumor_label: int = 1, min_tumor_size_ratio=0.8) -> Tensor:
+
+def augmentation_tumor_only(
+    tumor_mask_: Tensor,
+    organ_mask: Tensor,
+    aug_transform,
+    spatial_size: tuple[int, int, int] | int | None = None,
+    tumor_label: int = 1,
+    min_tumor_size_ratio=0.8,
+) -> Tensor:
     """
     tumor augmentation.
 
     Args:
-        tumor_mask: input 3D tumor mask, [1,H,W,D] torch tensor.  
-        organ_mask: input 3D tumor mask, [1,H,W,D] torch tensor, binary mask.  
-        aug_transform: tumor augmentation transform       
+        tumor_mask: input 3D tumor mask, [1,H,W,D] torch tensor.
+        organ_mask: input 3D tumor mask, [1,H,W,D] torch tensor, binary mask.
+        aug_transform: tumor augmentation transform
         spatial_size: output image spatial size, used in random transform.
                       If not defined, will use (H,W,D). If some components are non-positive values,
                       the transform will use the corresponding components of whole_mask size.
@@ -367,7 +371,7 @@ def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transfo
 
     Return:
         augmented mask, with shape of spatial_size and data type as whole_mask.
-        
+
 
     Example:
 
@@ -379,8 +383,6 @@ def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transfo
             tumor_mask[0, 97:103, 97:103, 97:103]=2
     """
     # Initialize binary tumor mask
-    device = tumor_mask_.device
-
     tumor_region_binary_mask = torch.isin(tumor_mask_, torch.tensor(tumor_label, device=tumor_mask_.device)).long()
     tumor_size = torch.sum(tumor_region_binary_mask)
     ###########################
@@ -392,7 +394,7 @@ def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transfo
         while True:
             tumor_mask = tumor_mask_
             # apply random augmentation to tumor region only, excluding organ basis
-            augmented_mask = aug_transform(tumor_mask_*tumor_region_binary_mask, spatial_size=spatial_size).as_tensor()
+            augmented_mask = aug_transform(tumor_mask_ * tumor_region_binary_mask, spatial_size=spatial_size).as_tensor()
             # generate final tumor mask
             count += 1
             tumor_mask = finalize_tumor_mask(augmented_mask, organ_mask, tumor_size * min_tumor_size_ratio)
@@ -404,6 +406,7 @@ def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transfo
         tumor_mask = tumor_mask_
 
     return tumor_mask
+
 
 def finalize_tumor_mask(augmented_mask: Tensor, organ_mask: Tensor, threshold_tumor_size: float):
     """
@@ -418,17 +421,18 @@ def finalize_tumor_mask(augmented_mask: Tensor, organ_mask: Tensor, threshold_tu
     Return:
         tumor_mask, [H,W,D] torch tensor; or None if the size did not qualify
     """
-    tumor_mask = augmented_mask * organ_mask # might not be binary for multi-type tumor map
+    tumor_mask = augmented_mask * organ_mask  # might not be binary for multi-type tumor map
     if torch.sum(tumor_mask) >= threshold_tumor_size:
         label_list = torch.unique(tumor_mask.long())
-        if len(label_list)==2:            
+        if len(label_list) == 2:
             tumor_mask = dilate_one_img(tumor_mask.squeeze(0), filter_size=5, pad_value=1.0)
             tumor_mask = erode_one_img(tumor_mask, filter_size=5, pad_value=1.0).unsqueeze(0).to(torch.uint8)
-            tumor_mask[tumor_mask>0] = torch.max(label_list)
+            tumor_mask[tumor_mask > 0] = torch.max(label_list)
         return tumor_mask
     else:
         return None
-        
+
+
 def augmentation(pt_nda, output_size, random_seed=None):
     label_list = torch.unique(pt_nda)
     label_list = list(label_list.cpu().numpy())
@@ -450,7 +454,7 @@ def augmentation(pt_nda, output_size, random_seed=None):
         pt_nda = augmentation_tumor_colon(pt_nda, output_size, random_seed)
     elif 401 in label_list or 402 in label_list or 403 in label_list:
         print("augmenting brats tumor")
-        tumor_label = [401,402,403]
+        tumor_label = [401, 402, 403]
         elastic_tumor = Rand3DElastic(
             mode="nearest",
             prob=1.0,
@@ -463,10 +467,10 @@ def augmentation(pt_nda, output_size, random_seed=None):
         )
         elastic_tumor.set_random_state(seed=random_seed)
         volume = pt_nda.squeeze(0)
-        organ_mask_ = (volume>0).long()
+        organ_mask_ = (volume > 0).long()
         tumor_mask_orig = torch.isin(volume, torch.tensor(tumor_label, device=volume.device)).long()
         tumor_mask = augmentation_tumor_only(volume, organ_mask_, elastic_tumor, output_size, tumor_label, 0.8).long()
-        volume[tumor_mask_orig>0] = 22
+        volume[tumor_mask_orig > 0] = 22
         m = tumor_mask > 0
         volume[m] = tumor_mask[m]
         pt_nda = volume.unsqueeze(0)
@@ -477,14 +481,14 @@ def augmentation(pt_nda, output_size, random_seed=None):
     return pt_nda
 
 
-def remove_tumors(orig_labels,pseudo_labels=None):
+def remove_tumors(orig_labels, pseudo_labels=None):
     """
     Replace tumor-related class ids with organ ids or pseudo labels.
 
     The function:
     - Maps tumor labels (e.g. hepatic, pancreatic, colon) to their organ counterparts.
     - Replaces ambiguous lesion regions with pseudo labels.
-    
+
     Args:
         orig_labels (torch.Tensor): Original ground-truth labels.
         pseudo_labels (torch.Tensor): Pseudo labels used for replacement for tumor region, same size with orig_labels.
@@ -493,33 +497,28 @@ def remove_tumors(orig_labels,pseudo_labels=None):
         torch.Tensor: Modified labels with tumor regions reassigned.
     """
     # hepatic tumor->liver, pancreatic tumor->pancreas, colon primaries timor->colon, kidney cyst-> kidney
-    if len(orig_labels.shape) not in [3,4]:
+    if len(orig_labels.shape) not in [3, 4]:
         raise ValueError(f"input has to be 3D/4D, [1,X,Y,Z] or [1,X,Y]. Yet got {orig_labels.shape}.")
-    x = remap_labels(
-        orig_labels, 
-        {26: 1, 24: 4, 27: 62, 116:14, 117:5}
-    ) 
+    x = remap_labels(orig_labels, {26: 1, 24: 4, 27: 62, 116: 14, 117: 5})
 
-    if pseudo_labels!= None:
-        # replace with pseudo_labels, for lung tumor, bone lesion, brain tumors 
-        for lesion_id in [23,128,401,402,403,176]:  
-            mask = (x == lesion_id)
+    if pseudo_labels is not None:
+        # replace with pseudo_labels, for lung tumor, bone lesion, brain tumors
+        for lesion_id in [23, 128, 401, 402, 403, 176]:
+            mask = x == lesion_id
             if mask.any():
                 x[mask] = pseudo_labels[mask]
-    else:    
+    else:
         # Replace lesion-like classes by pseudo labels (explicit and ordered)
         # replace lung tumor with majority vote of its immediate neighborhood
-        x = remove_tumors_majority_vote( 
+        x = remove_tumors_majority_vote(
             (x == 23),
             x,
             organ_label_lists=(28, 29, 30, 31, 32),
         )
         # replace brain tumors->brain
-        x = remap_labels(
-            x, 
-            {401:22, 402:22, 403:22, 176:22}
-        )
+        x = remap_labels(x, {401: 22, 402: 22, 403: 22, 176: 22})
     return x
+
 
 def remove_tumors_majority_vote(
     tumor_mask_: Tensor,
@@ -527,34 +526,34 @@ def remove_tumors_majority_vote(
     organ_label_lists=(28, 29, 30, 31, 32),
 ):
     """
-        Replace tumor voxels in a segmentation volume with the majority organ label 
-        from their immediate neighborhood.
+    Replace tumor voxels in a segmentation volume with the majority organ label
+    from their immediate neighborhood.
 
-        Steps:
-        1. Dilate the tumor mask with a small kernel to get a surrounding "ring."
-        2. Remove the original tumor voxels from that dilation (keeping only the ring).
-        3. Restrict the ring to voxels whose labels are in `organ_label_lists`.
-        4. Extract labels from that ring and compute the majority vote (mode).
-        - If the ring is empty, fall back to the most frequent organ label 
-            in the entire volume.
-        5. Overwrite the original tumor region in `volume` with the chosen organ label.
+    Steps:
+    1. Dilate the tumor mask with a small kernel to get a surrounding "ring."
+    2. Remove the original tumor voxels from that dilation (keeping only the ring).
+    3. Restrict the ring to voxels whose labels are in `organ_label_lists`.
+    4. Extract labels from that ring and compute the majority vote (mode).
+    - If the ring is empty, fall back to the most frequent organ label
+        in the entire volume.
+    5. Overwrite the original tumor region in `volume` with the chosen organ label.
 
-        Args:
-            tumor_mask_ (Tensor): Binary (0/1) tumor mask of shape [1, D, H, W] or [1, ...].
-            volume (Tensor): Segmentation label map of shape [D, H, W] or [1, D, H, W],
-                            containing integer organ labels.
-            organ_label_lists (iterable): Labels considered valid "organ" labels 
-                                        to fill the tumor region (default [28–32]).
+    Args:
+        tumor_mask_ (Tensor): Binary (0/1) tumor mask of shape [1, D, H, W] or [1, ...].
+        volume (Tensor): Segmentation label map of shape [D, H, W] or [1, D, H, W],
+                        containing integer organ labels.
+        organ_label_lists (iterable): Labels considered valid "organ" labels
+                                    to fill the tumor region (default [28–32]).
 
-        Returns:
-            Tensor: A copy of `volume` where tumor voxels are replaced with the 
-                    majority-vote organ label.
+    Returns:
+        Tensor: A copy of `volume` where tumor voxels are replaced with the
+                majority-vote organ label.
 
-        Notes:
-            - `volume` is expected to contain integer labels, not raw intensities.
-            - `dilate_one_img` should be a morphological dilation that accepts
-            a single-channel binary tensor and returns the dilated mask.
-        """
+    Notes:
+        - `volume` is expected to contain integer labels, not raw intensities.
+        - `dilate_one_img` should be a morphological dilation that accepts
+        a single-channel binary tensor and returns the dilated mask.
+    """
     # 1) Build a ring: dilate tumor, then remove original tumor voxels
     dil = dilate_one_img(tumor_mask_.squeeze(0), filter_size=3, pad_value=1.0).unsqueeze(0)
     ring = dil.bool() & (~tumor_mask_.bool())
@@ -577,7 +576,8 @@ def remove_tumors_majority_vote(
     out[tumor_mask_.bool()] = mode
     return out
 
-def remap_labels(x, mapping: dict[int,int]):
+
+def remap_labels(x, mapping: dict[int, int]):
     """
     Remap integer labels in a tensor.
 
