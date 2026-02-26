@@ -54,7 +54,9 @@ def define_fixed_intensity_transform(modality: str, image_keys: list[str] = ["im
         List: A list of intensity transforms.
     """
     if modality not in SUPPORT_MODALITIES:
-        warnings.warn(f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities.")
+        warnings.warn(
+            f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities."
+        )
 
     modality = modality.lower()  # Normalize modality to lowercase
 
@@ -82,7 +84,9 @@ def define_random_intensity_transform(modality: str, image_keys: list[str] = ["i
     """
     modality = modality.lower()  # Normalize modality to lowercase
     if modality not in SUPPORT_MODALITIES:
-        warnings.warn(f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities.")
+        warnings.warn(
+            f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities."
+        )
 
     if modality == "ct":
         return []  # CT HU intensity is stable across different datasets
@@ -135,7 +139,9 @@ def define_vae_transform(
     """
     modality = modality.lower()  # Normalize modality to lowercase
     if modality not in SUPPORT_MODALITIES:
-        warnings.warn(f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities.")
+        warnings.warn(
+            f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities."
+        )
 
     if spacing_type not in ["original", "fixed", "rand_zoom"]:
         raise ValueError(f"spacing_type has to be chosen from ['original', 'fixed', 'rand_zoom']. Got {spacing_type}.")
@@ -201,19 +207,25 @@ def define_vae_transform(
             RandSpatialCropd(keys=keys, roi_size=patch_size, allow_missing_keys=True, random_size=False, random_center=True),
         ]
     else:
-        val_crop = [DivisiblePadd(keys=keys, allow_missing_keys=True, k=k)] if val_patch_size is None else [ResizeWithPadOrCropd(keys=keys, allow_missing_keys=True, spatial_size=val_patch_size)]
+        val_crop = (
+            [DivisiblePadd(keys=keys, allow_missing_keys=True, k=k)]
+            if val_patch_size is None
+            else [ResizeWithPadOrCropd(keys=keys, allow_missing_keys=True, spatial_size=val_patch_size)]
+        )
 
     final_transform = [EnsureTyped(keys=keys, dtype=output_dtype, allow_missing_keys=True)]
 
     if is_train:
-        train_transforms = Compose(common_transform + random_transform + train_crop + final_transform if random_aug else common_transform + train_crop + final_transform)
+        train_transforms = Compose(
+            common_transform + random_transform + train_crop + final_transform if random_aug else common_transform + train_crop + final_transform
+        )
         return train_transforms
     else:
         val_transforms = Compose(common_transform + val_crop + final_transform)
         return val_transforms
 
 
-class VAE_Transform:
+class VAE_Transform:  # noqa: N801
     """
     A class to handle MAISI VAE transformations for different modalities.
     """
@@ -290,7 +302,9 @@ class VAE_Transform:
         modality = fixed_modality or img["class"]
         modality = modality.lower()  # Normalize modality to lowercase
         if modality not in ["ct", "mri"]:
-            warnings.warn(f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities.")
+            warnings.warn(
+                f"Intensity transform only support {SUPPORT_MODALITIES}. Got {modality}. Will not do any intensity transform and will use original intensities."
+            )
 
         transform = self.transform_dict[modality]
         return transform(img)

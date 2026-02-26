@@ -254,7 +254,9 @@ def ldm_conditional_sample_one_image(
         # generate segmentation mask
         combine_label = combine_label_or.to(device)
         if output_size[0] != combine_label.shape[2] or output_size[1] != combine_label.shape[3] or output_size[2] != combine_label.shape[4]:
-            logging.info("output_size is not a desired value. Need to interpolate the mask to match with output_size. The result image will be very low quality.")
+            logging.info(
+                "output_size is not a desired value. Need to interpolate the mask to match with output_size. The result image will be very low quality."
+            )
             combine_label = torch.nn.functional.interpolate(combine_label, size=output_size, mode="nearest")
 
         controlnet_cond_vis = binarize_labels(combine_label.as_tensor().long()).half()
@@ -289,7 +291,9 @@ def ldm_conditional_sample_one_image(
             total=min(len(all_timesteps), len(all_next_timesteps)),
         )
         if cfg_guidance_scale > 0:
-            combine_label_no_tumor = torch.nn.functional.interpolate(remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(), size=output_size, mode="nearest").to(combine_label.dtype)
+            combine_label_no_tumor = torch.nn.functional.interpolate(
+                remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(), size=output_size, mode="nearest"
+            ).to(combine_label.dtype)
             controlnet_cond_vis_no_tumor = binarize_labels(combine_label_no_tumor.as_tensor().long()).half()
             del combine_label_no_tumor
         for t, next_t in progress_bar:
@@ -471,7 +475,9 @@ def check_input_ct(
     if output_size[0] != output_size[1]:
         raise ValueError(f"The first two components of output_size need to be equal, yet got {output_size}.")
     if (output_size[0] not in [256, 384, 512]) or (output_size[2] not in [128, 256, 384, 512, 640, 768]):
-        raise ValueError(f"The output_size[0] have to be chosen from [256, 384, 512], and output_size[2] have to be chosen from [128, 256, 384, 512, 640, 768], yet got {output_size}.")
+        raise ValueError(
+            f"The output_size[0] have to be chosen from [256, 384, 512], and output_size[2] have to be chosen from [128, 256, 384, 512, 640, 768], yet got {output_size}."
+        )
 
     if spacing[0] != spacing[1]:
         raise ValueError(f"The first two components of spacing need to be equal, yet got {spacing}.")
@@ -479,18 +485,20 @@ def check_input_ct(
         raise ValueError(f"spacing[0] have to be between 0.5 and 3.0 mm, spacing[2] have to be between 0.5 and 5.0 mm, yet got {spacing}.")
 
     if output_size[0] * spacing[0] < 256:
-        FOV = [output_size[axis] * spacing[axis] for axis in range(3)]
+        FOV = [output_size[axis] * spacing[axis] for axis in range(3)]  # noqa: N806
         raise ValueError(
             f"`'spacing'({spacing}mm) and 'output_size'({output_size}) together decide the output field of view (FOV). The FOV will be {FOV}mm. We recommend the FOV in x and y axis to be at least 256mm for head, and at least 384mm for other body regions like abdomen. There is no such restriction for z-axis."
         )
 
-    if controllable_anatomy_size == None:
+    if controllable_anatomy_size is None:
         logging.info("`controllable_anatomy_size` is not provided.")
         return
 
     # check controllable_anatomy_size format
     if len(controllable_anatomy_size) > 10:
-        raise ValueError(f"The length of list controllable_anatomy_size has to be less than 10. Yet got length equal to {len(controllable_anatomy_size)}.")
+        raise ValueError(
+            f"The length of list controllable_anatomy_size has to be less than 10. Yet got length equal to {len(controllable_anatomy_size)}."
+        )
     available_controllable_organ = [
         "liver",
         "gallbladder",
@@ -510,7 +518,9 @@ def check_input_ct(
     controllable_organ = []
     for controllable_anatomy_size_pair in controllable_anatomy_size:
         if controllable_anatomy_size_pair[0] not in available_controllable_anatomy:
-            raise ValueError(f"The controllable_anatomy have to be chosen from {available_controllable_anatomy}, yet got {controllable_anatomy_size_pair[0]}.")
+            raise ValueError(
+                f"The controllable_anatomy have to be chosen from {available_controllable_anatomy}, yet got {controllable_anatomy_size_pair[0]}."
+            )
         if controllable_anatomy_size_pair[0] in available_controllable_tumor:
             controllable_tumor += [controllable_anatomy_size_pair[0]]
         if controllable_anatomy_size_pair[0] in available_controllable_organ:
@@ -518,16 +528,22 @@ def check_input_ct(
         if controllable_anatomy_size_pair[1] == -1:
             continue
         if controllable_anatomy_size_pair[1] < 0 or controllable_anatomy_size_pair[1] > 1.0:
-            raise ValueError(f"The controllable size scale have to be between 0 and 1,0, or equal to -1, yet got {controllable_anatomy_size_pair[1]}.")
+            raise ValueError(
+                f"The controllable size scale have to be between 0 and 1,0, or equal to -1, yet got {controllable_anatomy_size_pair[1]}."
+            )
     if len(controllable_tumor + controllable_organ) != len(list(set(controllable_tumor + controllable_organ))):
         raise ValueError(f"Please do not repeat controllable_anatomy. Got {controllable_tumor + controllable_organ}.")
     if len(controllable_tumor) > 1:
         raise ValueError(f"Only one controllable tumor is supported. Yet got {controllable_tumor}.")
 
     if len(controllable_anatomy_size) > 0:
-        logging.info(f"`controllable_anatomy_size` is not empty.\nWe will ignore `body_region` and `anatomy_list` and synthesize based on `controllable_anatomy_size`: ({controllable_anatomy_size}).")
+        logging.info(
+            f"`controllable_anatomy_size` is not empty.\nWe will ignore `body_region` and `anatomy_list` and synthesize based on `controllable_anatomy_size`: ({controllable_anatomy_size})."
+        )
     else:
-        logging.info(f"`controllable_anatomy_size` is empty.\nWe will synthesize based on `body_region`: ({body_region}) and `anatomy_list`: ({anatomy_list}).")
+        logging.info(
+            f"`controllable_anatomy_size` is empty.\nWe will synthesize based on `body_region`: ({body_region}) and `anatomy_list`: ({anatomy_list})."
+        )
         # check body_region format
         available_body_region = [
             "head",
@@ -583,10 +599,16 @@ def check_input_mr(
         if output_size[0] not in [128, 256, 384, 512]:
             raise ValueError(f"The output_size[0] have to be chosen from [128, 256, 384, 512] when output_size[2]=128, yet got {output_size}.")
     elif output_size[2] == 256:
-        if (output_size[0] == 128 and output_size[1] == 256) or (output_size[0] == 256 and output_size[1] == 128) or (output_size[0] == 256 and output_size[1] == 256):
+        if (
+            (output_size[0] == 128 and output_size[1] == 256)
+            or (output_size[0] == 256 and output_size[1] == 128)
+            or (output_size[0] == 256 and output_size[1] == 256)
+        ):
             pass
         else:
-            raise ValueError(f"The output_size can only be [128,256,256] or [256,128,256], or [256,256,256] when output_size[2]=256, yet got {output_size}.")
+            raise ValueError(
+                f"The output_size can only be [128,256,256] or [256,128,256], or [256,256,256] when output_size[2]=256, yet got {output_size}."
+            )
     else:
         raise ValueError(f"The output_size[2] have to be chosen from [128, 256], yet got {output_size}.")
 
@@ -698,7 +720,9 @@ class LDMSampler:
         if any(size % 16 != 0 for size in autoencoder_sliding_window_infer_size):
             raise ValueError(f"autoencoder_sliding_window_infer_size must be divisible by 16.\n Got {autoencoder_sliding_window_infer_size}")
         if not (0 <= autoencoder_sliding_window_infer_overlap <= 1):
-            raise ValueError(f"Value of autoencoder_sliding_window_infer_overlap must be between 0 and 1.\n Got {autoencoder_sliding_window_infer_overlap}")
+            raise ValueError(
+                f"Value of autoencoder_sliding_window_infer_overlap must be between 0 and 1.\n Got {autoencoder_sliding_window_infer_overlap}"
+            )
         self.autoencoder_sliding_window_infer_size = autoencoder_sliding_window_infer_size
         self.autoencoder_sliding_window_infer_overlap = autoencoder_sliding_window_infer_overlap
 
@@ -789,7 +813,10 @@ class LDMSampler:
             selected_mask_files = self.select_mask(candidate_mask_files, num_img)
             logging.info(f"Images will be generated based on {selected_mask_files}.")
             if len(selected_mask_files) < num_img:
-                raise ValueError(f"len(selected_mask_files) ({len(selected_mask_files)}) < num_img ({num_img}). " "This should not happen. Please revisit function select_mask(self, candidate_mask_files, num_img).")
+                raise ValueError(
+                    f"len(selected_mask_files) ({len(selected_mask_files)}) < num_img ({num_img}). "
+                    "This should not happen. Please revisit function select_mask(self, candidate_mask_files, num_img)."
+                )
 
         num_generated_img = 0
         for index_s in range(len(selected_mask_files)):
@@ -824,9 +851,6 @@ class LDMSampler:
             end_time = time.time()
             logging.info(f"---- Mask preparation time: {end_time - start_time} seconds ----")
             torch.cuda.empty_cache()
-            # generate image/label pairs
-            to_generate = True
-            try_time = 0
             # start generation
             synthetic_images, synthetic_labels = self.sample_one_pair(
                 combine_label_or,
@@ -836,10 +860,17 @@ class LDMSampler:
                 modality_tensor,
             )
             # synthetic image quality check
-            pass_quality_check = self.quality_check_ct(synthetic_images.cpu().detach().numpy(), combine_label_or.cpu().detach().numpy(), perform_quality_check=(modality_tensor <= 7 and modality_tensor >= 1))
+            pass_quality_check = self.quality_check_ct(
+                synthetic_images.cpu().detach().numpy(),
+                combine_label_or.cpu().detach().numpy(),
+                perform_quality_check=(modality_tensor <= 7 and modality_tensor >= 1),
+            )
             if pass_quality_check or (num_img - num_generated_img) >= (len(selected_mask_files) - index_s):
                 if not pass_quality_check:
-                    logging.info("Generated image/label pair did not pass quality check, but will still save them. " "Please consider changing spacing and output_size to facilitate a more realistic setting.")
+                    logging.info(
+                        "Generated image/label pair did not pass quality check, but will still save them. "
+                        "Please consider changing spacing and output_size to facilitate a more realistic setting."
+                    )
                 num_generated_img = num_generated_img + 1
                 # save image/label pairs
                 output_postfix = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -864,7 +895,6 @@ class LDMSampler:
                 label_saver(synthetic_labels[0])
                 synthetic_labels_filename = os.path.join(self.output_dir, "sample_" + output_postfix + "_label" + self.label_output_ext)
                 output_filenames.append([synthetic_images_filename, synthetic_labels_filename])
-                to_generate = False
             else:
                 logging.info("Generated image/label pair did not pass quality check, will re-generate another pair.")
         return output_filenames
@@ -1079,7 +1109,9 @@ class LDMSampler:
                 # check if the resampled mask still contains those target labels
                 for anatomy_label in self.anatomy_list:
                     if anatomy_label not in contained_labels:
-                        raise ValueError(f"Resampled mask does not contain required class labels {anatomy_label}. Please tune spacing and output size.")
+                        raise ValueError(
+                            f"Resampled mask does not contain required class labels {anatomy_label}. Please tune spacing and output size."
+                        )
         return labels
 
     def read_mask_information(self, mask_file):
@@ -1214,6 +1246,8 @@ class LDMSampler:
         outlier_results = is_outlier(self.median_statistics, image_data, label_data, self.label_int_dict)
         for label, result in outlier_results.items():
             if result.get("is_outlier", False):
-                logging.info(f"Generated image quality check for label '{label}' failed: median value {result['median_value']} is outside the acceptable range ({result['low_thresh']} - {result['high_thresh']}).")
+                logging.info(
+                    f"Generated image quality check for label '{label}' failed: median value {result['median_value']} is outside the acceptable range ({result['low_thresh']} - {result['high_thresh']})."
+                )
                 return False
         return True

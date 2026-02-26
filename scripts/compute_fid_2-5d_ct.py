@@ -148,7 +148,7 @@ def drop_empty_slice(slices, empty_threshold: float):
         else:
             outputs.append(True)
 
-    logger.info(f"Empty slice drop rate {round((n_drop/len(slices))*100,1)}%")
+    logger.info(f"Empty slice drop rate {round((n_drop / len(slices)) * 100, 1)}%")
     return outputs
 
 
@@ -282,7 +282,7 @@ def get_features_2p5d(
     # Convert from 'RGB'→(R,G,B) to (B,G,R)
     image = image[:, [2, 1, 0], ...]
 
-    B, C, H, W, D = image.size()
+    B, C, H, W, D = image.size()  # noqa: N806
     with torch.no_grad():
         # ---------------------- XY-plane slicing along D ----------------------
         if center_slices:
@@ -497,12 +497,10 @@ def main(
     # -------------------------------------------------------------------------
     if model_name == "radimagenet_resnet50":
         feature_network = torch.hub.load("Warvito/radimagenet-models", model="radimagenet_resnet50", verbose=True, trust_repo=True)
-        suffix = "radimagenet_resnet50"
     else:
         import torchvision
 
         feature_network = torchvision.models.squeezenet1_1(pretrained=True)
-        suffix = "squeezenet1_1"
 
     feature_network.to(device)
     feature_network.eval()
@@ -532,7 +530,7 @@ def main(
     # -------------------------------------------------------------------------
     output_root_real = os.path.join(output_root, real_features_dir)
     with open(real_filelist) as rf:
-        real_lines = [l.strip() for l in rf.readlines()]
+        real_lines = [line.strip() for line in rf.readlines()]
     real_lines.sort()
     real_lines = real_lines[:num_images]
 
@@ -544,7 +542,7 @@ def main(
     # -------------------------------------------------------------------------
     output_root_synth = os.path.join(output_root, synth_features_dir)
     with open(synth_filelist) as sf:
-        synth_lines = [l.strip() for l in sf.readlines()]
+        synth_lines = [line.strip() for line in sf.readlines()]
     synth_lines.sort()
     synth_lines = synth_lines[:num_images]
 
@@ -617,7 +615,7 @@ def main(
     real_features_xy = torch.vstack(real_features_xy)
     real_features_yz = torch.vstack(real_features_yz)
     real_features_zx = torch.vstack(real_features_zx)
-    logger.info(f"Real feature shapes: {real_features_xy.shape}, " f"{real_features_yz.shape}, {real_features_zx.shape}")
+    logger.info(f"Real feature shapes: {real_features_xy.shape}, {real_features_yz.shape}, {real_features_zx.shape}")
 
     # -------------------------------------------------------------------------
     # Extract features for Synthetic Dataset
@@ -655,7 +653,7 @@ def main(
     synth_features_xy = torch.vstack(synth_features_xy)
     synth_features_yz = torch.vstack(synth_features_yz)
     synth_features_zx = torch.vstack(synth_features_zx)
-    logger.info(f"Synth feature shapes: {synth_features_xy.shape}, " f"{synth_features_yz.shape}, {synth_features_zx.shape}")
+    logger.info(f"Synth feature shapes: {synth_features_xy.shape}, {synth_features_yz.shape}, {synth_features_zx.shape}")
 
     # -------------------------------------------------------------------------
     # All-reduce / gather features across ranks

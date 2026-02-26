@@ -18,6 +18,8 @@ from torch import Tensor
 
 from .utils import dilate_one_img, erode_one_img
 
+MAX_COUNT = 1000  # maximum augmentation retries before raising an error
+
 
 def erode3d(input_tensor, erosion=3):
     # Define the structuring element
@@ -86,7 +88,13 @@ def augmentation_tumor_bone(pt_nda, output_size, random_seed=None):
     ###########################
     if tumor_szie > 0:
         # get organ mask
-        organ_mask = torch.logical_and(33 <= volume, volume <= 56).float() + torch.logical_and(63 <= volume, volume <= 97).float() + (volume == 127).float() + (volume == 114).float() + real_l_volume_
+        organ_mask = (
+            torch.logical_and(33 <= volume, volume <= 56).float()
+            + torch.logical_and(63 <= volume, volume <= 97).float()
+            + (volume == 127).float()
+            + (volume == 114).float()
+            + real_l_volume_
+        )
         organ_mask = (organ_mask > 0).float()
         cnt = 0
         while True:
@@ -338,7 +346,14 @@ def augmentation_body(pt_nda, random_seed=None):
     return pt_nda
 
 
-def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transform, spatial_size: tuple[int, int, int] | int | None = None, tumor_label: int = 1, min_tumor_size_ratio=0.8) -> Tensor:
+def augmentation_tumor_only(
+    tumor_mask_: Tensor,
+    organ_mask: Tensor,
+    aug_transform,
+    spatial_size: tuple[int, int, int] | int | None = None,
+    tumor_label: int = 1,
+    min_tumor_size_ratio=0.8,
+) -> Tensor:
     """
     tumor augmentation.
 
@@ -368,8 +383,6 @@ def augmentation_tumor_only(tumor_mask_: Tensor, organ_mask: Tensor, aug_transfo
             tumor_mask[0, 97:103, 97:103, 97:103]=2
     """
     # Initialize binary tumor mask
-    device = tumor_mask_.device
-
     tumor_region_binary_mask = torch.isin(tumor_mask_, torch.tensor(tumor_label, device=tumor_mask_.device)).long()
     tumor_size = torch.sum(tumor_region_binary_mask)
     ###########################
@@ -488,7 +501,7 @@ def remove_tumors(orig_labels, pseudo_labels=None):
         raise ValueError(f"input has to be 3D/4D, [1,X,Y,Z] or [1,X,Y]. Yet got {orig_labels.shape}.")
     x = remap_labels(orig_labels, {26: 1, 24: 4, 27: 62, 116: 14, 117: 5})
 
-    if pseudo_labels != None:
+    if pseudo_labels is not None:
         # replace with pseudo_labels, for lung tumor, bone lesion, brain tumors
         for lesion_id in [23, 128, 401, 402, 403, 176]:
             mask = x == lesion_id

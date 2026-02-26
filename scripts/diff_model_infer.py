@@ -268,7 +268,9 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
     args = load_config(env_config_path, model_config_path, model_def_path)
     local_rank, world_size, device = initialize_distributed(num_gpus)
     logger = setup_logging("inference")
-    random_seed = set_random_seed(args.diffusion_unet_inference["random_seed"] + local_rank if "random_seed" in args.diffusion_unet_inference.keys() else None)
+    random_seed = set_random_seed(
+        args.diffusion_unet_inference["random_seed"] + local_rank if "random_seed" in args.diffusion_unet_inference.keys() else None
+    )
     logger.info(f"Using {device} of {world_size} with random seed: {random_seed}")
 
     output_size = tuple(args.diffusion_unet_inference["dim"])
@@ -291,7 +293,11 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
     autoencoder, unet, scale_factor = load_models(args, device, logger)
     num_downsample_level = max(
         1,
-        (len(args.diffusion_unet_def["num_channels"]) if isinstance(args.diffusion_unet_def["num_channels"], list) else len(args.diffusion_unet_def["attention_levels"])),
+        (
+            len(args.diffusion_unet_def["num_channels"])
+            if isinstance(args.diffusion_unet_def["num_channels"], list)
+            else len(args.diffusion_unet_def["attention_levels"])
+        ),
     )
     divisor = 2 ** (num_downsample_level - 2)
     logger.info(f"num_downsample_level -> {num_downsample_level}, divisor -> {divisor}.")
@@ -322,10 +328,8 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         world = dist.get_world_size()
         paths = [None] * world
         dist.all_gather_object(paths, output_path)
-        is_rank0 = local_rank == 0
     else:
         paths = [output_path]
-        is_rank0 = True
 
     if dist.is_initialized():
         dist.destroy_process_group()

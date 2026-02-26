@@ -52,7 +52,12 @@ def create_transforms(dim: tuple = None, modality: str = "unknown") -> Compose:
 
     if dim:
         return Compose(
-            [monai.transforms.LoadImaged(keys="image"), monai.transforms.EnsureChannelFirstd(keys="image"), monai.transforms.Orientationd(keys="image", axcodes="RAS"), monai.transforms.EnsureTyped(keys="image", dtype=torch.float32)]
+            [
+                monai.transforms.LoadImaged(keys="image"),
+                monai.transforms.EnsureChannelFirstd(keys="image"),
+                monai.transforms.Orientationd(keys="image", axcodes="RAS"),
+                monai.transforms.EnsureTyped(keys="image", dtype=torch.float32),
+            ]
             + intensity_transforms
             + [
                 monai.transforms.Resized(keys="image", spatial_size=dim, mode="trilinear"),
@@ -102,7 +107,15 @@ def round_number(number: int, base_number: int = 128) -> int:
 #     return [_item["image"] for _item in filenames_raw]
 
 
-def process_file(filepath: str, args: argparse.Namespace, autoencoder: torch.nn.Module, device: torch.device, plain_transforms: Compose, new_transforms: Compose, logger: logging.Logger) -> None:
+def process_file(
+    filepath: str,
+    args: argparse.Namespace,
+    autoencoder: torch.nn.Module,
+    device: torch.device,
+    plain_transforms: Compose,
+    new_transforms: Compose,
+    logger: logging.Logger,
+) -> None:
     """
     Process a single file to create training data.
 
@@ -231,7 +244,9 @@ def diff_model_create_training_data(env_config_path: str, model_config_path: str
         modality = files_raw[_iter]["modality"]
 
         # Compute rounded target dims (multiples of 128) from the original image metadata.
-        new_dim = tuple(round_number(int(plain_transforms({"image": os.path.join(args.data_base_dir, filepath)})["image"].meta["dim"][_i])) for _i in range(1, 4))
+        new_dim = tuple(
+            round_number(int(plain_transforms({"image": os.path.join(args.data_base_dir, filepath)})["image"].meta["dim"][_i])) for _i in range(1, 4)
+        )
 
         # Build the transform pipeline that includes resizing to new_dim.
         # NOTE: 'modality' is referenced here but not defined in this scope; caller must ensure it's available

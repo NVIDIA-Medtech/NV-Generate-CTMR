@@ -87,7 +87,14 @@ def infer_controlnet(env_config_path: str, model_config_path: str, model_def_pat
 
     # Step 1: set data loader
     _, val_loader = prepare_maisi_controlnet_json_dataloader(
-        json_data_list=args.json_data_list, data_base_dir=args.data_base_dir, rank=rank, world_size=world_size, batch_size=args.controlnet_train["batch_size"], cache_rate=args.controlnet_train["cache_rate"], fold=args.controlnet_train["fold"], modality_mapping=args.modality_mapping
+        json_data_list=args.json_data_list,
+        data_base_dir=args.data_base_dir,
+        rank=rank,
+        world_size=world_size,
+        batch_size=args.controlnet_train["batch_size"],
+        cache_rate=args.controlnet_train["cache_rate"],
+        fold=args.controlnet_train["fold"],
+        modality_mapping=args.modality_mapping,
     )
 
     # Step 3: inference
@@ -107,7 +114,6 @@ def infer_controlnet(env_config_path: str, model_config_path: str, model_def_pat
             bottom_region_index_tensor = None
         spacing_tensor = batch["spacing"].to(device)
         modality_tensor = args.controlnet_infer["modality"] * torch.ones((len(labels),), dtype=torch.long).to(device)
-        out_spacing = tuple((batch["spacing"].squeeze().numpy() / 100).tolist())
         # get target dimension
         dim = batch["dim"]
         output_size = (dim[0].item(), dim[1].item(), dim[2].item())

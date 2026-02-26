@@ -258,7 +258,16 @@ def add_data_dir2path(list_files: list, data_dir: str, fold: int = None) -> tupl
         return new_list_files, []
 
 
-def prepare_maisi_controlnet_json_dataloader(json_data_list: list | str, data_base_dir: list | str, batch_size: int = 1, fold: int = 0, cache_rate: float = 0.0, rank: int = 0, world_size: int = 1, modality_mapping: dict = None) -> tuple[DataLoader, DataLoader]:
+def prepare_maisi_controlnet_json_dataloader(
+    json_data_list: list | str,
+    data_base_dir: list | str,
+    batch_size: int = 1,
+    fold: int = 0,
+    cache_rate: float = 0.0,
+    rank: int = 0,
+    world_size: int = 1,
+    modality_mapping: dict = None,
+) -> tuple[DataLoader, DataLoader]:
     """
     Prepare dataloaders for training and validation.
 
@@ -503,7 +512,9 @@ def general_mask_generation_post_process(volume_t, target_tumor_label=None, devi
         data[organ_fill_by_removed_mask(data, target_label=3, remove_mask=organ_remove_mask, device=device)] = 3
         dia_tumor_mask = dilate_one_img(torch.from_numpy(data == target_tumor_label).to(device), filter_size=3, pad_value=0.0).cpu().numpy()
         dia_tumor_mask = dilate_one_img(torch.from_numpy(dia_tumor_mask).to(device), filter_size=3, pad_value=0.0).cpu().numpy()
-        data[organ_fill_by_removed_mask(data, target_label=target_tumor_label, remove_mask=dia_tumor_mask * organ_remove_mask, device=device)] = target_tumor_label
+        data[organ_fill_by_removed_mask(data, target_label=target_tumor_label, remove_mask=dia_tumor_mask * organ_remove_mask, device=device)] = (
+            target_tumor_label
+        )
         # refine hepatic tumor
         hepatic_tumor_vessel_liver_mask_ = (data == 26).astype(np.long) + (data == 25).astype(np.long) + (data == 1).astype(np.long)
         hepatic_tumor_vessel_liver_mask_ = (hepatic_tumor_vessel_liver_mask_ > 1).astype(np.long)
@@ -520,7 +531,9 @@ def general_mask_generation_post_process(volume_t, target_tumor_label=None, devi
         # speical process for cases with colon tumor
         dia_tumor_mask = dilate_one_img(torch.from_numpy(data == target_tumor_label).to(device), filter_size=3, pad_value=0.0).cpu().numpy()
         dia_tumor_mask = dilate_one_img(torch.from_numpy(dia_tumor_mask).to(device), filter_size=3, pad_value=0.0).cpu().numpy()
-        data[organ_fill_by_removed_mask(data, target_label=target_tumor_label, remove_mask=dia_tumor_mask * organ_remove_mask, device=device)] = target_tumor_label
+        data[organ_fill_by_removed_mask(data, target_label=target_tumor_label, remove_mask=dia_tumor_mask * organ_remove_mask, device=device)] = (
+            target_tumor_label
+        )
 
     if target_tumor_label == 129 and np.sum(target_tumor) > 0:
         # speical process for cases with kidney tumor
@@ -530,7 +543,10 @@ def general_mask_generation_post_process(volume_t, target_tumor_label=None, devi
             data[organ_fill_by_closing(data, target_label=organ_label, device=device)] = organ_label
     # TODO: current model does not support hepatic vessel by size control.
     # we treat it as liver for better visiaulization
-    print("Current model does not support hepatic vessel by size control, " "so we treat generated hepatic vessel as part of liver for better visiaulization.")
+    print(
+        "Current model does not support hepatic vessel by size control, "
+        "so we treat generated hepatic vessel as part of liver for better visiaulization."
+    )
     data[hepatic_vessel] = 1
     data[airway] = 132
     if target_tumor_label is not None:
@@ -604,7 +620,7 @@ class MapLabelValue:
         return out
 
 
-def KL_loss(z_mu, z_sigma):
+def KL_loss(z_mu, z_sigma):  # noqa: N802
     """
     Compute the Kullback-Leibler (KL) divergence loss for a variational autoencoder (VAE).
 

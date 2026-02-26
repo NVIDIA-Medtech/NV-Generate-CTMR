@@ -82,7 +82,16 @@ def load_filenames(data_list_path: str) -> list:
     return [_item["image"].replace(".nii.gz", "_emb.nii.gz") for _item in filenames_train]
 
 
-def prepare_data(train_files: list, device: torch.device, cache_rate: float, num_workers: int = 2, batch_size: int = 1, include_body_region: bool = False, include_modality: bool = True, modality_mapping: dict = None) -> DataLoader:
+def prepare_data(
+    train_files: list,
+    device: torch.device,
+    cache_rate: float,
+    num_workers: int = 2,
+    batch_size: int = 1,
+    include_body_region: bool = False,
+    include_modality: bool = True,
+    modality_mapping: dict = None,
+) -> DataLoader:
     """
     Prepare training data.
 
@@ -346,7 +355,9 @@ def train_one_epoch(
         loss_torch[1] += 1.0
 
         if local_rank == 0:
-            logger.info(f"[{str(datetime.now())[:19]}] epoch {epoch + 1}, iter {_iter}/{len(train_loader)}, loss: {loss.item():.4f}, lr: {current_lr:.12f}.")
+            logger.info(
+                f"[{str(datetime.now())[:19]}] epoch {epoch + 1}, iter {_iter}/{len(train_loader)}, loss: {loss.item():.4f}, lr: {current_lr:.12f}."
+            )
 
     if dist.is_initialized():
         dist.all_reduce(loss_torch, op=torch.distributed.ReduceOp.SUM)
@@ -446,7 +457,15 @@ def diff_model_train(env_config_path: str, model_config_path: str, model_def_pat
     if dist.is_initialized():
         train_files = partition_dataset(data=train_files, shuffle=True, num_partitions=dist.get_world_size(), even_divisible=True)[local_rank]
 
-    train_loader = prepare_data(train_files, device, args.diffusion_unet_train["cache_rate"], batch_size=args.diffusion_unet_train["batch_size"], include_body_region=include_body_region, include_modality=include_modality, modality_mapping=args.modality_mapping)
+    train_loader = prepare_data(
+        train_files,
+        device,
+        args.diffusion_unet_train["cache_rate"],
+        batch_size=args.diffusion_unet_train["batch_size"],
+        include_body_region=include_body_region,
+        include_modality=include_modality,
+        modality_mapping=args.modality_mapping,
+    )
 
     scale_factor = calculate_scale_factor(train_loader, device, logger)
     optimizer = create_optimizer(unet, args.diffusion_unet_train["lr"])

@@ -84,7 +84,7 @@ def main():
     if directory is not None:
         os.makedirs(directory, exist_ok=True)
     root_dir = tempfile.mkdtemp() if directory is None else directory
-    print(root_dir)
+    logger.info(f"Data directory: {root_dir}")
 
     download_model_data(generate_version, root_dir)
 
@@ -95,8 +95,8 @@ def main():
         # Update the path to the downloaded dataset in MONAI_DATA_DIRECTORY
         val = v if "datasets/" not in v else os.path.join(root_dir, v)
         setattr(args, k, val)
-        print(f"{k}: {val}")
-    print("Global config variables have been loaded.")
+        logger.info(f"{k}: {val}")
+    logger.info("Global config variables have been loaded.")
 
     # ## Read in configuration setting, including network definition, body region and anatomy to generate, etc.
     #
@@ -114,7 +114,7 @@ def main():
         args.mask_generation_autoencoder_def["num_splits"] = config_infer_dict["autoencoder_tp_num_splits"]
     for k, v in config_infer_dict.items():
         setattr(args, k, v)
-        print(f"{k}: {v}")
+        logger.info(f"{k}: {v}")
 
     #
     # ## Read in optional extra configuration setting - typically acceleration options (TRT)
@@ -124,7 +124,7 @@ def main():
         extra_config_dict = json.load(open(args.extra_config_file))
         for k, v in extra_config_dict.items():
             setattr(args, k, v)
-            print(f"{k}: {v}")
+            logger.info(f"{k}: {v}")
     if args.modality >= 1 and args.modality <= 7:
         check_input_ct(
             args.body_region,
@@ -144,7 +144,7 @@ def main():
             args.controllable_anatomy_size,
         )
     latent_shape = [args.latent_channels, args.output_size[0] // 4, args.output_size[1] // 4, args.output_size[2] // 4]
-    print("Network definition and inference inputs have been loaded.")
+    logger.info("Network definition and inference inputs have been loaded.")
 
     # ## Initialize networks and noise scheduler, then load the trained model weights.
     # The networks and noise scheduler are defined in `config_file`. We will read them in and load the model weights.
@@ -178,7 +178,7 @@ def main():
     mask_generation_diffusion_unet.load_state_dict(checkpoint_mask_generation_diffusion_unet["unet_state_dict"])
     mask_generation_scale_factor = checkpoint_mask_generation_diffusion_unet["scale_factor"]
 
-    print("All the trained model weights have been loaded.")
+    logger.info("All the trained model weights have been loaded.")
 
     # ## Define the LDM Sampler, which contains functions that will perform the inference.
     ldm_sampler = LDMSampler(
@@ -216,9 +216,9 @@ def main():
         cfg_guidance_scale=args.cfg_guidance_scale,
     )
 
-    print(f"The generated image/mask pairs will be saved in {args.output_dir}.")
-    output_filenames = ldm_sampler.sample_multiple_images(args.num_output_samples)
-    print("MAISI image/mask generation finished")
+    logger.info(f"The generated image/mask pairs will be saved in {args.output_dir}.")
+    ldm_sampler.sample_multiple_images(args.num_output_samples)
+    logger.info("MAISI image/mask generation finished")
 
 
 if __name__ == "__main__":
