@@ -90,7 +90,8 @@ def main():
 
     # ## Read in environment setting, including data directory, model directory, and output directory
     # The information for data directory, model directory, and output directory are saved in ./configs/environment.json
-    env_dict = json.load(open(args.environment_file))
+    with open(args.environment_file) as _f:
+        env_dict = json.load(_f)
     for k, v in env_dict.items():
         # Update the path to the downloaded dataset in MONAI_DATA_DIRECTORY
         val = v if "datasets/" not in v else os.path.join(root_dir, v)
