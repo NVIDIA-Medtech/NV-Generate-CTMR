@@ -71,7 +71,7 @@ You can run it in command line to generate paired CT image and mask.
 ```bash
 export MONAI_DATA_DIRECTORY="./temp_work_dir"
 network="rflow"
-generate_version="rflow-ct"
+generate_version="rflow-ct" # can change to "ddpm-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
@@ -81,7 +81,7 @@ You can run it in command line to generate CT image without mask.
 
 ```bash
 network="rflow"
-generate_version="rflow-ct"
+generate_version="rflow-ct" # can change to "ddpm-ct"
 python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
@@ -147,15 +147,16 @@ This repository provides **four model variants** for medical image generation: `
 | **Modality**       | MRI (brain)         | MRI                                  | CT                                | CT                   |
 | **Model Weights**  | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
 | **Model License**  | Open-source and commercial friendly | [Open-source and research only](https://huggingface.co/nvidia/NV-Generate-MR/blob/main/NVIDIA%20OneWay%20Noncommercial%20License_22Mar2022%20(research%20only).pdf) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) |
+| **Quick Start**    | [1.4 MR Brain Image Generation](#14-mr-brain-image-generation) | [1.3 MR Image Generation](#13-mr-image-generation) | [1.1 CT Paired Image/Mask](#11-ct-paired-imagemask-generation), [1.2 CT Image](#12-ct-image-generation) | [1.1 CT Paired Image/Mask](#11-ct-paired-imagemask-generation) |
 | **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      |
 | **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
 | **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) |
 | **Inference Steps**| 30                  | 30                                    | 30 (**33× faster**)               | 1000                 |
 | **Max Volume**     | 512×512×256         | 512×512×128                           | 512×512×768                       | 512×512×768          |
 | **Use Case**       | MR image-only generation for brain (T1w, T2w, Flair, SWI; whole brain and skull-stripped) | MR image-only generation with user specified contrast | CT image-only generation; CT image/mask pair generation | CT image-only generation; CT image/mask pair generation |
-| **Model: Foundation VAE**     | trained on CT and MR (with additional abdomen MRI) | trained on CT and MR (with additional abdomen MRI) | same VAE with `ddpm-ct` | trained on CT and MR |
+| **Model: Foundation VAE**     | same VAE with `ddpm-ct` | trained on CT and MR (with additional abdomen MRI) | same VAE with `ddpm-ct` | trained on CT and MR |
 | **Model: Foundation Diffusion Model**     | does not take body region as input, takes [modality](configs/modality_mapping.json) as input (brain-focused) | does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data. | does not take body region as input, has API for modality input (always set as 'ct' but expandable) | takes body region as input, no API for modality input  |
-| **Model: ControlNet**     | N/A | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
+| **Model: ControlNet**     | Coming soon | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
 
 **Quick Recommendations**:
 
