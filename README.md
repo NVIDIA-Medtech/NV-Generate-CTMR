@@ -10,7 +10,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 | *Generated MR T2w prostate and T1w brain image* | *Generated CT image/mask pair* |
 
 ## News
-
+- **March 2026** — Released rectified flow models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-striped brain generation for T1w, T2w, Flair, SWI images.
 - **October 2025** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI repo to this NV-Generate-CTMR repo.
 - **March 2025** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT image/mask synthesis. Key differences compared with `ddpm-ct`:
   - `rflow-ct` is much faster. Its diffusion model inference is **33x** faster than `ddpm-ct`.
@@ -32,7 +32,8 @@ Online demo, no GPU required:
   - [1.1 CT Paired Image/Mask Generation](#11-ct-paired-imagemask-generation)
   - [1.2 CT Image Generation](#12-ct-image-generation)
   - [1.3 MR Image Generation](#13-mr-image-generation)
-  - [1.4 Example Application: MR-to-CT Synthesis](#14-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
+  - [1.4 MR Brain Image Generation](#14-mr-brain-image-generation)
+  - [1.5 Example Application: MR-to-CT Synthesis](#15-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
 - [2. Model Family](#2-model-family)
 - [3. Time Cost and GPU Memory Usage](#3-time-cost-and-gpu-memory-usage)
   - [3.1 Minimum GPU Requirement](#31-minimum-gpu-requirement)
@@ -105,7 +106,32 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 1.4 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
+### 1.4 MR Brain Image Generation
+
+Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
+
+You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support T1 and thick-slice T2 images for brain MRI, Flair for skull-stripped brain MRI, T2 images for prostate MRI, T1 image for breast MRI, T1 and T2 image for abdomen MRI. Contrast-enhanced MRI is not supported.
+
+```json
+"mri":8,
+"mri_t1":9,
+"mri_t2":10,
+"mri_flair":11,
+ "mri_swi":20,
+"mri_t1_skull_stripped":29,
+"mri_t2_skull_stripped":30,
+"mri_flair_skull_stripped":31,
+"mri_swi_skull_stripped":32,
+```
+
+```bash
+network="rflow"
+generate_version="rflow-mr-brain"
+python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
+python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
+```
+
+### 1.5 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
 
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rflow-ct`) is available here:
 [https://github.com/brudfors/maisi-mr-to-ct](https://github.com/brudfors/maisi-mr-to-ct)
@@ -114,21 +140,21 @@ If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and
 
 ## 2. Model Family
 
-This repository provides **three model variants** for medical image generation, including `ddpm-ct`, `rflow-ct`, and `rflow-mr`.
+This repository provides **four model variants** for medical image generation: `rflow-mr-brain`, `rflow-mr`, `rflow-ct`, and `ddpm-ct`.
 
-|                    | `ddpm-ct`             | `rflow-ct`                          | `rflow-mr`                        |
-|--------------------|----------------------|--------------------------------------|-----------------------------------|
-| **Modality**       | CT                   | CT                                   | MRI                               |
-| **Model Weights**    | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) |
-| **Architecture**   | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         |
-| **Paper**          | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
-| **Network Detail** | [config_network_ddpm.json](./configs/config_network_ddpm.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) |
-| **Inference Steps**| 1000                 | 30 (**33× faster**)                  | 30                                |
-| **Max Volume**     | 512×512×768          | 512×512×768                          | 512×512×128                       |
-| **Use Case**       | CT image-only generation; CT image/mask pair generation        | CT image-only generation; CT image/mask pair generation      | MR image-only generation with user specified contrast |
-| **Model: Foundation VAE**     | trained on CT and MR | same VAE with `ddpm-ct` | trained on CT and MR (with additional abdomen MRI) |
-| **Model: Foundation Diffusion Model**     | takes body region as input, no API for modality input  | does not take body region as input, has API for modality input (always set as 'ct' but expandable)| does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data.|
-| **Model: ControlNet**     | generate image/mask pairs, no contrastive loss | generate image/mask pairs, with contrastive loss | N/A |
+|                    | `rflow-mr-brain`     | `rflow-mr`                          | `rflow-ct`                        | `ddpm-ct`             |
+|--------------------|---------------------|--------------------------------------|-----------------------------------|----------------------|
+| **Modality**       | MRI (brain)         | MRI                                  | CT                                | CT                   |
+| **Model Weights**  | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
+| **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      |
+| **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
+| **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) |
+| **Inference Steps**| 30                  | 30                                    | 30 (**33× faster**)               | 1000                 |
+| **Max Volume**     | 512×512×128         | 512×512×128                           | 512×512×768                       | 512×512×768          |
+| **Use Case**       | MR brain (T1w, T2w, Flair, SWI; whole brain and skull-stripped) | MR image-only generation with user specified contrast | CT image-only generation; CT image/mask pair generation | CT image-only generation; CT image/mask pair generation |
+| **Model: Foundation VAE**     | trained on CT and MR (with additional abdomen MRI) | trained on CT and MR (with additional abdomen MRI) | same VAE with `ddpm-ct` | trained on CT and MR |
+| **Model: Foundation Diffusion Model**     | does not take body region as input, takes [modality](configs/modality_mapping.json) as input (brain-focused) | does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data. | does not take body region as input, has API for modality input (always set as 'ct' but expandable) | takes body region as input, no API for modality input  |
+| **Model: ControlNet**     | N/A | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
 
 **Quick Recommendations**:
 
