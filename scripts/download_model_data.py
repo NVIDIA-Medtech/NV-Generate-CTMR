@@ -60,9 +60,9 @@ def download_model_data(generate_version, root_dir, model_only=False):
                 "filename": "models/autoencoder_v1.pt",
             },
             {
-                "path": "models/diff_unet_3d_rflow-mr-brain_v1.pt",
+                "path": "models/diff_unet_3d_rflow-mr-brain_v0.pt",
                 "repo_id": "nvidia/NV-Generate-MR-Brain",
-                "filename": "models/diff_unet_3d_rflow-mr-brain_v1.pt",
+                "filename": "models/diff_unet_3d_rflow-mr-brain_v0.pt",
             },
         ]
     elif generate_version == "ddpm-ct" or generate_version == "rflow-ct":
