@@ -28,13 +28,13 @@ Online demo, no GPU required:
 
 - [News](#news)
 - [🚀 Live Demo](#-have-a-try-live-demo-to-generate-ct-image-and-mask-pairs)
-- [1. Quick Start](#1-quick-start-requires-at-least-a-16g-gpu)
-  - [1.1 MR Brain Image Generation](#11-mr-brain-image-generation)
-  - [1.2 CT Paired Image/Mask Generation](#12-ct-paired-imagemask-generation)
-  - [1.3 CT Image Generation](#13-ct-image-generation)
-  - [1.4 MR Image Generation](#14-mr-image-generation)
-  - [1.5 Example Application: MR-to-CT Synthesis](#15-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
-- [2. Model Family](#2-model-family)
+- [1. Model Family](#1-model-family)
+- [2. Quick Start](#2-quick-start-requires-at-least-a-16g-gpu)
+  - [2.1 MR Brain Image Generation](#21-mr-brain-image-generation)
+  - [2.2 CT Paired Image/Mask Generation](#22-ct-paired-imagemask-generation)
+  - [2.3 CT Image Generation](#23-ct-image-generation)
+  - [2.4 MR Image Generation](#24-mr-image-generation)
+  - [2.5 Example Application: MR-to-CT Synthesis](#25-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
 - [3. Time Cost and GPU Memory Usage](#3-time-cost-and-gpu-memory-usage)
   - [3.1 Minimum GPU Requirement](#31-minimum-gpu-requirement)
   - [3.2 Inference Time Cost and GPU Memory Usage](#32-inference-time-cost-and-gpu-memory-usage)
@@ -60,9 +60,35 @@ Online demo, no GPU required:
 - [10. License](#10-license)
 - [11. Questions and Bugs](#11-questions-and-bugs)
 
-## 1. Quick Start (requires at least a 16G GPU)
+## 1. Model Family
 
-### 1.1 MR Brain Image Generation
+This repository provides **four model variants** for medical image generation: `rflow-mr-brain`, `rflow-mr`, `rflow-ct`, and `ddpm-ct`.
+
+|                    | `rflow-mr-brain`     | `rflow-mr`                          | `rflow-ct`                        | `ddpm-ct`             |
+|--------------------|---------------------|--------------------------------------|-----------------------------------|----------------------|
+| **Modality**       | MRI (brain)         | MRI                                  | CT                                | CT                   |
+| **Release Date**   | March 2026        | October 2025                           |  March 2025                     |    Auguest 2024        |
+| **Model Weights**  | [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
+| **Model License**  | Open-source and commercial friendly | [Open-source and research only](https://huggingface.co/nvidia/NV-Generate-MR/blob/main/NVIDIA%20OneWay%20Noncommercial%20License_22Mar2022%20(research%20only).pdf) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) |
+| **Quick Start**    | [2.1 MR Brain Image Generation](#21-mr-brain-image-generation) | [2.4 MR Image Generation](#24-mr-image-generation) | [2.2 CT Paired Image/Mask](#22-ct-paired-imagemask-generation), [2.3 CT Image](#23-ct-image-generation) | [2.2 CT Paired Image/Mask](#22-ct-paired-imagemask-generation) |
+| **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      |
+| **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
+| **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) |
+| **Inference Steps**| 30                  | 30                                    | 30 (**33× faster than `ddpm-ct`**)               | 1000                 |
+| **Max Volume**     | 512×512×256         | 512×512×128                           | 512×512×768                       | 512×512×768          |
+| **Use Case**       | MR image-only generation for brain (T1w, T2w, Flair, SWI; whole brain and skull-stripped) | MR image-only generation with user specified contrast | CT image-only generation; CT image/mask pair generation | CT image-only generation; CT image/mask pair generation |
+| **Model: Foundation VAE**     | same VAE with `ddpm-ct` | trained on CT and MR (with additional abdomen MRI) | same VAE with `ddpm-ct` | trained on CT and MR |
+| **Model: Foundation Diffusion Model**     | does not take body region as input, takes [modality](configs/modality_mapping.json) as input (brain-focused) | does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data. | does not take body region as input, has API for modality input (always set as 'ct' but expandable) | takes body region as input, no API for modality input  |
+| **Model: ControlNet**     | Coming soon | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
+
+**Quick Recommendations**:
+
+- **For CT projects**: Use `rflow-ct` - ready to inference for CT covering whole body region
+- **For MRI projects**: Use `rflow-mr` - fine-tune on your own MR
+
+## 2. Quick Start (requires at least a 16G GPU)
+
+### 2.1 MR Brain Image Generation
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
@@ -87,7 +113,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 1.2 CT Paired Image/Mask Generation
+### 2.2 CT Paired Image/Mask Generation
 
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
@@ -100,7 +126,7 @@ generate_version="rflow-ct" # can change to "ddpm-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
-### 1.3 CT Image Generation
+### 2.3 CT Image Generation
 
 You can run it in command line to generate CT image without mask.
 
@@ -111,7 +137,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 1.4 MR Image Generation
+### 2.4 MR Image Generation
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
@@ -131,38 +157,12 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 1.5 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
+### 2.5 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
 
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rflow-ct`) is available here:
 [https://github.com/brudfors/maisi-mr-to-ct](https://github.com/brudfors/maisi-mr-to-ct)
 
 If you’ve adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, please feel free to open an issue or contact the maintainers — we’d love to link to your repo.
-
-## 2. Model Family
-
-This repository provides **four model variants** for medical image generation: `rflow-mr-brain`, `rflow-mr`, `rflow-ct`, and `ddpm-ct`.
-
-|                    | `rflow-mr-brain`     | `rflow-mr`                          | `rflow-ct`                        | `ddpm-ct`             |
-|--------------------|---------------------|--------------------------------------|-----------------------------------|----------------------|
-| **Modality**       | MRI (brain)         | MRI                                  | CT                                | CT                   |
-| **Release Date**   | March 2026        | October 2025                           |  March 2025                     |    Auguest 2024        |
-| **Model Weights**  | [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
-| **Model License**  | Open-source and commercial friendly | [Open-source and research only](https://huggingface.co/nvidia/NV-Generate-MR/blob/main/NVIDIA%20OneWay%20Noncommercial%20License_22Mar2022%20(research%20only).pdf) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) |
-| **Quick Start**    | [1.1 MR Brain Image Generation](#11-mr-brain-image-generation) | [1.4 MR Image Generation](#14-mr-image-generation) | [1.2 CT Paired Image/Mask](#12-ct-paired-imagemask-generation), [1.3 CT Image](#13-ct-image-generation) | [1.2 CT Paired Image/Mask](#12-ct-paired-imagemask-generation) |
-| **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      |
-| **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
-| **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) |
-| **Inference Steps**| 30                  | 30                                    | 30 (**33× faster than `ddpm-ct`**)               | 1000                 |
-| **Max Volume**     | 512×512×256         | 512×512×128                           | 512×512×768                       | 512×512×768          |
-| **Use Case**       | MR image-only generation for brain (T1w, T2w, Flair, SWI; whole brain and skull-stripped) | MR image-only generation with user specified contrast | CT image-only generation; CT image/mask pair generation | CT image-only generation; CT image/mask pair generation |
-| **Model: Foundation VAE**     | same VAE with `ddpm-ct` | trained on CT and MR (with additional abdomen MRI) | same VAE with `ddpm-ct` | trained on CT and MR |
-| **Model: Foundation Diffusion Model**     | does not take body region as input, takes [modality](configs/modality_mapping.json) as input (brain-focused) | does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data. | does not take body region as input, has API for modality input (always set as 'ct' but expandable) | takes body region as input, no API for modality input  |
-| **Model: ControlNet**     | Coming soon | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
-
-**Quick Recommendations**:
-
-- **For CT projects**: Use `rflow-ct` - ready to inference for CT covering whole body region
-- **For MRI projects**: Use `rflow-mr` - fine-tune on your own MR
 
 ## 3. Time Cost and GPU Memory Usage
 
