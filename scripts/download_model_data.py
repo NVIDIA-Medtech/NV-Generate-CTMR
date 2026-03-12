@@ -52,7 +52,20 @@ def fetch_to_hf_path_cmd(
 
 def download_model_data(generate_version, root_dir, model_only=False):
     # TODO: remove the `files` after the files are uploaded to the NGC
-    if generate_version == "ddpm-ct" or generate_version == "rflow-ct":
+    if generate_version == "rflow-mr-brain":
+        files = [
+            {
+                "path": "models/autoencoder_v1.pt",
+                "repo_id": "nvidia/NV-Generate-CT",
+                "filename": "models/autoencoder_v1.pt",
+            },
+            {
+                "path": "models/diff_unet_3d_rflow-mr-brain_v1.pt",
+                "repo_id": "nvidia/NV-Generate-MR-Brain",
+                "filename": "models/diff_unet_3d_rflow-mr-brain_v1.pt",
+            },
+        ]
+    elif generate_version == "ddpm-ct" or generate_version == "rflow-ct":
         files = [
             {
                 "path": "models/autoencoder_v1.pt",
