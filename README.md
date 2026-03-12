@@ -29,10 +29,10 @@ Online demo, no GPU required:
 - [News](#news)
 - [🚀 Live Demo](#-have-a-try-live-demo-to-generate-ct-image-and-mask-pairs)
 - [1. Quick Start](#1-quick-start-requires-at-least-a-16g-gpu)
-  - [1.1 CT Paired Image/Mask Generation](#11-ct-paired-imagemask-generation)
-  - [1.2 CT Image Generation](#12-ct-image-generation)
-  - [1.3 MR Image Generation](#13-mr-image-generation)
-  - [1.4 MR Brain Image Generation](#14-mr-brain-image-generation)
+  - [1.1 MR Brain Image Generation](#11-mr-brain-image-generation)
+  - [1.2 CT Paired Image/Mask Generation](#12-ct-paired-imagemask-generation)
+  - [1.3 CT Image Generation](#13-ct-image-generation)
+  - [1.4 MR Image Generation](#14-mr-image-generation)
   - [1.5 Example Application: MR-to-CT Synthesis](#15-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
 - [2. Model Family](#2-model-family)
 - [3. Time Cost and GPU Memory Usage](#3-time-cost-and-gpu-memory-usage)
@@ -62,7 +62,32 @@ Online demo, no GPU required:
 
 ## 1. Quick Start (requires at least a 16G GPU)
 
-### 1.1 CT Paired Image/Mask Generation
+### 1.1 MR Brain Image Generation
+
+Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
+
+You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support T1 and thick-slice T2 images for brain MRI, Flair for skull-stripped brain MRI, T2 images for prostate MRI, T1 image for breast MRI, T1 and T2 image for abdomen MRI. Contrast-enhanced MRI is not supported.
+
+```json
+"mri":8,
+"mri_t1":9,
+"mri_t2":10,
+"mri_flair":11,
+"mri_swi":20,
+"mri_t1_skull_stripped":29,
+"mri_t2_skull_stripped":30,
+"mri_flair_skull_stripped":31,
+"mri_swi_skull_stripped":32,
+```
+
+```bash
+network="rflow"
+generate_version="rflow-mr-brain"
+python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
+python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
+```
+
+### 1.2 CT Paired Image/Mask Generation
 
 Please refer to [inference_tutorial.ipynb](inference_tutorial.ipynb) for the inference tutorial that generates paired CT image and mask.
 
@@ -75,7 +100,7 @@ generate_version="rflow-ct" # can change to "ddpm-ct"
 python -m scripts.inference -t ./configs/config_network_${network}.json -i ./configs/config_infer.json -e ./configs/environment_${generate_version}.json --random-seed 0 --version ${generate_version}
 ```
 
-### 1.2 CT Image Generation
+### 1.3 CT Image Generation
 
 You can run it in command line to generate CT image without mask.
 
@@ -86,7 +111,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 1.3 MR Image Generation
+### 1.4 MR Image Generation
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
@@ -106,31 +131,6 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 1.4 MR Brain Image Generation
-
-Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
-
-You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support T1 and thick-slice T2 images for brain MRI, Flair for skull-stripped brain MRI, T2 images for prostate MRI, T1 image for breast MRI, T1 and T2 image for abdomen MRI. Contrast-enhanced MRI is not supported.
-
-```json
-"mri":8,
-"mri_t1":9,
-"mri_t2":10,
-"mri_flair":11,
- "mri_swi":20,
-"mri_t1_skull_stripped":29,
-"mri_t2_skull_stripped":30,
-"mri_flair_skull_stripped":31,
-"mri_swi_skull_stripped":32,
-```
-
-```bash
-network="rflow"
-generate_version="rflow-mr-brain"
-python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
-python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
-```
-
 ### 1.5 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
 
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (`rflow-ct`) is available here:
@@ -145,9 +145,9 @@ This repository provides **four model variants** for medical image generation: `
 |                    | `rflow-mr-brain`     | `rflow-mr`                          | `rflow-ct`                        | `ddpm-ct`             |
 |--------------------|---------------------|--------------------------------------|-----------------------------------|----------------------|
 | **Modality**       | MRI (brain)         | MRI                                  | CT                                | CT                   |
-| **Model Weights**  | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
+| **Model Weights**  | [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
 | **Model License**  | Open-source and commercial friendly | [Open-source and research only](https://huggingface.co/nvidia/NV-Generate-MR/blob/main/NVIDIA%20OneWay%20Noncommercial%20License_22Mar2022%20(research%20only).pdf) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) | [Open-source and commercial friendly](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) |
-| **Quick Start**    | [1.4 MR Brain Image Generation](#14-mr-brain-image-generation) | [1.3 MR Image Generation](#13-mr-image-generation) | [1.1 CT Paired Image/Mask](#11-ct-paired-imagemask-generation), [1.2 CT Image](#12-ct-image-generation) | [1.1 CT Paired Image/Mask](#11-ct-paired-imagemask-generation) |
+| **Quick Start**    | [1.1 MR Brain Image Generation](#11-mr-brain-image-generation) | [1.4 MR Image Generation](#14-mr-image-generation) | [1.2 CT Paired Image/Mask](#12-ct-paired-imagemask-generation), [1.3 CT Image](#13-ct-image-generation) | [1.2 CT Paired Image/Mask](#12-ct-paired-imagemask-generation) |
 | **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      |
 | **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
 | **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) |
