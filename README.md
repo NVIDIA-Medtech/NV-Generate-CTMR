@@ -68,7 +68,7 @@ This repository provides **four model variants** for medical image generation: `
 |                    | `rflow-mr-brain`     | `rflow-mr`                          | `rflow-ct`                        | `ddpm-ct`             |
 |--------------------|---------------------|--------------------------------------|-----------------------------------|----------------------|
 | **Modality**       | MRI (brain)         | MRI                                  | CT                                | CT                   |
-| **Release Date**   | **March 2026 **       | October 2025                           |  March 2025                     |    Auguest 2024        |
+| **Release Date**   | **March 2026**       | October 2025                           |  March 2025                     |    Auguest 2024        |
 | **Model Weights**  | [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
 | **Quick Start**    | [2.1 MR Brain Image Generation](#21-mr-brain-image-generation) | [2.4 MR Image Generation](#24-mr-image-generation) | [2.2 CT Paired Image/Mask](#22-ct-paired-imagemask-generation), [2.3 CT Image](#23-ct-image-generation) | [2.2 CT Paired Image/Mask](#22-ct-paired-imagemask-generation) |
 | **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      |
