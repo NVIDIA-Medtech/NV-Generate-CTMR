@@ -346,5 +346,6 @@
     "Left-TTG---transverse-temporal-gyrus": 345,
     "brain tumor NCR/NETC": 401,
     "brain tumor ED": 402,
-    "brain tumor ET": 403
+    "brain tumor ET": 403,
+    "body": 500
 }
