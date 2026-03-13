@@ -95,15 +95,15 @@ Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutoria
 You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr-brain.json](configs/config_maisi_diff_model_rflow-mr-brain.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support both whole brain and skull-striped brain generation for T1w, T2w, Flair, SWI images.
 
 ```json
-"mri":8,
-"mri_t1":9,
-"mri_t2":10,
-"mri_flair":11,
-"mri_swi":20,
-"mri_t1_skull_stripped":29,
-"mri_t2_skull_stripped":30,
-"mri_flair_skull_stripped":31,
-"mri_swi_skull_stripped":32,
+"mri":8, # MRI without specifying contrast, can be any of them
+"mri_t1":9, # T1w whole-brain MRI
+"mri_t2":10, # T2w whole-brain MRI
+"mri_flair":11, # Flair whole-brain MRI
+"mri_swi":20, # SWI whole-brain MRI
+"mri_t1_skull_stripped":29, # T1w skull-stripped brain MRI
+"mri_t2_skull_stripped":30, # T2w skull-stripped brain MRI
+"mri_flair_skull_stripped":31, # Flair skull-stripped brain MRI
+"mri_swi_skull_stripped":32, # SWI skull-stripped brain MRI
 ```
 
 ```bash
