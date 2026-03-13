@@ -11,7 +11,7 @@ This repo includes the applications of training and validating NV-Generate-CTMR,
 
 ## News
 
-- **🆕 March 2026** — Released rectified flow models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-striped brain generation for T1w, T2w, Flair, SWI images.
+- **🎆 March 2026 🎇** — Released rectified flow models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-striped brain generation for T1w, T2w, Flair, SWI images.
 - **October 2025** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI repo to this NV-Generate-CTMR repo.
 - **March 2025** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT image/mask synthesis. Key differences compared with `ddpm-ct`:
   - `rflow-ct` is much faster. Its diffusion model inference is **33x** faster than `ddpm-ct`.
