@@ -12,5 +12,11 @@
     "mri_adc":14,
     "mri_ssfp":15,
     "mri_mra":16,
-    "mri_t1c":17
+    "mri_t1c":17,
+    "mri_swi":20,
+    "mri_t1_skull_stripped":29,
+    "mri_t2_skull_stripped":30,
+    "mri_flair_skull_stripped":31,
+    "mri_swi_skull_stripped":32,
+    "mri_mra_skull_stripped":33
 }
