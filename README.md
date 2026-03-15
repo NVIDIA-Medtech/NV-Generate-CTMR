@@ -147,7 +147,7 @@ python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -
 
 ### 2.5 MR Image Generation
 
-Change `"modality"` in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Supported contrasts: T1/T2 brain, FLAIR skull-stripped brain, T2 prostate, T1 breast, T1/T2 abdomen.
+Change `"modality"` in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Supported contrasts: T1/T2 brain, FLAIR skull-stripped brain, T2 prostate, T1 breast, T1/T2 abdomen. But if you are going to synthesize brain images, we recommend using `rflow-mr-brain` model instead. Please see [2.2 MR Brain Image Generation](#22-mr-brain-image-generation).
 
 ```bash
 network="rflow"
