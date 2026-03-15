@@ -167,7 +167,8 @@ If you've adapted NV-Generate-CTMR for other imaging tasks or applications and w
 | Guide | Description |
 |-------|-------------|
 | [Setup](docs/setup.md) | Full installation guide, dependencies, model weight download |
-| [Inference](docs/inference.md) | Detailed inference parameters, spacing tables, GPU memory usage |
+| [Inference](docs/inference.md) | Detailed inference parameters, spacing tables |
+| [Performance](docs/performance.md) | Inference time cost, GPU memory usage (inference and training) |
 | [Training](docs/training.md) | VAE, Diffusion Model, and ControlNet training guides |
 | [Data Preparation](docs/data.md) | Dataset formats and preparation steps |
 | [Evaluation](docs/evaluation.md) | FID evaluation tool and benchmark results |
@@ -188,7 +189,7 @@ On the unseen [autoPET 2023](https://www.nature.com/articles/s41597-022-01718-3)
 | `rflow-ct` | **5.124** | 30 | **33x faster** |
 | `ddpm-ct` | 6.083 | 1000 | baseline |
 
-For inference parameters, GPU memory, and timing, see [Documentation](#3-documentation-details-of-data-preparation-training-and-inference-tutorials) (Inference and related guides).
+For inference parameters, see [Documentation](#3-documentation-details-of-data-preparation-training-and-inference-tutorials). For GPU memory and timing, see [Performance](docs/performance.md).
 
 ## 5. License
 
