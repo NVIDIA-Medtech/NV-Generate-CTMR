@@ -7,20 +7,37 @@ from huggingface_hub import hf_hub_download
 from monai.apps import download_url
 
 
+def ensure_hf_download_tracked(
+    repo_id: str,
+    revision: str = "main",
+    token: str | None = None,
+) -> str:
+    """
+    Force a request to config.json so Hugging Face generic download tracking
+    can register a download for repos that rely on the default query file.
+    """
+    return hf_hub_download(
+        repo_id=repo_id,
+        filename="config.json",
+        revision=revision,
+        token=token,
+    )
+
+
 def fetch_to_hf_path_cmd(
     items: list[dict[str, str]],
-    root_dir: str = "./",  # (kept for signature compatibility; not required)
+    root_dir: str = "./",
     revision: str = "main",
     overwrite: bool = False,
-    token: str | None = None,  # or rely on env HF_TOKEN / HUGGINGFACE_HUB_TOKEN
+    token: str | None = None,
+    track_download: bool = True,
 ) -> list[str]:
     """
     items: list of {"repo_id": "...", "filename": "path/in/repo.ext", "path": "local/target.ext"}
-    Returns list of saved local paths (in the same order as items).
-
-    Pure Python implementation (CI-safe): no `huggingface-cli` dependency.
+    Returns list of saved local paths.
     """
     saved = []
+    tracked_repos: set[str] = set()
 
     for it in items:
         repo_id = it["repo_id"]
@@ -28,19 +45,29 @@ def fetch_to_hf_path_cmd(
         dst = Path(it["path"])
         dst.parent.mkdir(parents=True, exist_ok=True)
 
+        # Hit config.json once per repo before downloading weights/data.
+        if track_download and repo_id not in tracked_repos:
+            try:
+                ensure_hf_download_tracked(
+                    repo_id=repo_id,
+                    revision=revision,
+                    token=token,
+                )
+            except Exception as e:
+                print(f"Warning: failed to fetch config.json for tracking from {repo_id}: {e}")
+            tracked_repos.add(repo_id)
+
         if dst.exists() and not overwrite:
             saved.append(str(dst))
             continue
 
-        # Download into HF cache, then copy to requested destination
         cached_path = hf_hub_download(
             repo_id=repo_id,
             filename=repo_file,
             revision=revision,
-            token=token,  # if None, huggingface_hub will use env / cached auth if present
+            token=token,
         )
 
-        # Copy/move into place
         if dst.exists() and overwrite:
             dst.unlink()
 
