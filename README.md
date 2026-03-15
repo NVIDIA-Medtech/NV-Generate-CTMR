@@ -51,7 +51,7 @@ synthesis.
   - [2.4 CT Image Generation](#24-ct-image-generation)
   - [2.5 MR Image Generation](#25-mr-image-generation)
   - [2.6 Example Application: MR-to-CT Image Synthesis](#26-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
-- [3. Documentation](#3-documentation)
+- [3. Documentation: details of data preparation, training, and inference tutorials](#3-documentation-details-of-data-preparation-training-and-inference-tutorials)
 - [4. Performance: accuracy, speed, and GPU memory usage](#4-performance-accuracy-speed-and-gpu-memory-usage)
 - [5. License](#5-license)
 - [6. Citation](#6-citation)
@@ -162,7 +162,7 @@ A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (rfl
 
 If you've adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, please feel free to open an issue or contact the maintainers — we'd love to link to your repo.
 
-## 3. Documentation
+## 3. Documentation: details of data preparation, training, and inference tutorials
 
 | Guide | Description |
 |-------|-------------|
@@ -188,7 +188,7 @@ On the unseen [autoPET 2023](https://www.nature.com/articles/s41597-022-01718-3)
 | `rflow-ct` | **5.124** | 30 | **33x faster** |
 | `ddpm-ct` | 6.083 | 1000 | baseline |
 
-For inference parameters, GPU memory, and timing, see [Documentation](#3-documentation) (Inference and related guides).
+For inference parameters, GPU memory, and timing, see [Documentation](#3-documentation-details-of-data-preparation-training-and-inference-tutorials) (Inference and related guides).
 
 ## 5. License
 
