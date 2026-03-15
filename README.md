@@ -115,7 +115,7 @@ On the unseen [autoPET 2023](https://www.nature.com/articles/s41597-022-01718-3)
 | Model | FID Score | Inference Steps | Speed vs ddpm-ct |
 |-------|----------|-----------------|------------------|
 | `rflow-ct` | **5.124** | 30 | **33x faster** |
-| `ddpm-ct` | 6.8 | 1000 | baseline |
+| `ddpm-ct` | 6.083 | 1000 | baseline |
 
 Detailed GPU memory usage and inference timing in [docs/inference.md](docs/inference.md).
 
