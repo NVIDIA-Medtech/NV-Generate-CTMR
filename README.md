@@ -68,8 +68,8 @@ This repository provides **four model variants** for medical image generation: `
 | **Architecture** | MAISI-v2 + ControlNet | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow) | MAISI-v1 (DDPM) |
 | **Paper** | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
 | **Inference Steps** | 30 | 30 | 30 | 1000 |
-| **Max Volume** | 512x512x128 | 512x512x128 | 512x512x768 | 512x512x768 |
-| **Use Case** | Brain multi-contrast synthesis | MR image-only generation | CT image/mask pair generation | CT image/mask pair generation |
+| **Max Volume** | 512x512x256 | 512x512x128 | 512x512x768 | 512x512x768 |
+| **Use Case** | MR Brain multi-contrast synthesis | MR image-only generation | CT image/mask pair generation | CT image/mask pair generation |
 | **License** | [NVIDIA Open Model](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) | [NVIDIA Non-Commercial](https://developer.download.nvidia.com/licenses/NVIDIA-OneWay-Noncommercial-License-22Mar2022.pdf) | [NVIDIA Open Model](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) | [NVIDIA Open Model](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/) |
 
 **Summary**: Use `rflow-ct` for CT (whole-body inference). Use `rflow-mr-brain` for brain MRI (multi-contrast). Use `rflow-mr` for other MRI anatomies (fine-tune on your own data).
