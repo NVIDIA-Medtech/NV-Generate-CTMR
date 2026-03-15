@@ -45,8 +45,8 @@ synthesis.
 - [News](#news)
 - [1. Model Variants](#1-model-variants)
 - [2. Quick Start](#2-quick-start-requires-at-least-a-16g-gpu)
-  - [2.1 MR Brain Image Generation](#21-mr-brain-image-generation)
-  - [2.2 Installation](#22-installation)
+  - [2.1 Installation](#21-installation)
+  - [2.2 MR Brain Image Generation](#22-mr-brain-image-generation)
   - [2.3 CT Paired Image/Mask Generation](#23-ct-paired-imagemask-generation)
   - [2.4 CT Image Generation](#24-ct-image-generation)
   - [2.5 MR Image Generation](#25-mr-image-generation)
@@ -81,7 +81,7 @@ This repository provides **four model variants** for medical image generation: `
 | **Modality**       | MRI (brain)         | MRI                                  | CT                                | CT                   |
 | **Release Date**   | **March 2026**       | October 2025                           |  March 2025                     |    August 2024        |
 | **Model Weights**  | [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
-| **Quick Start**    | [2.1 MR Brain Image Generation](#21-mr-brain-image-generation) | [2.5 MR Image Generation](#25-mr-image-generation) | [2.3 CT Paired Image/Mask](#23-ct-paired-imagemask-generation), [2.4 CT Image](#24-ct-image-generation) | [2.3 CT Paired Image/Mask](#23-ct-paired-imagemask-generation) |
+| **Quick Start**    | [2.2 MR Brain Image Generation](#22-mr-brain-image-generation) | [2.5 MR Image Generation](#25-mr-image-generation) | [2.3 CT Paired Image/Mask](#23-ct-paired-imagemask-generation), [2.4 CT Image](#24-ct-image-generation) | [2.3 CT Paired Image/Mask](#23-ct-paired-imagemask-generation) |
 | **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      |
 | **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) |
 | **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) |
@@ -94,7 +94,13 @@ This repository provides **four model variants** for medical image generation: `
 
 ## 2. Quick Start (requires at least a 16G GPU)
 
-### 2.1 MR Brain Image Generation
+### 2.1 Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2.2 MR Brain Image Generation
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
@@ -117,12 +123,6 @@ network="rflow"
 generate_version="rflow-mr-brain"
 python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
-```
-
-### 2.2 Installation
-
-```bash
-pip install -r requirements.txt
 ```
 
 ### 2.3 CT Paired Image/Mask Generation
