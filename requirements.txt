@@ -1,0 +1,17 @@
+# Core dependencies (all installable from PyPI with: pip install -r requirements.txt)
+# For GPU support: install PyTorch with CUDA from https://pytorch.org/get-started/locally/
+# e.g. pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+torch>=2.1.0
+monai>=1.5.0
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-image>=0.20.0
+nibabel>=5.0.0
+matplotlib>=3.7.0
+einops>=0.7.0
+huggingface_hub>=0.20.0
+tqdm>=4.65.0
+fire>=0.5.0
+tensorboard>=2.14.0
+PyYAML>=6.0
