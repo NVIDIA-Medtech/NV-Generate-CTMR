@@ -202,7 +202,7 @@ This project will download and install additional third-party open source softwa
 ## 6. Citation
 
 ```bibtex
-@article{zhao2025maisi,
+@article{zhao2026maisi,
   title={MAISI-v2: Accelerated 3D high-resolution medical image synthesis with rectified flow and region-specific contrastive loss},
   author={Zhao, Can and Guo, Pengfei and Yang, Dong and Tang, Yucheng and He, Yufan and Simon, Benjamin and Belue, Mason and Harmon, Stephanie and Turkbey, Baris and Xu, Daguang},
   journal={Proceedings of the 40th AAAI Conference on Artificial Intelligence (AAAI 2026)},
