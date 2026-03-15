@@ -74,7 +74,7 @@ This repository provides **four model variants** for medical image generation: `
 
 **Summary**: Use `rflow-ct` for CT (whole-body inference). Use `rflow-mr-brain` for brain MRI (multi-contrast). Use `rflow-mr` for other MRI anatomies (fine-tune on your own data).
 
-**Detailed comparison**
+### Detailed comparison
 
 |                    | `rflow-mr-brain`     | `rflow-mr`                          | `rflow-ct`                        | `ddpm-ct`             |
 |--------------------|---------------------|--------------------------------------|-----------------------------------|----------------------|
