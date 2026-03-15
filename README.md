@@ -30,7 +30,7 @@ Key capabilities:
 
 ## News
 
-- **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-striped brain generation for T1w, T2w, Flair, SWI images.
+- **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images.
 - **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI
 repo to this NV-Generate-CTMR repo.
 - **[March 2025]** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT
@@ -87,9 +87,9 @@ This repository provides **four model variants** for medical image generation: `
 | **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) |
 | **Inference Steps**| 30                  | 30                                    | 30 (**33× faster than `ddpm-ct`**)               | 1000                 |
 | **Max Volume**     | 512×512×256         | 512×512×128                           | 512×512×768                       | 512×512×768          |
-| **Use Case**       | MR image-only generation for brain (T1w, T2w, Flair, SWI; whole brain and skull-stripped) | MR image-only generation with user specified contrast | CT image-only generation; CT image/mask pair generation | CT image-only generation; CT image/mask pair generation |
+| **Use Case**       | MR image-only generation for brain (T1w, T2w, FLAIR, SWI; whole brain and skull-stripped) | MR image-only generation with user specified contrast | CT image-only generation; CT image/mask pair generation | CT image-only generation; CT image/mask pair generation |
 | **Model: Foundation VAE**     | same VAE with `ddpm-ct` | trained on CT and MR (with additional abdomen MRI) | same VAE with `ddpm-ct` | trained on CT and MR |
-| **Model: Foundation Diffusion Model**     | does not take body region as input, takes [modality](configs/modality_mapping.json) as input (brain-focused) | does not take body region as input, takes [modality](configs/modality_mapping.json) as input. Recommend finetune with users' own MRI data. | does not take body region as input, has API for modality input (always set as 'ct' but expandable) | takes body region as input, no API for modality input  |
+| **Model: Foundation Diffusion Model**     | does not take body region as input, takes [modality](configs/modality_mapping.json) as input (brain-focused) | does not take body region as input, takes [modality](configs/modality_mapping.json) as input. We recommend finetuning with users' own MRI data. | does not take body region as input, has API for modality input (always set as 'ct' but expandable) | takes body region as input, no API for modality input  |
 | **Model: ControlNet**     | Coming soon | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
 
 ## 2. Quick Start (requires at least a 16G GPU)
@@ -104,17 +104,17 @@ pip install -r requirements.txt
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
-You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr-brain.json](configs/config_maisi_diff_model_rflow-mr-brain.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support both whole brain and skull-striped brain generation for T1w, T2w, Flair, SWI images.
+You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr-brain.json](configs/config_maisi_diff_model_rflow-mr-brain.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images.
 
 ```json
 "mri":8, # MRI without specifying contrast or skull condition, can be any of them
 "mri_t1":9, # T1w whole-brain MRI
 "mri_t2":10, # T2w whole-brain MRI
-"mri_flair":11, # Flair whole-brain MRI
+"mri_flair":11, # FLAIR whole-brain MRI
 "mri_swi":20, # SWI whole-brain MRI
 "mri_t1_skull_stripped":29, # T1w skull-stripped brain MRI
 "mri_t2_skull_stripped":30, # T2w skull-stripped brain MRI
-"mri_flair_skull_stripped":31, # Flair skull-stripped brain MRI
+"mri_flair_skull_stripped":31, # FLAIR skull-stripped brain MRI
 "mri_swi_skull_stripped":32, # SWI skull-stripped brain MRI
 ```
 
