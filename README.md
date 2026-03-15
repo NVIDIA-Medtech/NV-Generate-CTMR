@@ -31,12 +31,12 @@ Key capabilities:
 ## News
 
 - **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-striped brain generation for T1w, T2w, Flair, SWI images.
-- **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI 
+- **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI
 repo to this NV-Generate-CTMR repo.
-- **[March 2025]** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT 
-image/mask synthesis. `rflow-ct` is **33x faster** than `ddpm-ct` and generates better quality images for the head region and small 
+- **[March 2025]** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT
+image/mask synthesis. `rflow-ct` is **33x faster** than `ddpm-ct` and generates better quality images for the head region and small
 output volumes.
-- **[August 2024]** — Initial release `ddpm-ct` supporting 3D latent diffusion (DDPM) for CT image generation and paired CT image/mask 
+- **[August 2024]** — Initial release `ddpm-ct` supporting 3D latent diffusion (DDPM) for CT image generation and paired CT image/mask
 synthesis.
 
 ## Table of Contents
@@ -168,7 +168,6 @@ If you've adapted NV-Generate-CTMR for other imaging tasks or applications and w
 |-------|-------------|
 | [Setup](docs/setup.md) | Full installation guide, dependencies, model weight download |
 | [Inference](docs/inference.md) | Detailed inference parameters, spacing tables |
-| [Performance](docs/performance.md) | Inference time cost, GPU memory usage (inference and training) |
 | [Training](docs/training.md) | VAE, Diffusion Model, and ControlNet training guides |
 | [Data Preparation](docs/data.md) | Dataset formats and preparation steps |
 | [Evaluation](docs/evaluation.md) | FID evaluation tool and benchmark results |
