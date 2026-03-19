@@ -332,7 +332,7 @@ def train_one_epoch(
             elif noise_scheduler.prediction_type == DDPMPredictionType.SAMPLE:
                 model_gt = images
             elif noise_scheduler.prediction_type == DDPMPredictionType.V_PREDICTION:
-                # DDPM v-objective: sqrt(alpha_bar)*eps - sqrt(1-alpha_bar)*x0 (see MONAI DDPMScheduler.step).
+                # DDPM v-objective (RFlow uses prediction_type v too but is handled above)
                 model_gt = noise_scheduler.get_velocity(images, noise, timesteps)
             else:
                 raise ValueError(
