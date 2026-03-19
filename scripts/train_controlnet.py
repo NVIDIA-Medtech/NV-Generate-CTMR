@@ -434,15 +434,17 @@ def train_controlnet(env_config_path: str, model_config_path: str, model_def_pat
                         return_controlnet_blocks=False,
                     )
 
-                if noise_scheduler.prediction_type == DDPMPredictionType.EPSILON:
+                if isinstance(noise_scheduler, RFlowScheduler):
+                    model_gt = images - noise
+                elif noise_scheduler.prediction_type == DDPMPredictionType.EPSILON:
                     # predict noise
                     model_gt = noise
                 elif noise_scheduler.prediction_type == DDPMPredictionType.SAMPLE:
                     # predict sample
                     model_gt = images
                 elif noise_scheduler.prediction_type == DDPMPredictionType.V_PREDICTION:
-                    # predict velocity
-                    model_gt = images - noise
+                    # DDPM v-objective (RFlow uses prediction_type v too but is handled above)
+                    model_gt = noise_scheduler.get_velocity(images, noise, timesteps)
                 else:
                     raise ValueError(
                         "noise scheduler prediction type has to be chosen from ",

@@ -252,9 +252,9 @@ def train_one_epoch(
         loss_pt (torch.nn.L1Loss): Loss function.
         scaler (GradScaler): Gradient scaler for mixed precision training.
         scale_factor (torch.Tensor): Scaling factor.
-        noise_scheduler (torch.nn.Module): Noise scheduler.
+        noise_scheduler (torch.nn.Module): Noise scheduler (RFlowScheduler or DDPM-style with prediction_type).
         num_images_per_batch (int): Number of images per batch.
-        num_train_timesteps (int): Number of training timesteps.
+        num_train_timesteps (int): Training timesteps (used for DDPM uniform timestep sampling).
         device (torch.device): Device to use for training.
         logger (logging.Logger): Logger for logging information.
         local_rank (int): Local rank for distributed training.
@@ -324,15 +324,16 @@ def train_one_epoch(
                 )
             model_output = unet(**unet_inputs)
 
-            if noise_scheduler.prediction_type == DDPMPredictionType.EPSILON:
-                # predict noise
+            if isinstance(noise_scheduler, RFlowScheduler):
+                # Rectified flow: velocity target along the linear path (not DDPM prediction_type).
+                model_gt = images - noise
+            elif noise_scheduler.prediction_type == DDPMPredictionType.EPSILON:
                 model_gt = noise
             elif noise_scheduler.prediction_type == DDPMPredictionType.SAMPLE:
-                # predict sample
                 model_gt = images
             elif noise_scheduler.prediction_type == DDPMPredictionType.V_PREDICTION:
-                # predict velocity
-                model_gt = images - noise
+                # DDPM v-objective: sqrt(alpha_bar)*eps - sqrt(1-alpha_bar)*x0 (see MONAI DDPMScheduler.step).
+                model_gt = noise_scheduler.get_velocity(images, noise, timesteps)
             else:
                 raise ValueError(
                     "noise scheduler prediction type has to be chosen from ",
@@ -537,4 +538,4 @@ if __name__ == "__main__":
     parser.add_argument("--no_amp", dest="amp", action="store_false", help="Disable automatic mixed precision training")
 
     args = parser.parse_args()
-    diff_model_train(args.env_config, args.model_config, args.model_def, args.num_gpus, args.amp)
+    diff_model_train(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus, args.amp)
