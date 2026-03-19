@@ -225,11 +225,11 @@ def run_inference(
         modality = int(modality_tensor.cpu().item())
         if modality >= 8:
             a_min, a_max, b_min, b_max = 0, 1000, 0, 1  # MR
-            data = (data - b_min) / (b_max - b_min) * (a_max - a_min) + a_min 
+            data = (data - b_min) / (b_max - b_min) * (a_max - a_min) + a_min
             data = np.clip(data, a_min, None)
         else:
             a_min, a_max, b_min, b_max = -1000, 1000, 0, 1  # CT
-            data = (data - b_min) / (b_max - b_min) * (a_max - a_min) + a_min        
+            data = (data - b_min) / (b_max - b_min) * (a_max - a_min) + a_min
             data = np.clip(data, a_min, a_max)
         return np.int16(data)
 
