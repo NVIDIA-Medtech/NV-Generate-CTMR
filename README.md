@@ -237,3 +237,7 @@ This project will download and install additional third-party open source softwa
 ## 8. Acknowledgements
 
 This project was conducted by NVIDIA in collaboration with the University of Zurich, Istanbul Medipol University, and Forithmus.
+
+We would like to thank the following people for their contributions to the development of the NV-Generate-MR-Brain models: Bjoern Menze, Ibrahim Ethem Hamamci, Sezgin Er, Suprosanna Shit, Utku Türkbey, etc.
+
+![Collaborating institutions](assets/github_logos.png)
