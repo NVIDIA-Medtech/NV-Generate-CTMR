@@ -56,6 +56,7 @@ synthesis.
 - [5. License](#5-license)
 - [6. Citation](#6-citation)
 - [7. Resources](#7-resources)
+- [8. Acknowledgements](#8-acknowledgements)
 
 ## 1. Model Variants
 
@@ -232,3 +233,11 @@ This project will download and install additional third-party open source softwa
 - [MAISI-v1 Paper (WACV 2025)](https://arxiv.org/pdf/2409.11169)
 - [MAISI-v2 Paper (AAAI 2026)](https://arxiv.org/pdf/2508.05772)
 - Built with [MONAI](https://monai.io/) -- Medical Open Network for AI
+
+## 8. Acknowledgements
+
+This project was conducted by NVIDIA in collaboration with the University of Zurich, Istanbul Medipol University, and Forithmus.
+
+We would like to thank the following people for their contributions to the development of the [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) models: Bjoern Menze, Ibrahim Ethem Hamamci, Sezgin Er, Suprosanna Shit, Utku Türkbey, etc.
+
+![Collaborating institutions](assets/github_logos.png)
