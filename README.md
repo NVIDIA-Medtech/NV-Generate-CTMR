@@ -229,6 +229,7 @@ This project will download and install additional third-party open source softwa
 - [NV-Generate-CT on HuggingFace](https://huggingface.co/nvidia/NV-Generate-CT) -- CT model weights and model card
 - [NV-Generate-MR on HuggingFace](https://huggingface.co/nvidia/NV-Generate-MR) -- MR model weights and model card
 - [NV-Generate-MR-Brain on HuggingFace](https://huggingface.co/nvidia/NV-Generate-MR-Brain) -- Brain MRI model weights and model card
+- [MR-RATE on HuggingFace](https://huggingface.co/datasets/Forithmus/MR-RATE) -- Brain MRI model training data MR-RATE
 - [MAISI Live Demo](https://build.nvidia.com/nvidia/maisi) -- Try online without GPU
 - [MAISI-v1 Paper (WACV 2025)](https://arxiv.org/pdf/2409.11169)
 - [MAISI-v2 Paper (AAAI 2026)](https://arxiv.org/pdf/2508.05772)
