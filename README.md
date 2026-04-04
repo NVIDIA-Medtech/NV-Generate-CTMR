@@ -10,6 +10,10 @@
 
 3D Latent Diffusion Models (LDM) for generating large CT and MRI images with corresponding segmentation masks. Supports variable volume size and voxel spacing with precise control of organ/tumor size.
 
+Please cite all the following papers if you are using code or model from this repo.
+- [MAISI-v1 Paper (WACV 2025)](https://arxiv.org/pdf/2409.11169)
+- [MAISI-v2 Paper (AAAI 2026)](https://arxiv.org/pdf/2508.05772)
+
 | | |
 |:---:|:---:|
 | ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
@@ -30,7 +34,7 @@ Key capabilities:
 
 ## News
 
-- **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images.
+- **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain v0 models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images. The training data of this version v0 is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE).
 - **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI
 repo to this NV-Generate-CTMR repo.
 - **[March 2025]** — Released rectified flow models `rflow-ct` for **fast** high-resolution 3D CT image generation and paired CT
