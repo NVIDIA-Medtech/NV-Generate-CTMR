@@ -4,7 +4,8 @@ Disclaimer: We are not the hosts of the data. Please make sure to read the requi
 
 ## 1 VAE training Data
 
-For the released Foundation autoencoder model weights in MAISI, we used 37243 CT training data and 1963 CT validation data from chest, abdomen, head and neck region; and 17887 MRI training data and 940 MRI validation data from brain, skull-stripped brain, chest, and below-abdomen region.  The training data come from
+## 1.1 autoencoder_v1.pt
+For the released Foundation autoencoder model weights autoencoder_v1.pt, we used 37243 CT training data and 1963 CT validation data from chest, abdomen, head and neck region; and 17887 MRI training data and 940 MRI validation data from brain, skull-stripped brain, chest, and below-abdomen region.  The training data come from
 [TCIA Covid 19 Chest CT](https://wiki.cancerimagingarchive.net/display/Public/CT+Images+in+COVID-19#70227107b92475d33ae7421a9b9c426f5bb7d5b3),
 [TCIA Colon Abdomen CT](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=3539213),
 [MSD03 Liver Abdomen CT](http://medicaldecathlon.com/),
@@ -36,12 +37,23 @@ In total, we included these data in autoencoder_v1.pt. The model is open-source 
 |       | Total CT (v1)                                      | 37243                   | 1963                      |
 |       | Total MRI (v1)                                     | 17887                   | 940                       |
 
-For autoencoder_v2.pt, we added the following datasets on top of the data above. Those sources are openly available for research under their respective licenses but are not cleared for commercial use; autoencoder_v2.pt is offered on the same basis—research use only, not commercial use. You can find the license in [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
+## 1.2 autoencoder_v2.pt
+For the released Foundation autoencoder model weights autoencoder_v2.pt, we added the following datasets on top of the data above. Those sources are openly available for research under their respective licenses but are not cleared for commercial use; autoencoder_v2.pt is offered on the same basis—research use only, not commercial use. You can find the license in [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
+The additional training data come from
+[HNSCC head and neck CT](https://www.cancerimagingarchive.net/collection/hnscc/),
+[AbdomenCT-1K abdomen CT](https://github.com/JunMa11/AbdomenCT-1K),
+[TotalSegmentatorV2 whole body CT](https://zenodo.org/records/10047292),
+[amos22_unlabeled_mri_7000_8199 Abdomen MR](https://amos22.grand-challenge.org/),
+[DukeLiver Abdomen MR](https://zenodo.org/records/7774566),
+[SPIDER spine MR](https://spider.grand-challenge.org/),
+[MSD02 heart MR](http://medicaldecathlon.com/),
+[PanSeg Abdomen MR](https://osf.io/kysnj/).
+
 | Index | Dataset Name                                   | Number of Training Data | Number of Validation Data |
 |-------|------------------------------------------------|-------------------------|---------------------------|
-| 14     | HNSCC CT                              | 1164                    | 61                        |
-| 15     | AbdomenCT-1K CT                              | 640                     | 160                       |
-| 16     | TotalSegmentatorV2 CT                              | 784                     | 196                       |
+| 14     | HNSCC head and neck CT                              | 1164                    | 61                        |
+| 15     | AbdomenCT-1K abdomen CT                              | 640                     | 160                       |
+| 16     | TotalSegmentatorV2 whole body CT                              | 784                     | 196                       |
 | 17     | amos22_unlabeled_mri_7000_8199 Abdomen MR                 | 1077                    | 120                       |
 | 18     | DukeLiver Abdomen MR                 | 155                     | 39                        |
 | 19     | SPIDER spine MR                 | 403                     | 44                        |
