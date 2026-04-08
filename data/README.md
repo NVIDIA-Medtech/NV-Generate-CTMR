@@ -2,9 +2,25 @@
 
 Disclaimer: We are not the hosts of the data. Please make sure to read the requirements and usage policies of the data and give credit to the authors of the datasets!
 
+## Table of Contents
+
+- [1 VAE training Data](#1-vae-training-data)
+  - [1.1 autoencoder_v1.pt](#11-autoencoder_v1pt)
+  - [1.2 autoencoder_v2.pt](#12-autoencoder_v2pt)
+- [2 Diffusion model training Data](#2-diffusion-model-training-data)
+  - [2.1 diff_unet_3d_ddpm-ct.pt](#21-diff_unet_3d_ddpm-ctpt)
+  - [2.2 diff_unet_3d_rflow-ct.pt](#22-diff_unet_3d_rflow-ctpt)
+  - [2.3 diff_unet_3d_rflow-mr.pt](#23-diff_unet_3d_rflow-mrpt)
+- [3 ControlNet model training Data](#3-controlnet-model-training-data)
+  - [3.1 controlnet_3d_ddpm-ct.pt](#31-controlnet_3d_ddpm-ctpt)
+  - [3.2 controlnet_3d_rflow-ct.pt](#32-controlnet_3d_rflow-ctpt)
+  - [3.3 Example to finetune on a new dataset](#33-example-to-finetune-on-a-new-dataset)
+- [4 Questions and bugs](#4-questions-and-bugs)
+- [Reference](#reference)
+
 ## 1 VAE training Data
 
-## 1.1 autoencoder_v1.pt
+### 1.1 autoencoder_v1.pt
 For the released Foundation autoencoder model weights autoencoder_v1.pt, we used 37243 CT training data and 1963 CT validation data from chest, abdomen, head and neck region; and 17887 MRI training data and 940 MRI validation data from brain, skull-stripped brain, chest, and below-abdomen region.  The training data come from
 [TCIA Covid 19 Chest CT](https://wiki.cancerimagingarchive.net/display/Public/CT+Images+in+COVID-19#70227107b92475d33ae7421a9b9c426f5bb7d5b3),
 [TCIA Colon Abdomen CT](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=3539213),
@@ -37,7 +53,7 @@ In total, we included these data in autoencoder_v1.pt. The model is open-source 
 |       | Total CT (v1)                                      | 37243                   | 1963                      |
 |       | Total MRI (v1)                                     | 17887                   | 940                       |
 
-## 1.2 autoencoder_v2.pt
+### 1.2 autoencoder_v2.pt
 For the released Foundation autoencoder model weights autoencoder_v2.pt, we added the following datasets on top of the data above. Those sources are openly available for research under their respective licenses but are not cleared for commercial use; autoencoder_v2.pt is offered on the same basis—research use only, not commercial use. You can find the license in [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
 The additional training data come from
 [HNSCC Head and neck CT](https://www.cancerimagingarchive.net/collection/hnscc/),
@@ -65,8 +81,8 @@ The additional training data come from
 
 ## 2 Diffusion model training Data
 
-## 2.1 diff_unet_3d_ddpm-ct.pt
-The training dataset for the this diffusion model comprises 10,277 CT volumes from 24 distinct datasets, encompassing various body regions and disease patterns.
+### 2.1 diff_unet_3d_ddpm-ct.pt
+The training dataset for this diffusion model comprises 10,277 CT volumes from 24 distinct datasets, encompassing various body regions and disease patterns.
 
 The table below provides a summary of the number of volumes for each dataset.
 
@@ -97,13 +113,13 @@ The table below provides a summary of the number of volumes for each dataset.
 23 | TotalSegmentatorV2 | 654
 24 | VerSe | 179
 
-## 2.2 diff_unet_3d_rflow-ct.pt
+### 2.2 diff_unet_3d_rflow-ct.pt
 For this model, we added HNSCC CT on top of the data above.
 |Index| Dataset name|Number of volumes|
 |:-----|:-----|:-----|
 25  | HNSCC | 1225
 
-## 2.3 diff_unet_3d_rflow-mr.pt
+### 2.3 diff_unet_3d_rflow-mr.pt
 The training dataset for this diffusion model comprises 16291 distinct MR images from 17 source datasets, spanning multiple body regions and disease patterns. Any volume with fewer than 48 slices was excluded before training to keep data quality consistent.
 
 |Index| Dataset name|T1w|T2w|FLAIR|DWI|ADC|PD|MRA|bSSFP|unknown contrast|original volumes|training volumes|
@@ -128,50 +144,9 @@ The training dataset for this diffusion model comprises 16291 distinct MR images
 | | Total | 11255 | 1707 | 152 | 196 | 196 | 577 | 569 | 30 | 1609 | 24046 | 16291
 
 
-### 3 ControlNet model training Data
+## 3 ControlNet model training Data
 
-#### 3.1 Example preprocessed dataset
-
-We provide the preprocessed subset of [C4KC-KiTS](https://www.cancerimagingarchive.net/collection/c4kc-kits/) dataset used in the finetuning config `environment_maisi_controlnet_train.json`. The [dataset](https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo/model_maisi_C4KC-KiTS_subset.zip) and [corresponding JSON data](https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo/model_maisi_C4KC-KiTS_subset.json) list can be downloaded and should be saved in `maisi/dataset/` folder.
-
-The structure of example folder in the preprocessed dataset is:
-
-```text
-            |-*arterial*.nii.gz               # original image
-            |-*arterial_emb*.nii.gz           # encoded image embedding
-KiTS-000* --|-mask*.nii.gz                    # original labels
-            |-mask_pseudo_label*.nii.gz       # pseudo labels
-            |-mask_combined_label*.nii.gz     # combined mask of original and pseudo labels
-```
-
-An example combined mask of original and pseudo labels is shown below:
-![example_combined_mask](../figures/example_combined_mask.png)
-
-Please note that the label of Kidney Tumor is mapped to index `129` in this preprocessed dataset. The encoded image embedding is generated by provided `Autoencoder` in `./models/autoencoder_epoch273.pt` during preprocessing to save memory usage for training. The pseudo labels are generated by [VISTA 3D](https://github.com/Project-MONAI/VISTA). In addition, the dimension of each volume and corresponding pseudo label is resampled to the closest multiple of 128 (e.g., 128, 256, 384, 512, ...).
-
-The training workflow requires one JSON file to specify the image embedding and segmentation pairs. The example file is located in the `maisi/dataset/C4KC-KiTS_subset.json`.
-
-The JSON file has the following structure:
-
-```python
-{
-    "training": [
-        {
-            "image": "*/*arterial_emb*.nii.gz",  # relative path to the image embedding file
-            "label": "*/mask_combined_label*.nii.gz",  # relative path to the combined label file
-            "dim": [512, 512, 512],  # the dimension of image
-            "spacing": [1.0, 1.0, 1.0],  # the spacing of image
-            "top_region_index": [0, 1, 0, 0],  # the top region index of the image
-            "bottom_region_index": [0, 0, 0, 1],  # the bottom region index of the image
-            "fold": 0  # fold index for cross validation, fold 0 is used for training
-        },
-
-        ...
-    ]
-}
-```
-
-#### 3.2 Controlnet full training datasets for controlnet_3d_ddpm-ct.pt
+### 3.1 controlnet_3d_ddpm-ct.pt
 
 The ControlNet training dataset used in MAISI contains 6330 CT volumes (5058 and 1272 volumes are used for training and validation, respectively) across 20 datasets and covers different body regions and diseases.
 
@@ -198,20 +173,63 @@ The table below summarizes the number of volumes for each dataset.
 17 | StonyBrook-CT | 1258
 18 | TCIA_Colon | 1436
 19 | TotalSegmentatorV2 | 654
-20| VerSe | 179
+20 | VerSe | 179
 
-#### 3.3 Controlnet full training datasets for controlnet_3d_rflow-ct.pt
-For this model, we added HNSCC CT on top of the data above.
+### 3.2 controlnet_3d_rflow-ct.pt
+
+For this model, we added HNSCC CT on top of the data in [§3.1](#31-controlnet_3d_ddpm-ctpt).
+
 |Index| Dataset name|Number of volumes|
 |:-----|:-----|:-----|
 21  | HNSCC | 1225
 
-### 4. Questions and bugs
+### 3.3 Example to finetune on a new dataset
+
+We provide the preprocessed subset of [C4KC-KiTS](https://www.cancerimagingarchive.net/collection/c4kc-kits/) dataset used in the finetuning config `environment_maisi_controlnet_train.json`. The [dataset](https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo/model_maisi_C4KC-KiTS_subset.zip) and [corresponding JSON data](https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo/model_maisi_C4KC-KiTS_subset.json) list can be downloaded and should be saved in `maisi/dataset/` folder.
+
+The structure of example folder in the preprocessed dataset is:
+
+```text
+            |-*arterial*.nii.gz               # original image
+            |-*arterial_emb*.nii.gz           # encoded image embedding
+KiTS-000* --|-mask*.nii.gz                    # original labels
+            |-mask_pseudo_label*.nii.gz       # pseudo labels
+            |-mask_combined_label*.nii.gz     # combined mask of original and pseudo labels
+```
+
+An example combined mask of original and pseudo labels is shown below:
+![example_combined_mask](../figures/example_combined_mask.png)
+
+Please note that the label of Kidney Tumor is mapped to index `129` in this preprocessed dataset. The encoded image embedding is generated by provided `Autoencoder` in `./models/autoencoder_v1.pt` during preprocessing to save memory usage for training. The pseudo labels are generated by [VISTA 3D](https://github.com/Project-MONAI/VISTA). In addition, the dimension of each volume and corresponding pseudo label is resampled to the closest multiple of 128 (e.g., 128, 256, 384, 512, ...).
+
+The training workflow requires one JSON file to specify the image embedding and segmentation pairs. The example file is located in the `maisi/dataset/C4KC-KiTS_subset.json`.
+
+The JSON file has the following structure:
+
+```python
+{
+    "training": [
+        {
+            "image": "*/*arterial_emb*.nii.gz",  # relative path to the image embedding file
+            "label": "*/mask_combined_label*.nii.gz",  # relative path to the combined label file
+            "dim": [512, 512, 512],  # the dimension of image
+            "spacing": [1.0, 1.0, 1.0],  # the spacing of image
+            "top_region_index": [0, 1, 0, 0],  # the top region index of the image
+            "bottom_region_index": [0, 0, 0, 1],  # the bottom region index of the image
+            "fold": 0  # fold index for cross validation, fold 0 is used for training
+        },
+
+        ...
+    ]
+}
+```
+
+## 4 Questions and bugs
 
 - For questions relating to the use of MONAI, please use our [Discussions tab](https://github.com/Project-MONAI/MONAI/discussions) on the main repository of MONAI.
 - For bugs relating to MONAI functionality, please create an issue on the [main repository](https://github.com/Project-MONAI/MONAI/issues).
 - For bugs relating to the running of a tutorial, please create an issue in [this repository](https://github.com/Project-MONAI/Tutorials/issues).
 
-### Reference
+## Reference
 
 [1] [Rombach, Robin, et al. "High-resolution image synthesis with latent diffusion models." CVPR 2022.](https://openaccess.thecvf.com/content/CVPR2022/papers/Rombach_High-Resolution_Image_Synthesis_With_Latent_Diffusion_Models_CVPR_2022_paper.pdf)
