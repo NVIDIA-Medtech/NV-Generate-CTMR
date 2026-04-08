@@ -110,17 +110,17 @@ The columns *Number of T1w* through *Number of (other)* count distinct source im
 
 |Index| Dataset name|T1w|T2w|FLAIR|DWI|ADC|PD|MRA|bSSFP|unknown contrast|original volumes|training volumes|
 |:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|
-1  | QTIM Brain | 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
-2  | AOMIC Bran | 2750 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2768 | 2750
-3  | IXI Brain | 581 | 577 | 0 | 0 | 0 | 577 | 569 | 0 | 0 | 2306 | 2304
-4  | LUMIR | 3967 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3984 | 3967
+1  | QTIM Brain| 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
+2  | AOMIC Brain| 2750 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2768 | 2750
+3  | IXI Brain| 581 | 577 | 0 | 0 | 0 | 577 | 569 | 0 | 0 | 2306 | 2304
+4  | LUMIR Brain| 3967 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3984 | 3967
 5  | ISLES2022 Brain| 0 | 0 | 152 | 196 | 196 | 0 | 0 | 0 | 0 | 750 | 544
 6  | ACRIN Breast| 1882 | 90 | 0 | 0 | 0 | 0 | 0 | 0 | 1165 | 6946 | 3137
 7  | TCIA Prostate MR| 0 | 898 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 977 | 898
 8  | CirrMRI600+ Abdomen| 362 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 738 | 368
 9  | AMOS22 Abdomen| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 60 | 60 | 60
 10 | DukeLiver Abdomen| 240 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 243 | 240
-11 | TotalSegmentatorMR | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 136 | 298 | 136
+11 | TotalSegmentatorMR| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 136 | 298 | 136
 12 | PanSeg Abdomen| 113 | 72 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 767 | 185
 13 | amos22_unlabeled_mri_7000_8199 Abdomen| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 236 | 1199 | 236
 14 | MSD Task02 Cardiac| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 30 | 30
