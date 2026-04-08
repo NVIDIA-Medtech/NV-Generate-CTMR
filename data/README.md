@@ -171,7 +171,7 @@ The JSON file has the following structure:
 }
 ```
 
-#### 3.2 Controlnet full training datasets
+#### 3.2 Controlnet full training datasets for controlnet_3d_ddpm-ct.pt
 
 The ControlNet training dataset used in MAISI contains 6330 CT volumes (5058 and 1272 volumes are used for training and validation, respectively) across 20 datasets and covers different body regions and diseases.
 
@@ -199,6 +199,12 @@ The table below summarizes the number of volumes for each dataset.
 18 | TCIA_Colon | 1436
 19 | TotalSegmentatorV2 | 654
 20| VerSe | 179
+
+#### 3.3 Controlnet full training datasets for controlnet_3d_rflow-ct.pt
+For this model, we added HNSCC CT on top of the data above.
+|Index| Dataset name|Number of volumes|
+|:-----|:-----|:-----|
+21  | HNSCC | 1225
 
 ### 4. Questions and bugs
 
