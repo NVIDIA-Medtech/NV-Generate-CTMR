@@ -40,9 +40,9 @@ In total, we included these data in autoencoder_v1.pt. The model is open-source 
 ## 1.2 autoencoder_v2.pt
 For the released Foundation autoencoder model weights autoencoder_v2.pt, we added the following datasets on top of the data above. Those sources are openly available for research under their respective licenses but are not cleared for commercial use; autoencoder_v2.pt is offered on the same basis—research use only, not commercial use. You can find the license in [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
 The additional training data come from
-[HNSCC head and neck CT](https://www.cancerimagingarchive.net/collection/hnscc/),
-[AbdomenCT-1K abdomen CT](https://github.com/JunMa11/AbdomenCT-1K),
-[TotalSegmentatorV2 whole body CT](https://zenodo.org/records/10047292),
+[HNSCC Head and neck CT](https://www.cancerimagingarchive.net/collection/hnscc/),
+[AbdomenCT-1K Abdomen CT](https://github.com/JunMa11/AbdomenCT-1K),
+[TotalSegmentatorV2 Whole body CT](https://zenodo.org/records/10047292),
 [amos22_unlabeled_mri_7000_8199 Abdomen MR](https://amos22.grand-challenge.org/),
 [DukeLiver Abdomen MR](https://zenodo.org/records/7774566),
 [SPIDER spine MR](https://spider.grand-challenge.org/),
@@ -51,9 +51,9 @@ The additional training data come from
 
 | Index | Dataset Name                                   | Number of Training Data | Number of Validation Data |
 |-------|------------------------------------------------|-------------------------|---------------------------|
-| 14     | HNSCC head and neck CT                              | 1164                    | 61                        |
-| 15     | AbdomenCT-1K abdomen CT                              | 640                     | 160                       |
-| 16     | TotalSegmentatorV2 whole body CT                              | 784                     | 196                       |
+| 14     | HNSCC Head and neck CT                              | 1164                    | 61                        |
+| 15     | AbdomenCT-1K Abdomen CT                              | 640                     | 160                       |
+| 16     | TotalSegmentatorV2 Whole body CT                              | 784                     | 196                       |
 | 17     | amos22_unlabeled_mri_7000_8199 Abdomen MR                 | 1077                    | 120                       |
 | 18     | DukeLiver Abdomen MR                 | 155                     | 39                        |
 | 19     | SPIDER spine MR                 | 403                     | 44                        |
