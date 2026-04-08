@@ -108,7 +108,7 @@ The training dataset for this diffusion model comprises 16291 distinct MR images
 
 The columns *Number of T1w* through *Number of (other)* count distinct source images per modality after deduplicating multi-resolution rows in each `*_emb.json` (same base path without the trailing `_WxHxD(_channelN)?_emb.nii.gz`). Labels follow the `class` field set in `6_create_json_mr_emb.py` (`mri_t1`→T1w, `mri_t2`→T2w, …). **(other)** counts volumes that kept the generic tag `mri` because the filename did not match a sequence-specific rule.
 
-|Index| Dataset name| # of T1w| # of T2w| # of FLAIR| # of DWI| # of ADC| # of PD| # of MRA| # of bSSFP| # of unknown contrast| # of total volumes| # of utilized volumes|
+|Index| Dataset name|T1w|T2w|FLAIR|DWI|ADC|PD|MRA|bSSFP|unknown contrast|total volumes|utilized volumes|
 |:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|
 1  | QTIM | 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
 2  | AOMIC | 2750 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2768 | 2750
