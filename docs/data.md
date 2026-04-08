@@ -37,7 +37,7 @@ This page is a **short guide** to training data for NV-Generate-CTMR. **Authorit
 - **controlnet_3d_rflow-ct.pt** — Adds **HNSCC** (**1,225** volumes) on top of the DDPM ControlNet mix. [Table → §3.2](../data/README.md#32-controlnet_3d_rflow-ctpt)
 - **Finetuning on a new site** — Example **C4KC-KiTS** subset, downloads, folder layout, JSON schema, and preprocessing notes (embeddings, VISTA pseudo labels, resampling to multiples of 128). [Full walkthrough → §3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset)
 
-## Bring your own data for ControlNet
+## Bring your own data for ControlNet Training
 
 Training volumes are expected as **NIfTI** (`.nii.gz`). For ControlNet-style training with latent embeddings, the README’s finetune section is in [example JSON block in §3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset).
 
