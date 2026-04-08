@@ -108,25 +108,25 @@ The training dataset for this diffusion model comprises 16291 distinct MR images
 
 The columns *Number of T1w* through *Number of (other)* count distinct source images per modality after deduplicating multi-resolution rows in each `*_emb.json` (same base path without the trailing `_WxHxD(_channelN)?_emb.nii.gz`). Labels follow the `class` field set in `6_create_json_mr_emb.py` (`mri_t1`→T1w, `mri_t2`→T2w, …). **(other)** counts volumes that kept the generic tag `mri` because the filename did not match a sequence-specific rule.
 
-|Index| Dataset name|T1w|T2w|FLAIR|DWI|ADC|PD|MRA|bSSFP|unknown contrast|total volumes|utilized volumes|
+|Index| Dataset name|T1w|T2w|FLAIR|DWI|ADC|PD|MRA|bSSFP|unknown contrast|original volumes|training volumes|
 |:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|
-1  | QTIM | 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
-2  | AOMIC | 2750 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2768 | 2750
-3  | IXI | 581 | 577 | 0 | 0 | 0 | 577 | 569 | 0 | 0 | 2306 | 2304
+1  | QTIM Brain | 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
+2  | AOMIC Bran | 2750 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2768 | 2750
+3  | IXI Brain | 581 | 577 | 0 | 0 | 0 | 577 | 569 | 0 | 0 | 2306 | 2304
 4  | LUMIR | 3967 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3984 | 3967
-5  | ISLES2022 | 0 | 0 | 152 | 196 | 196 | 0 | 0 | 0 | 0 | 750 | 544
-6  | ACRIN | 1882 | 90 | 0 | 0 | 0 | 0 | 0 | 0 | 1165 | 6946 | 3137
-7  | TCIA Prostate MR | 0 | 898 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 977 | 898
-8  | CirrMRI600+ | 362 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 738 | 368
-9  | AMOS22 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 60 | 60 | 60
-10 | DukeLiver | 240 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 243 | 240
+5  | ISLES2022 Brain| 0 | 0 | 152 | 196 | 196 | 0 | 0 | 0 | 0 | 750 | 544
+6  | ACRIN Breast| 1882 | 90 | 0 | 0 | 0 | 0 | 0 | 0 | 1165 | 6946 | 3137
+7  | TCIA Prostate MR| 0 | 898 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 977 | 898
+8  | CirrMRI600+ Abdomen| 362 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 738 | 368
+9  | AMOS22 Abdomen| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 60 | 60 | 60
+10 | DukeLiver Abdomen| 240 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 243 | 240
 11 | TotalSegmentatorMR | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 136 | 298 | 136
-12 | PanSeg | 113 | 72 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 767 | 185
-13 | amos22_unlabeled_mri_7000_8199 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 236 | 1199 | 236
-14 | MSD Task02 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 30 | 30
-15 | SPIDER | 16 | 57 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 447 | 73
+12 | PanSeg Abdomen| 113 | 72 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 767 | 185
+13 | amos22_unlabeled_mri_7000_8199 Abdomen| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 236 | 1199 | 236
+14 | MSD Task02 Cardiac| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 30 | 30
+15 | SPIDER Spine| 16 | 57 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 447 | 73
 16 | Sunnybrook Cardiac MR | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 1071 | 12
-17 | QIN-PROSTATE-Repeatability | 16 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 120 | 23
+17 | QIN-PROSTATE-Repeatability| 16 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 120 | 23
 | | Total | 11255 | 1707 | 152 | 196 | 196 | 577 | 569 | 30 | 1609 | 24046 | 16291
 
 
