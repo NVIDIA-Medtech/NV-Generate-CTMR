@@ -37,19 +37,9 @@ This page is a **short guide** to training data for NV-Generate-CTMR. **Authorit
 - **controlnet_3d_rflow-ct.pt** — Adds **HNSCC** (**1,225** volumes) on top of the DDPM ControlNet mix. [Table → §3.2](../data/README.md#32-controlnet_3d_rflow-ctpt)
 - **Finetuning on a new site** — Example **C4KC-KiTS** subset, downloads, folder layout, JSON schema, and preprocessing notes (embeddings, VISTA pseudo labels, resampling to multiples of 128). [Full walkthrough → §3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset)
 
-## Data format (ControlNet / embedding workflow)
+## Bring your own data for ControlNet
 
-Training volumes are expected as **NIfTI** (`.nii.gz`). For ControlNet-style training with latent embeddings, the README’s finetune section uses this pattern (names may vary by cohort):
-
-1. Original images (e.g. `*arterial*.nii.gz`)
-2. **Encoded embeddings** (`*arterial_emb*.nii.gz`) from the Autoencoder during preprocessing
-3. Original labels (`mask*.nii.gz`)
-4. **Pseudo labels** (`mask_pseudo_label*.nii.gz`) from [VISTA 3D](https://github.com/Project-MONAI/VISTA)
-5. **Combined masks** (`mask_combined_label*.nii.gz`)
-
-The JSON list pairs embedding paths with labels and includes fields such as `dim`, `spacing`, `top_region_index`, `bottom_region_index`, and `fold`. See the [example JSON block in §3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset).
-
-> **Paths such as `maisi/dataset/`** in the README are relative to the **MONAI data directory** (e.g. `MONAI_DATA_DIRECTORY`), not necessarily the repository root.
+Training volumes are expected as **NIfTI** (`.nii.gz`). For ControlNet-style training with latent embeddings, the README’s finetune section is in [example JSON block in §3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset).
 
 ## Where to go next
 
