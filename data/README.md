@@ -65,7 +65,8 @@ The additional training data come from
 
 ## 2 Diffusion model training Data
 
-The training dataset for the Diffusion model used in MAISI comprises 10,277 CT volumes from 24 distinct datasets, encompassing various body regions and disease patterns.
+## 2.1 diff_unet_3d_ddpm-ct.pt
+The training dataset for the this diffusion model comprises 10,277 CT volumes from 24 distinct datasets, encompassing various body regions and disease patterns.
 
 The table below provides a summary of the number of volumes for each dataset.
 
@@ -95,6 +96,39 @@ The table below provides a summary of the number of volumes for each dataset.
 22 | TCIA_Colon | 1437
 23 | TotalSegmentatorV2 | 654
 24 | VerSe | 179
+
+## 2.2 diff_unet_3d_rflow-ct.pt
+For this model, we added HNSCC CT on top of the data above.
+|Index| Dataset name|Number of volumes|
+|:-----|:-----|:-----|
+25  | HNSCC | 1225
+
+## 2.3 diff_unet_3d_rflow-mr.pt
+The training dataset for this diffusion model comprises 16291 distinct MR images from 17 source datasets, spanning multiple body regions and disease patterns. Any volume with fewer than 48 slices was excluded before training to keep data quality consistent.
+
+The columns *Number of utilized T1w* through *Number of utilized (other)* count distinct source images per modality after deduplicating multi-resolution rows in each `*_emb.json` (same base path without the trailing `_WxHxD(_channelN)?_emb.nii.gz`). Labels follow the `class` field set in `6_create_json_mr_emb.py` (`mri_t1`→T1w, `mri_t2`→T2w, …). **(other)** counts volumes that kept the generic tag `mri` because the filename did not match a sequence-specific rule.
+
+|Index| Dataset name| Number of utilized T1w| Number of utilized T2w| Number of utilized FLAIR| Number of utilized DWI| Number of utilized ADC| Number of utilized PD| Number of utilized MRA| Number of utilized bSSFP| Number of utilized unknown contrast| Number of total volumes| Number of utilized volumes|
+|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|
+1  | QTIM | 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
+2  | AOMIC | 2750 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2768 | 2750
+3  | IXI | 581 | 577 | 0 | 0 | 0 | 577 | 569 | 0 | 0 | 2306 | 2304
+4  | LUMIR | 3967 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3984 | 3967
+5  | ISLES2022 | 0 | 0 | 152 | 196 | 196 | 0 | 0 | 0 | 0 | 750 | 544
+6  | ACRIN | 1882 | 90 | 0 | 0 | 0 | 0 | 0 | 0 | 1165 | 6946 | 3137
+7  | TCIA Prostate MR | 0 | 898 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 977 | 898
+8  | CirrMRI600+ | 362 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 738 | 368
+9  | AMOS22 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 60 | 60 | 60
+10 | DukeLiver | 240 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 243 | 240
+11 | TotalSegmentatorMR | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 136 | 298 | 136
+12 | PanSeg | 113 | 72 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 767 | 185
+13 | amos22_unlabeled_mri_7000_8199 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 236 | 1199 | 236
+14 | MSD Task02 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 30 | 30
+15 | SPIDER | 16 | 57 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 447 | 73
+16 | Sunnybrook Cardiac MR | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 1071 | 12
+17 | QIN-PROSTATE-Repeatability | 16 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 120 | 23
+| | Total | 11255 | 1707 | 152 | 196 | 196 | 577 | 569 | 30 | 1609 | 24046 | 16291
+
 
 ### 3 ControlNet model training Data
 
