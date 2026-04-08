@@ -106,8 +106,6 @@ For this model, we added HNSCC CT on top of the data above.
 ## 2.3 diff_unet_3d_rflow-mr.pt
 The training dataset for this diffusion model comprises 16291 distinct MR images from 17 source datasets, spanning multiple body regions and disease patterns. Any volume with fewer than 48 slices was excluded before training to keep data quality consistent.
 
-The columns *Number of T1w* through *Number of (other)* count distinct source images per modality after deduplicating multi-resolution rows in each `*_emb.json` (same base path without the trailing `_WxHxD(_channelN)?_emb.nii.gz`). Labels follow the `class` field set in `6_create_json_mr_emb.py` (`mri_t1`→T1w, `mri_t2`→T2w, …). **(other)** counts volumes that kept the generic tag `mri` because the filename did not match a sequence-specific rule.
-
 |Index| Dataset name|T1w|T2w|FLAIR|DWI|ADC|PD|MRA|bSSFP|unknown contrast|original volumes|training volumes|
 |:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|
 1  | QTIM Brain| 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
