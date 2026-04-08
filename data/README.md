@@ -21,6 +21,7 @@ Disclaimer: We are not the hosts of the data. Please make sure to read the requi
 ## 1 VAE training Data
 
 ### 1.1 autoencoder_v1.pt
+
 For the released Foundation autoencoder model weights autoencoder_v1.pt, we used 37243 CT training data and 1963 CT validation data from chest, abdomen, head and neck region; and 17887 MRI training data and 940 MRI validation data from brain, skull-stripped brain, chest, and below-abdomen region.  The training data come from
 [TCIA Covid 19 Chest CT](https://wiki.cancerimagingarchive.net/display/Public/CT+Images+in+COVID-19#70227107b92475d33ae7421a9b9c426f5bb7d5b3),
 [TCIA Colon Abdomen CT](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=3539213),
@@ -54,6 +55,7 @@ In total, we included these data in autoencoder_v1.pt. The model is open-source 
 |       | Total MRI (v1)                                     | 17887                   | 940                       |
 
 ### 1.2 autoencoder_v2.pt
+
 For the released Foundation autoencoder model weights autoencoder_v2.pt, we added the following datasets on top of the data above. Those sources are openly available for research under their respective licenses but are not cleared for commercial use; autoencoder_v2.pt is offered on the same basis—research use only, not commercial use. You can find the license in [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
 The additional training data come from
 [HNSCC Head and neck CT](https://www.cancerimagingarchive.net/collection/hnscc/),
@@ -78,10 +80,10 @@ The additional training data come from
 |       | Total CT (v2)                             | 39831                   | 2380                      |
 |       | Total MRI (v2)                            | 20024                   | 1270                      |
 
-
 ## 2 Diffusion model training Data
 
 ### 2.1 diff_unet_3d_ddpm-ct.pt
+
 The training dataset for this diffusion model comprises 10,277 CT volumes from 24 distinct datasets, encompassing various body regions and disease patterns.
 
 The table below provides a summary of the number of volumes for each dataset.
@@ -114,12 +116,15 @@ The table below provides a summary of the number of volumes for each dataset.
 24 | VerSe | 179
 
 ### 2.2 diff_unet_3d_rflow-ct.pt
+
 For this model, we added HNSCC CT on top of the data above.
+
 |Index| Dataset name|Number of volumes|
 |:-----|:-----|:-----|
 25  | HNSCC | 1225
 
 ### 2.3 diff_unet_3d_rflow-mr.pt
+
 The training dataset for this diffusion model comprises 16291 distinct MR images from 17 source datasets, spanning multiple body regions and disease patterns. Any volume with fewer than 48 slices was excluded before training to keep data quality consistent.
 
 |Index| Dataset name|T1w|T2w|FLAIR|DWI|ADC|PD|MRA|bSSFP|unknown contrast|original volumes|training volumes|
@@ -142,7 +147,6 @@ The training dataset for this diffusion model comprises 16291 distinct MR images
 16 | Sunnybrook Cardiac MR | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 1071 | 12
 17 | QIN-PROSTATE-Repeatability| 16 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 120 | 23
 | | Total | 11255 | 1707 | 152 | 196 | 196 | 577 | 569 | 30 | 1609 | 24046 | 16291
-
 
 ## 3 ControlNet model training Data
 
