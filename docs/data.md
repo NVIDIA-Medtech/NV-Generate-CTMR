@@ -15,7 +15,7 @@ This page is a **short guide** to training data for NV-Generate-CTMR. **Authorit
 | Diffusion — rectified-flow MR | [§2.3](../data/README.md#23-diff_unet_3d_rflow-mrpt) |
 | ControlNet — DDPM CT (20 datasets) | [§3.1](../data/README.md#31-controlnet_3d_ddpm-ctpt) |
 | ControlNet — rflow CT (+ HNSCC) | [§3.2](../data/README.md#32-controlnet_3d_rflow-ctpt) |
-| ControlNet — finetune example (C4KC-KiTS) | [§3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset) |
+| ControlNet — finetune example (C4KC-KiTS) | [§3.3](../data/README.md#33-example-finetuning-on-a-new-dataset) |
 | Questions / bugs / reference | [§4](../data/README.md#4-questions-and-bugs), [Reference](../data/README.md#reference) |
 
 ## Summary of training data (high level)
@@ -35,11 +35,11 @@ This page is a **short guide** to training data for NV-Generate-CTMR. **Authorit
 
 - **controlnet_3d_ddpm-ct.pt** — **6,330** CT volumes (**5,058** train / **1,272** val) over **20** datasets. [Table → §3.1](../data/README.md#31-controlnet_3d_ddpm-ctpt)
 - **controlnet_3d_rflow-ct.pt** — Adds **HNSCC** (**1,225** volumes) on top of the DDPM ControlNet mix. [Table → §3.2](../data/README.md#32-controlnet_3d_rflow-ctpt)
-- **Finetuning on a new site** — Example **C4KC-KiTS** subset, downloads, folder layout, JSON schema, and preprocessing notes (embeddings, VISTA pseudo labels, resampling to multiples of 128). [Full walkthrough → §3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset)
+- **Finetuning on a new site** — Example **C4KC-KiTS** subset, downloads, folder layout, JSON schema, and preprocessing notes (embeddings, VISTA pseudo labels, resampling to multiples of 128). [Full walkthrough → §3.3](../data/README.md#33-example-finetuning-on-a-new-dataset)
 
 ## Bring your own data for ControlNet Training
 
-Training volumes are expected as **NIfTI** (`.nii.gz`). For ControlNet-style training with latent embeddings, the README’s finetune section is in [example JSON block in §3.3](../data/README.md#33-example-to-finetune-on-a-new-dataset).
+Training volumes are expected as **NIfTI** (`.nii.gz`). For ControlNet-style training with latent embeddings, the README’s finetune section is in [example JSON block in §3.3](../data/README.md#33-example-finetuning-on-a-new-dataset).
 
 ## Where to go next
 
