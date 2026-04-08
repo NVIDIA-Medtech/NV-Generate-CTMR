@@ -106,9 +106,9 @@ For this model, we added HNSCC CT on top of the data above.
 ## 2.3 diff_unet_3d_rflow-mr.pt
 The training dataset for this diffusion model comprises 16291 distinct MR images from 17 source datasets, spanning multiple body regions and disease patterns. Any volume with fewer than 48 slices was excluded before training to keep data quality consistent.
 
-The columns *Number of utilized T1w* through *Number of utilized (other)* count distinct source images per modality after deduplicating multi-resolution rows in each `*_emb.json` (same base path without the trailing `_WxHxD(_channelN)?_emb.nii.gz`). Labels follow the `class` field set in `6_create_json_mr_emb.py` (`mri_t1`→T1w, `mri_t2`→T2w, …). **(other)** counts volumes that kept the generic tag `mri` because the filename did not match a sequence-specific rule.
+The columns *Number of T1w* through *Number of (other)* count distinct source images per modality after deduplicating multi-resolution rows in each `*_emb.json` (same base path without the trailing `_WxHxD(_channelN)?_emb.nii.gz`). Labels follow the `class` field set in `6_create_json_mr_emb.py` (`mri_t1`→T1w, `mri_t2`→T2w, …). **(other)** counts volumes that kept the generic tag `mri` because the filename did not match a sequence-specific rule.
 
-|Index| Dataset name| Number of utilized T1w| Number of utilized T2w| Number of utilized FLAIR| Number of utilized DWI| Number of utilized ADC| Number of utilized PD| Number of utilized MRA| Number of utilized bSSFP| Number of utilized unknown contrast| Number of total volumes| Number of utilized volumes|
+|Index| Dataset name| # of T1w| # of T2w| # of FLAIR| # of DWI| # of ADC| # of PD| # of MRA| # of bSSFP| # of unknown contrast| # of total volumes| # of utilized volumes|
 |:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|:-----|
 1  | QTIM | 1328 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1342 | 1328
 2  | AOMIC | 2750 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2768 | 2750
