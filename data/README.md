@@ -17,7 +17,7 @@ For the released Foundation autoencoder model weights in MAISI, we used 37243 CT
 [TCIA Acrin Chest MR](https://www.cancerimagingarchive.net/collection/acrin-contralateral-breast-mr/),
 [TCIA Prostate MR Below-Abdomen MR](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=68550661#68550661a2c52df5969d435eae49b9669bea21a6).
 
-In total, we included:
+In total, we included these data in autoencoder_v1.pt:
 | Index | Dataset Name                                   | Number of Training Data | Number of Validation Data |
 |-------|------------------------------------------------|-------------------------|---------------------------|
 | 1     | Covid 19 Chest CT                              | 722                     | 49                        |
@@ -33,8 +33,23 @@ In total, we included:
 | 11    | TCIA Prostate MR Below-Abdomen MR              | 928                     | 49                        |
 | 12    | Aomic Brain MR, skull-stripped                 | 2630                    | 138                       |
 | 13    | QTIM Brain MR, skull-stripped                  | 1275                    | 67                        |
-|       | Total CT                                       | 37243                   | 1963                      |
-|       | Total MRI                                      | 17887                   | 940                       |
+|       | Total CT (v1)                                      | 37243                   | 1963                      |
+|       | Total MRI (v1)                                     | 17887                   | 940                       |
+
+For autoencoder_v2.pt, we added the following datasets in addition to the data above. These datasets are open-source for research usage, not comertial-friendly. Thus the license of autoencoder_v2.pt is also for research usage, not comertial-friendly.
+| Index | Dataset Name                                   | Number of Training Data | Number of Validation Data |
+|-------|------------------------------------------------|-------------------------|---------------------------|
+| 14     | HNSCC CT                              | 1164                    | 61                        |
+| 15     | AbdomenCT-1K CT                              | 640                     | 160                       |
+| 16     | TotalSegmentatorV2 CT                              | 784                     | 196                       |
+| 17     | amos22_unlabeled_mri_7000_8199 Abdomen MR                 | 1077                    | 120                       |
+| 18     | DukeLiver Abdomen MR                 | 155                     | 39                        |
+| 19     | SPIDER spine MR                 | 403                     | 44                        |
+| 20     | MSD02 heart MR                 | 12                      | 4                         |
+| 21     | PanSeg Abdomen MR        | 490                     | 123                       |
+|       | Total CT (v2)                             | 39831                   | 2380                      |
+|       | Total MRI (v2)                            | 20024                   | 1270                      |
+
 
 ## 2 Diffusion model training Data
 
