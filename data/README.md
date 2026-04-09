@@ -4,23 +4,35 @@ Disclaimer: We do not host these datasets. Please read each dataset's requiremen
 
 ## Table of Contents
 
-- [1 VAE training data](#1-vae-training-data)
-  - [1.1 autoencoder_v1.pt](#11-autoencoder_v1pt)
-  - [1.2 autoencoder_v2.pt](#12-autoencoder_v2pt)
-- [2 Diffusion model training data](#2-diffusion-model-training-data)
-  - [2.1 diff_unet_3d_ddpm-ct.pt](#21-diff_unet_3d_ddpm-ctpt)
-  - [2.2 diff_unet_3d_rflow-ct.pt](#22-diff_unet_3d_rflow-ctpt)
-  - [2.3 diff_unet_3d_rflow-mr.pt](#23-diff_unet_3d_rflow-mrpt)
-- [3 ControlNet model training data](#3-controlnet-model-training-data)
-  - [3.1 controlnet_3d_ddpm-ct.pt](#31-controlnet_3d_ddpm-ctpt)
-  - [3.2 controlnet_3d_rflow-ct.pt](#32-controlnet_3d_rflow-ctpt)
-  - [3.3 Example: finetuning on a new dataset](#33-example-finetuning-on-a-new-dataset)
-- [4 Questions and bugs](#4-questions-and-bugs)
+- [1 Model versions and checkpoints](#1-model-versions-and-checkpoints)
+- [2 VAE training data](#2-vae-training-data)
+  - [2.1 autoencoder_v1.pt](#21-autoencoder_v1pt)
+  - [2.2 autoencoder_v2.pt](#22-autoencoder_v2pt)
+- [3 Diffusion model training data](#3-diffusion-model-training-data)
+  - [3.1 diff_unet_3d_ddpm-ct.pt](#31-diff_unet_3d_ddpm-ctpt)
+  - [3.2 diff_unet_3d_rflow-ct.pt](#32-diff_unet_3d_rflow-ctpt)
+  - [3.3 diff_unet_3d_rflow-mr.pt](#33-diff_unet_3d_rflow-mrpt)
+- [4 ControlNet model training data](#4-controlnet-model-training-data)
+  - [4.1 controlnet_3d_ddpm-ct.pt](#41-controlnet_3d_ddpm-ctpt)
+  - [4.2 controlnet_3d_rflow-ct.pt](#42-controlnet_3d_rflow-ctpt)
+  - [4.3 Example: finetuning on a new dataset](#43-example-finetuning-on-a-new-dataset)
+- [5 Questions and bugs](#5-questions-and-bugs)
 - [Reference](#reference)
 
-## 1 VAE training data
+## 1 Model versions and checkpoints
 
-### 1.1 autoencoder_v1.pt
+The table below shows which checkpoints are downloaded for each model version (via `scripts/download_model_data.py`).
+
+| Version | Checkpoints |
+|---------|-------------|
+| `rflow-mr-brain` | `autoencoder_v1.pt`, `diff_unet_3d_rflow-mr-brain_v0.pt` |
+| `ddpm-ct` | `autoencoder_v1.pt`, `mask_generation_autoencoder.pt`, `mask_generation_diffusion_unet.pt`, `diff_unet_3d_ddpm-ct.pt`, `controlnet_3d_ddpm-ct.pt` |
+| `rflow-ct` | `autoencoder_v1.pt`, `mask_generation_autoencoder.pt`, `mask_generation_diffusion_unet.pt`, `diff_unet_3d_rflow-ct.pt`, `controlnet_3d_rflow-ct.pt` |
+| `rflow-mr` | `autoencoder_v2.pt`, `diff_unet_3d_rflow-mr.pt` |
+
+## 2 VAE training data
+
+### 2.1 autoencoder_v1.pt
 
 For the released Foundation autoencoder model weights autoencoder_v1.pt, we used 37,243 CT training volumes and 1,963 CT validation volumes from the chest, abdomen, and head-and-neck regions, and 17,887 MRI training volumes and 940 MRI validation volumes from the brain, skull-stripped brain, chest, and below-abdomen regions. The training data comes from
 [TCIA Covid 19 Chest CT](https://wiki.cancerimagingarchive.net/display/Public/CT+Images+in+COVID-19#70227107b92475d33ae7421a9b9c426f5bb7d5b3),
@@ -55,7 +67,7 @@ In total, we included these datasets in autoencoder_v1.pt. The model is open sou
 |       | Total CT (v1)                                      | 37243                   | 1963                      |
 |       | Total MRI (v1)                                     | 17887                   | 940                       |
 
-### 1.2 autoencoder_v2.pt
+### 2.2 autoencoder_v2.pt
 
 For the released Foundation autoencoder model weights autoencoder_v2.pt, we added the following datasets on top of the data above. Those sources are openly available for research under their respective licenses but are not cleared for commercial use; autoencoder_v2.pt is offered on the same basis—research use only, not commercial use. You can find the license at [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR).
 
@@ -82,9 +94,9 @@ Additional training data comes from
 |       | Total CT (v2)                             | 39831                   | 2380                      |
 |       | Total MRI (v2)                            | 20024                   | 1270                      |
 
-## 2 Diffusion model training data
+## 3 Diffusion model training data
 
-### 2.1 diff_unet_3d_ddpm-ct.pt
+### 3.1 diff_unet_3d_ddpm-ct.pt
 
 The training dataset for this diffusion model comprises 10,277 CT volumes from 24 distinct datasets, encompassing various body regions and disease patterns.
 
@@ -117,7 +129,7 @@ The table below provides a summary of the number of volumes for each dataset.
 23 | TotalSegmentatorV2 | 654
 24 | VerSe | 179
 
-### 2.2 diff_unet_3d_rflow-ct.pt
+### 3.2 diff_unet_3d_rflow-ct.pt
 
 For this model, we added HNSCC CT on top of the data above.
 
@@ -125,7 +137,7 @@ For this model, we added HNSCC CT on top of the data above.
 |:-----|:-----|:-----|
 25  | HNSCC | 1225
 
-### 2.3 diff_unet_3d_rflow-mr.pt
+### 3.3 diff_unet_3d_rflow-mr.pt
 
 The training dataset for this diffusion model comprises 16,291 distinct MR volumes from 17 source datasets, spanning multiple body regions. Any volume with fewer than 48 slices was excluded before training to keep data quality consistent.
 
@@ -150,9 +162,9 @@ The training dataset for this diffusion model comprises 16,291 distinct MR volum
 17 | QIN-PROSTATE-Repeatability| 16 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 120 | 23
 | | Total | 11255 | 1707 | 152 | 196 | 196 | 577 | 569 | 30 | 1609 | 24046 | 16291
 
-## 3 ControlNet model training data
+## 4 ControlNet model training data
 
-### 3.1 controlnet_3d_ddpm-ct.pt
+### 4.1 controlnet_3d_ddpm-ct.pt
 
 The ControlNet training dataset used in MAISI contains 6,330 CT volumes (5,058 for training and 1,272 for validation) across 20 datasets and covers different body regions and diseases.
 
@@ -181,15 +193,15 @@ The table below summarizes the number of volumes for each dataset.
 19 | TotalSegmentatorV2 | 654
 20 | VerSe | 179
 
-### 3.2 controlnet_3d_rflow-ct.pt
+### 4.2 controlnet_3d_rflow-ct.pt
 
-For this model, we added HNSCC CT on top of the data in [§3.1](#31-controlnet_3d_ddpm-ctpt).
+For this model, we added HNSCC CT on top of the data in [§4.1](#41-controlnet_3d_ddpm-ctpt).
 
 |Index| Dataset name|Number of volumes|
 |:-----|:-----|:-----|
 21  | HNSCC | 1225
 
-### 3.3 Example: finetuning on a new dataset
+### 4.3 Example: finetuning on a new dataset
 
 We provide the preprocessed subset of the [C4KC-KiTS](https://www.cancerimagingarchive.net/collection/c4kc-kits/) dataset used in the finetuning config `environment_maisi_controlnet_train.json`. The [dataset](https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo/model_maisi_C4KC-KiTS_subset.zip) and [corresponding JSON file](https://developer.download.nvidia.com/assets/Clara/monai/tutorials/model_zoo/model_maisi_C4KC-KiTS_subset.json) can be downloaded and should be saved in the `maisi/dataset/` folder.
 
@@ -230,7 +242,7 @@ The JSON file has the following structure:
 }
 ```
 
-## 4 Questions and bugs
+## 5 Questions and bugs
 
 - For questions about using MONAI, please use the [Discussions tab](https://github.com/Project-MONAI/MONAI/discussions) on the main MONAI repository.
 - For bugs in MONAI functionality, please create an issue on the [main repository](https://github.com/Project-MONAI/MONAI/issues).
