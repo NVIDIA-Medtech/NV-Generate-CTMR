@@ -20,6 +20,8 @@ Please cite all the following papers if you are using code or model from this re
 | ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
 | *Generated MR T2w prostate and T1w brain image* | *Generated CT image/mask pair* |
 
+[MR-Brain example](assets/combined_grid.gif)
+
 ## Overview
 
 NV-Generate-CTMR generates high-resolution synthetic 3D medical volumes using latent diffusion models built on the MAISI (Medical AI for Synthetic Imaging) framework. It produces CT images with paired segmentation masks and MRI volumes across multiple contrasts — enabling synthetic training data generation, data augmentation for rare pathologies, and privacy-preserving data sharing.
