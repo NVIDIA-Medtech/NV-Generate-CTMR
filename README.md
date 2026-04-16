@@ -15,12 +15,12 @@ Please cite all the following papers if you are using code or model from this re
 - [MAISI-v1 Paper (WACV 2025)](https://arxiv.org/pdf/2409.11169)
 - [MAISI-v2 Paper (AAAI 2026)](https://arxiv.org/pdf/2508.05772)
 
-| | |
-|:---:|:---:|
-| ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
-| *Generated MR T2w prostate and T1w brain image* | *Generated CT image/mask pair* |
+| | | |
+|:---:|:---:|:---:|
+|![MR-Brain example](assets/combined_grid.gif)| ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
+|*Generated MR Brain with `rflow-mr-brain`| *Generated MR T2w prostate and T1w brain image with  with `rflow-mr`* | *Generated CT image/mask pair with  with `rflow-ct`* |
 
-![MR-Brain example](assets/combined_grid.gif)
+
 
 ## Overview
 
