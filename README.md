@@ -20,7 +20,7 @@ Please cite all the following papers if you are using code or model from this re
 | ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
 | *Generated MR T2w prostate and T1w brain image* | *Generated CT image/mask pair* |
 
-[MR-Brain example](assets/combined_grid.gif)
+![MR-Brain example](assets/combined_grid.gif)
 
 ## Overview
 
