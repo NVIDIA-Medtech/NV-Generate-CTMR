@@ -18,7 +18,7 @@ Please cite all the following papers if you are using code or model from this re
 | | | |
 |:---:|:---:|:---:|
 |![MR-Brain example](assets/combined_grid.gif)| ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
-|*Generated MR Brain with `rflow-mr-brain`| *Generated MR T2w prostate and T1w brain image with  with `rflow-mr`* | *Generated CT image/mask pair with  with `rflow-ct`* |
+|*Generated MR Brain with `rflow-mr-brain`*| *Generated MR T2w prostate and T1w brain image with  with `rflow-mr`* | *Generated CT image/mask pair with  with `rflow-ct`* |
 
 
 
