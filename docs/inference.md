@@ -149,8 +149,8 @@ Recommended FOV is computed from median FOV of training data.
 
 | Body region | Modality | number of training data | Median FOV x × y × z (mm) |
 |---|---|---:|---|
-| brain | mri_t1 (9) | 7,234 | 216.0 × 240.0 × 240.0 |
-| brain | mri_t2 (10) | 3,152 | 240.0 × 240.0 × 155.0 |
+| brain | mri_t1 (9) | 4,659 | 160.0 × 256.0 × 256.0 |
+| brain | mri_t2 (10) | 577 | 240.0 × 240.0 × 162.5 |
 | brain | mri_flair (11) | 152 | 199.9 × 250.0 × 250.0 |
 | prostate | mri_t2 (10) | 898 | 170.0 × 170.0 × 90.0 |
 | breast | mri_t1 (9) | 2,162 | 174.0 × 200.0 × 200.0 |
