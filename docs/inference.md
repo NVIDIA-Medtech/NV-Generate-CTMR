@@ -144,7 +144,7 @@ Currently supported MR contrasts:
 - T1 and thick-slice T2 images for brain MRI
 - Flair for skull-stripped brain MRI
 
-## Recommended Spacing for MR `rflow-mr` model
+## Recommended FOV for MR `rflow-mr` model
 | Body region | Modality | number of training data | Median FOV x × y × z (mm) |
 |---|---|---:|---|
 | brain | mri_t1 | 7,234 | 216.0 × 240.0 × 240.0 |
