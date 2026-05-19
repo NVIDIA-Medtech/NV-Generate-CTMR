@@ -143,8 +143,16 @@ Currently supported MR contrasts:
 
 - T1 and thick-slice T2 images for brain MRI
 - Flair for skull-stripped brain MRI
-- T2 images for prostate MRI
-- T1 image for breast MRI
-- T1 and T2 image for abdomen MRI
+
+## Recommended Spacing for MR `rflow-mr` model
+| Body region | Modality | number of training data | Median FOV x × y × z (mm) |
+|---|---|---:|---|
+| brain | mri_t1 | 7,234 | 216.0 × 240.0 × 240.0 |
+| brain | mri_t2 | 3,152 | 240.0 × 240.0 × 155.0 |
+| skull_stripped brain | mri_flair | 152 | 199.9 × 250.0 × 250.0 |
+| pelvis | mri_t2 | 905 | 170.0 × 170.0 × 90.0 |
+| breast | mri_t1 | 2,162 | 174.0 × 200.0 × 200.0 |
+| abdomen | mri_t1 | 715 | 400.0 × 325.0 × 288.0 |
+| abdomen | mri_t2 | 78 | 350.0 × 350.0 × 245.6 |
 
 Contrast-enhanced MRI is not supported.
