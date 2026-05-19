@@ -149,12 +149,12 @@ Recommended FOV is computed from median FOV of training data.
 
 | Body region | Modality | number of training data | Median FOV x × y × z (mm) |
 |---|---|---:|---|
-| brain | mri_t1 | 7,234 | 216.0 × 240.0 × 240.0 |
-| brain | mri_t2 | 3,152 | 240.0 × 240.0 × 155.0 |
-| skull_stripped brain | mri_flair | 152 | 199.9 × 250.0 × 250.0 |
-| pelvis | mri_t2 | 905 | 170.0 × 170.0 × 90.0 |
-| breast | mri_t1 | 2,162 | 174.0 × 200.0 × 200.0 |
-| abdomen | mri_t1 | 715 | 380.0 × 308.8 × 288.0 |
-| abdomen | mri_t2 | 78 | 350.0 × 350.0 × 245.6 |
+| brain | mri_t1 (9) | 7,234 | 216.0 × 240.0 × 240.0 |
+| brain | mri_t2 (10) | 3,152 | 240.0 × 240.0 × 155.0 |
+| brain | mri_flair (11) | 152 | 199.9 × 250.0 × 250.0 |
+| pelvis | mri_t2 (10) | 905 | 170.0 × 170.0 × 90.0 |
+| breast | mri_t1 (9) | 2,162 | 174.0 × 200.0 × 200.0 |
+| abdomen | mri_t1 (9) | 715 | 380.0 × 308.8 × 288.0 |
+| abdomen | mri_t2 (10) | 78 | 350.0 × 350.0 × 245.6 |
 
 Contrast-enhanced MRI is not supported.
