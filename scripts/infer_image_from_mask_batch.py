@@ -15,7 +15,6 @@ import logging
 import os
 from datetime import datetime
 
-import monai
 import torch
 import torch.distributed as dist
 from monai.data import MetaTensor, decollate_batch
@@ -23,14 +22,34 @@ from monai.transforms import SaveImage
 from monai.utils import RankFilter
 
 from .diff_model_setting import load_config
-from .sample import ldm_conditional_sample_one_image
-from .utils import define_instance, prepare_maisi_controlnet_json_dataloader, setup_ddp
+from .infer_image_from_mask import ldm_conditional_sample_one_image
+from .utils import prepare_maisi_controlnet_json_dataloader, setup_ddp
+from .utils_infer import load_image_models
 
 
 @torch.inference_mode()
-def infer_controlnet(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
+def infer_image_from_mask_batch(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
+    """
+    Batch image-from-mask inference driven by a JSON manifest.
+
+    Reads ``args.json_data_list`` (the manifest), which must list cases each
+    with at least:
+
+        - ``label``: path to a NIfTI mask in the MAISI 132-class vocabulary
+        - ``dim``: ``[H, W, D]`` target output size
+        - ``spacing``: ``[sx, sy, sz]`` (mm)
+        - ``top_region_index``, ``bottom_region_index``: one-hot 4-lists
+          (required only when the image DM was trained with
+          ``include_top_region_index_input=True`` — i.e. ``ddpm-ct``)
+
+    For each batch, calls :func:`ldm_conditional_sample_one_image` and saves
+    the paired image + label as NIfTI under ``args.output_dir``.
+
+    For single-mask inference, use ``python -m scripts.infer_image_from_mask
+    --mask <file>`` instead (no manifest needed).
+    """
     # Step 0: configuration
-    logger = logging.getLogger("maisi.controlnet.infer")
+    logger = logging.getLogger("maisi.image_from_mask_batch.infer")
     # whether to use distributed data parallel
     use_ddp = num_gpus > 1
     if use_ddp:
@@ -49,29 +68,11 @@ def infer_controlnet(env_config_path: str, model_config_path: str, model_def_pat
 
     args = load_config(env_config_path, model_config_path, model_def_path)
 
-    # Step 2: define AE, diffusion model and controlnet
-    autoencoder = define_instance(args, "autoencoder_def").to(device)
-    checkpoint_autoencoder = torch.load(args.trained_autoencoder_path)
-    if "unet_state_dict" in checkpoint_autoencoder.keys():
-        checkpoint_autoencoder = checkpoint_autoencoder["unet_state_dict"]
-    autoencoder.load_state_dict(checkpoint_autoencoder)
-    logger.info(f"Load trained VAE model from {args.trained_autoencoder_path}.")
-
-    unet = define_instance(args, "diffusion_unet_def").to(device)
-    checkpoint_diffusion_unet = torch.load(args.trained_diffusion_path, weights_only=False)
-    unet.load_state_dict(checkpoint_diffusion_unet["unet_state_dict"], strict=False)
-    scale_factor = checkpoint_diffusion_unet["scale_factor"].to(device)
+    # Step 2: load image-side networks (AE + DM + ControlNet) via the shared helper
+    autoencoder, unet, controlnet, scale_factor, noise_scheduler = load_image_models(args, device)
     include_body_region = unet.include_top_region_index_input
     include_modality = unet.num_class_embeds is not None
-    logger.info(f"Load trained diffusion model from {args.trained_diffusion_path}.")
-
-    controlnet = define_instance(args, "controlnet_def").to(device)
-    checkpoint_controlnet = torch.load(args.trained_controlnet_path, weights_only=False)
-    monai.networks.utils.copy_model_state(controlnet, unet.state_dict())
-    controlnet.load_state_dict(checkpoint_controlnet["controlnet_state_dict"], strict=False)
-    logger.info(f"Load trained controlnet model from {args.trained_controlnet_path}.")
-
-    noise_scheduler = define_instance(args, "noise_scheduler")
+    logger.info("Loaded image AE + DM + ControlNet via utils_infer.load_image_models.")
 
     # set data loader
     if include_modality:
@@ -161,7 +162,14 @@ def infer_controlnet(env_config_path: str, model_config_path: str, model_def_pat
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ControlNet Model Training")
+    parser = argparse.ArgumentParser(
+        prog="python -m scripts.infer_image_from_mask_batch",
+        description=(
+            "Batch image-from-mask inference: read a JSON manifest of mask files and "
+            "generate a paired CT/MR image for each one via the ControlNet-conditioned "
+            "image LDM. For single-mask inference use scripts.infer_image_from_mask."
+        ),
+    )
     parser.add_argument(
         "--env_config_path",
         type=str,
@@ -178,4 +186,4 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
 
     args = parser.parse_args()
-    infer_controlnet(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)
+    infer_image_from_mask_batch(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)

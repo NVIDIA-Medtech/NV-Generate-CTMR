@@ -145,6 +145,7 @@ Currently supported MR contrasts:
 - Flair for skull-stripped brain MRI
 
 ## Recommended FOV for MR `rflow-mr` model
+
 Recommended FOV is computed from median FOV of training data.
 
 | Body region | Modality | number of training data | Median FOV x × y × z (mm) |

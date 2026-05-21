@@ -20,8 +20,6 @@ Please cite all the following papers if you are using code or model from this re
 |![MR-Brain example](assets/combined_grid.gif)| ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
 |*Generated MR Brain with `rflow-mr-brain`*| *Generated MR T2w prostate and T1w brain image with  with `rflow-mr`* | *Generated CT image/mask pair with  with `rflow-ct`* |
 
-
-
 ## Overview
 
 NV-Generate-CTMR generates high-resolution synthetic 3D medical volumes using latent diffusion models built on the MAISI (Medical AI for Synthetic Imaging) framework. It produces CT images with paired segmentation masks and MRI volumes across multiple contrasts — enabling synthetic training data generation, data augmentation for rare pathologies, and privacy-preserving data sharing.
@@ -57,7 +55,8 @@ synthesis.
   - [2.3 CT Paired Image/Mask Generation](#23-ct-paired-imagemask-generation)
   - [2.4 CT Image Generation](#24-ct-image-generation)
   - [2.5 MR Image Generation](#25-mr-image-generation)
-  - [2.6 Example Application: MR-to-CT Image Synthesis](#26-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
+  - [2.6 CT Image Generation from Your Own Mask](#26-ct-image-generation-from-your-own-mask)
+  - [2.7 Example Application: MR-to-CT Image Synthesis](#27-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
 - [3. Documentation: details of data preparation, training, and inference tutorials](#3-documentation-details-of-data-preparation-training-and-inference-tutorials)
 - [4. Performance: accuracy, speed, and GPU memory usage](#4-performance-accuracy-speed-and-gpu-memory-usage)
 - [5. License](#5-license)
@@ -101,6 +100,13 @@ This repository provides **four model variants** for medical image generation: `
 | **Model: ControlNet**     | Coming soon | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
 
 ## 2. Quick Start (requires at least a 16G GPU)
+
+> ⚠️ **Picking the right `dim` and `spacing` is the single biggest factor in output quality.** The product `dim × spacing` defines the field of view (FOV). Each model variant has only ever seen FOVs in the **training-data distribution** for its target anatomy — asking it to synthesize at a numerically-valid but out-of-distribution FOV (e.g. a 128 mm-cube whole-body CT) produces unusable output. Start from the recommended `(dim, spacing)` per anatomy:
+>
+> - **CT** (`rflow-ct`, `ddpm-ct`): [docs/inference.md#recommended-spacing-for-ct](docs/inference.md#recommended-spacing-for-ct)
+> - **MR** (`rflow-mr`, `rflow-mr-brain`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-model)
+>
+> See also the `infer_image-only` / `infer_mask-image-paired` skills under [skills/](skills/) for end-to-end workflow guidance.
 
 ### 2.1 Installation
 
@@ -164,7 +170,32 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 2.6 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
+### 2.6 CT Image Generation from Your Own Mask
+
+If you already have a 3D label mask in the **MAISI 132-class vocabulary** with the body envelope (label `200`) added, you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
+
+```bash
+network="rflow"
+generate_version="rflow-ct" # can change to "ddpm-ct"
+python -m scripts.download_model_data --version ${generate_version} --root_dir "./"
+python -m scripts.infer_image_from_mask \
+  -t ./configs/config_network_${network}.json \
+  -i ./configs/config_infer.json \
+  -e ./configs/environment_${generate_version}.json \
+  --mask /path/to/your_mask.nii.gz \
+  --version ${generate_version}
+```
+
+> ⚠️ **The mask must be in the MAISI 132-class label vocabulary AND include the body envelope (label 200).** In concrete terms, the MAISI 132-class vocabulary is the same as the `nv-segment-ct` output label definition **plus the body envelope (label 200)**. The authoritative reference is [`configs/label_dict.json`](configs/label_dict.json). Two practical ways to produce a valid mask:
+>
+> - **From `nv-segment-ct`** (recommended — already in MAISI vocabulary): run `nv-segment-ct` on the CT, then add the body envelope via `scripts.utils.add_body_envelope` (label 200 is never emitted by `nv-segment-ct`).
+> - **From another segmenter**: remap the output labels to the MAISI 132-class IDs in `configs/label_dict.json`, then add the body envelope.
+>
+> See the [`infer_image-from-mask` skill](skills/infer_image-from-mask.md) for the full preprocessing chain and the complete spec of "valid mask format".
+
+For batch generation from many masks listed in a JSON, see [`scripts.infer_image_from_mask_batch`](scripts/infer_image_from_mask_batch.py).
+
+### 2.7 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
 
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (rflow-ct) is available here: <https://github.com/brudfors/maisi-mr-to-ct>.
 
