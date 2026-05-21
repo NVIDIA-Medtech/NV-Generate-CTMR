@@ -84,9 +84,10 @@ The released CT ControlNet expects the MAISI 132-class vocabulary. In concrete t
 If your mask comes from TotalSegmentator or any other segmenter whose label IDs differ from MAISI, you must first remap the integer label IDs to the MAISI 132-class space defined in [`configs/label_dict.json`](../configs/label_dict.json).
 
 1. **Start with a CT NIfTI.**
-2. **Run your segmenter** on the CT, then **remap its label IDs to the MAISI 132-class IDs** by matching anatomical structure name to the entries in [`configs/label_dict.json`](../configs/label_dict.json). Structures not present in MAISI's 132 classes must be dropped (set to `0`). Apply the map voxel-wise.
-3. **Add the body envelope** (label `200`) as in Option A step 3.
-4. **Save** as a 1-channel integer NIfTI.
+2. **Run your segmenter** on the CT.
+3. **⚠️ Remap label IDs to the MAISI 132-class space.** This is the critical step that distinguishes Option B from Option A. Build a label-ID map from your segmenter's IDs → MAISI 132-class IDs by matching anatomical structure name to the entries in [`configs/label_dict.json`](../configs/label_dict.json). Structures not present in MAISI's 132 classes must be dropped (set to `0`). Apply the map voxel-wise. **If you skip this step or get the mapping wrong, the generated CT will be unusable** — the ControlNet was trained on a specific label vocabulary and silently produces garbage for unfamiliar label IDs.
+4. **Add the body envelope** (label `200`) as in Option A step 3.
+5. **Save** as a 1-channel integer NIfTI.
 
 Either way, the final output is the `--mask` argument the CLI accepts, or the `combine_label_or` argument when calling the library function directly.
 
