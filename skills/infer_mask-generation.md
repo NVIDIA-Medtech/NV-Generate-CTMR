@@ -1,11 +1,11 @@
 ---
-name: mask-generation
+name: infer_mask-generation
 description: Explains how NV-Generate-CTMR generates a 3D organ-label mask from scratch (no input image needed) using anatomy_size conditioning. Trigger when the user asks "how does mask generation work", "how do I generate a synthetic mask", "what does ldm_conditional_sample_one_mask do", "explain the mask diffusion model", or any low-level question about the mask LDM pipeline.
 ---
 
 # Mask generation (NV-Generate-CTMR)
 
-This skill explains how NV-Generate-CTMR samples a **3D body-region label mask** from scratch, conditioned on a small organ-size vector. The mask is the input to the ControlNet-conditioned image LDM (see the `image-from-mask` skill).
+This skill explains how NV-Generate-CTMR samples a **3D body-region label mask** from scratch, conditioned on a small organ-size vector. The mask is the input to the ControlNet-conditioned image LDM (see the `infer_image-from-mask` skill).
 
 Code entry point: `scripts.sample_mask.ldm_conditional_sample_one_mask`.
 
@@ -179,7 +179,7 @@ The pretrained mask DM was trained at **256×256×256 × 1.5 mm isotropic**. Dow
 1. **Generate from scratch** — triggered when `controllable_anatomy_size` is non-empty. Calls `ldm_conditional_sample_one_mask`.
 2. **Pick a real training mask** — triggered when `controllable_anatomy_size` is empty. Uses `find_masks` / `find_closest_masks` to retrieve a database entry that matches `body_region` + `anatomy_list`. No diffusion involved.
 
-Both paths produce a label tensor that then feeds the `image-from-mask` skill.
+Both paths produce a label tensor that then feeds the `infer_image-from-mask` skill.
 
 ## Code references
 

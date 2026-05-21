@@ -1,5 +1,5 @@
 ---
-name: image-only-inference
+name: infer_image-only
 description: How to run image-only inference (no mask, no ControlNet) with NV-Generate-CTMR. Covers picking the right model variant (rflow-ct / rflow-mr / rflow-mr-brain / ddpm-ct), choosing dim/spacing for a target field-of-view, and the modality + body-region knobs. Trigger when the user asks "how do I generate a CT image", "what dim/spacing should I use", "how do I set the FOV", "which model variant for brain MRI / abdomen CT / chest CT", or wants help running the README §2.2, §2.4, §2.5 commands.
 ---
 
@@ -19,7 +19,7 @@ This skill covers running the **image-only** diffusion model — no ControlNet, 
 - §2.4 CT Image Generation (`rflow-ct` or `ddpm-ct`)
 - §2.5 MR Image Generation (`rflow-mr`)
 
-This is distinct from the mask-image-paired pipeline in §2.3, which uses `scripts.inference` and the `LDMSampler` orchestrator (see the `mask-image-paired-inference` skill).
+This is distinct from the mask-image-paired pipeline in §2.3, which uses `scripts.inference` and the `LDMSampler` orchestrator (see the `infer_mask-image-paired` skill).
 
 ## Picking a model variant
 
@@ -149,7 +149,7 @@ Slots correspond to `[head, chest, abdomen, pelvis]`. `rflow-ct` / `rflow-mr` / 
 
 ## Related skills
 
-- `download-models` — fetch the right checkpoints.
-- `mask-generation` — generate a mask from scratch (the other algorithm in this repo).
-- `image-from-mask` — generate an image FROM an existing mask (uses ControlNet).
-- `mask-image-paired-inference` — full mask + image paired pipeline (chains both).
+- `infer_download-models` — fetch the right checkpoints.
+- `infer_mask-generation` — generate a mask from scratch (the other algorithm in this repo).
+- `infer_image-from-mask` — generate an image FROM an existing mask (uses ControlNet).
+- `infer_mask-image-paired` — full mask + image paired pipeline (chains both).

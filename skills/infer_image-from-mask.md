@@ -1,11 +1,11 @@
 ---
-name: image-from-mask
+name: infer_image-from-mask
 description: Explains how NV-Generate-CTMR generates a CT or MR image from an existing 3D label mask using the ControlNet-conditioned image latent diffusion model. Trigger when the user asks "how do I generate an image from a mask", "how does the ControlNet work", "what does ldm_conditional_sample_one_image do", "explain the image diffusion model in NV-Generate-CTMR", or any low-level question about the image LDM pipeline.
 ---
 
 # Image-from-mask inference (NV-Generate-CTMR)
 
-This skill explains how NV-Generate-CTMR takes a **3D label mask** (typically produced by the `mask-generation` skill or pulled from the training-mask database) and **synthesizes a paired CT or MR image** from it. The image LDM is conditioned on the mask via a ControlNet branch.
+This skill explains how NV-Generate-CTMR takes a **3D label mask** (typically produced by the `infer_mask-generation` skill or pulled from the training-mask database) and **synthesizes a paired CT or MR image** from it. The image LDM is conditioned on the mask via a ControlNet branch.
 
 Code entry point: `scripts.infer_image_from_mask.ldm_conditional_sample_one_image`.
 
@@ -188,7 +188,7 @@ Validated by `check_input_ct` and `check_input_mr` (in `scripts/sample_mask.py`)
 - `spacing[0] ∈ [0.5, 3.0]` mm, `spacing[2] ∈ [0.5, 5.0]` mm
 - FOV_xy ≥ 256 mm for head, ≥ 384 mm for abdomen / body
 
-See the `image-only-inference` skill for recommended `(dim, spacing)` per anatomical target.
+See the `infer_image-only` skill for recommended `(dim, spacing)` per anatomical target.
 
 ## Code references
 

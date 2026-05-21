@@ -1,5 +1,5 @@
 ---
-name: mask-image-paired-inference
+name: infer_mask-image-paired
 description: How to run paired mask + image generation with NV-Generate-CTMR. Generates a 3D mask (either from anatomy_size or by retrieving a real training mask) and then a paired CT/MR image conditioned on that mask via ControlNet. Trigger when the user asks "how do I generate a mask and image together", "how does LDMSampler work", "what does scripts.inference do", or wants help running the README §2.3 CT Paired Image/Mask command.
 ---
 
@@ -9,8 +9,8 @@ This skill covers the **paired generation** pipeline: mask first, then image con
 
 Two algorithms run sequentially:
 
-1. **Mask stage** — see the `mask-generation` skill.
-2. **Image stage** — see the `image-from-mask` skill.
+1. **Mask stage** — see the `infer_mask-generation` skill.
+2. **Image stage** — see the `infer_image-from-mask` skill.
 
 This skill explains how they're chained, the LDMSampler state required, and the configuration knobs.
 
@@ -57,7 +57,7 @@ sample_one_mask()      read_mask_information(mask_file)
                                       top/bottom_region_index)
             │
             ▼
-   sample_one_pair()  (ControlNet + image DM — see image-from-mask skill)
+   sample_one_pair()  (ControlNet + image DM — see infer_image-from-mask skill)
             │
             ▼
    quality_check_ct(image, mask)
@@ -75,7 +75,7 @@ save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
 **Path A — `controllable_anatomy_size` non-empty** (diffusion-generated mask):
 
 - User provides e.g. `[("pancreas", 0.5), ("liver", 0.7)]` in `config_infer.json`.
-- `prepare_anatomy_size_condition` builds the 10-d vector (see `mask-generation` skill).
+- `prepare_anatomy_size_condition` builds the 10-d vector (see `infer_mask-generation` skill).
 - `sample_one_mask` runs the mask DDPM.
 - Result is at fixed shape `256×256×256 × 1.5mm iso` (the mask DM's pretrained shape).
 - `ensure_output_size_and_spacing` resamples to the user's requested `output_size` + `spacing`.
@@ -110,9 +110,9 @@ Both paths then call `sample_one_pair` for the image stage.
 
 ## `dim` and `spacing` — same FOV rules as image-only
 
-> ⚠️ **FOV (= `dim × spacing`) is the #1 quality knob.** See the **"Why FOV matters"** section at the top of [`image-only-inference.md`](image-only-inference.md) — same warning applies here. Out-of-distribution FOVs produce unusable output even when the validator accepts the inputs.
+> ⚠️ **FOV (= `dim × spacing`) is the #1 quality knob.** See the **"Why FOV matters"** section at the top of [`infer_image-only.md`](infer_image-only.md) — same warning applies here. Out-of-distribution FOVs produce unusable output even when the validator accepts the inputs.
 
-The mask + image pipeline uses **the same** `output_size` and `spacing` constraints as image-only inference — see the `image-only-inference` skill for the table of recommended `(dim, spacing)` per anatomical target and the hard constraints from `check_input_ct` / `check_input_mr`.
+The mask + image pipeline uses **the same** `output_size` and `spacing` constraints as image-only inference — see the `infer_image-only` skill for the table of recommended `(dim, spacing)` per anatomical target and the hard constraints from `check_input_ct` / `check_input_mr`.
 
 Additional FOV considerations specific to the paired pipeline:
 
@@ -142,7 +142,7 @@ Key `config_infer.json` knobs:
 | `body_region` | List of regions present in the requested mask: any of `["head", "chest", "thorax", "abdomen", "pelvis", "lower"]`. Used by Path B only (`find_masks` filter). |
 | `anatomy_list` | List of organ names from `configs/label_dict.json` that must be present. Used by `find_masks` (Path B) AND as the post-process filter (`filter_mask_with_organs`) for both paths. |
 | `controllable_anatomy_size` | Empty list → Path B. Non-empty list of `(organ_name, size)` tuples → Path A (diffusion-generated mask). At most 10 entries; at most 1 tumor. |
-| `output_size` | Target volume shape. Hard constraints apply (see `image-only-inference` skill). |
+| `output_size` | Target volume shape. Hard constraints apply (see `infer_image-only` skill). |
 | `spacing` | Target voxel spacing (mm). Hard constraints apply. |
 | `modality` | Modality code (1=CT, 8..32=MR variants). |
 | `num_inference_steps` | RFlow → 30, **DDPM → 1000**. ⚠️ For `ddpm-ct` you must set this to 1000; the notebook auto-applies this override in cell 12. |
@@ -175,7 +175,7 @@ For each successful generation, two files are saved to `output_dir`:
 
 ## Related skills
 
-- `mask-generation` — algorithm details for the mask stage.
-- `image-from-mask` — algorithm details for the image stage.
-- `image-only-inference` — image-only path (no mask); covers FOV/dim/spacing table.
-- `download-models` — fetch checkpoints first.
+- `infer_mask-generation` — algorithm details for the mask stage.
+- `infer_image-from-mask` — algorithm details for the image stage.
+- `infer_image-only` — image-only path (no mask); covers FOV/dim/spacing table.
+- `infer_download-models` — fetch checkpoints first.
