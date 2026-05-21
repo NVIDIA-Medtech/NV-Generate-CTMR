@@ -79,12 +79,12 @@ The released CT ControlNet expects the MAISI 132-class vocabulary. In concrete t
 3. **Add the body envelope** (label `200`): call [`scripts.utils.add_body_envelope(seg_mask, ct_image)`](../scripts/utils.py). It finds the largest connected component of air (default `HU < -800`), morphologically closes it, treats labeled voxels as not-air, inverts to get the body silhouette, then runs an erode→largest-CC→dilate cleanup that drops the patient bed/table (which often touches the body in CT scans). Every voxel inside the silhouette that nv-segment didn't already label is set to `body_label` (default `200`). Algorithm follows `find_body_maskv2` from pengfeig's `3d_ldm_monai`.
 4. **Save** as a 1-channel integer NIfTI.
 
-#### Option B: another segmenter (e.g. TotalSegmentator) + remap + add body envelope
+#### Option B: another segmenter + remap + add body envelope
 
 If your mask comes from TotalSegmentator or any other segmenter whose label IDs differ from MAISI, you must first remap the integer label IDs to the MAISI 132-class space defined in [`configs/label_dict.json`](../configs/label_dict.json).
 
 1. **Start with a CT image.**
-2. **Run your segmenter** on the CT.
+2. **Run your segmenter** (e.g. TotalSegmentator) on the CT.
 3. **⚠️ Remap label IDs to the MAISI 132-class space.** This is the critical step that distinguishes Option B from Option A. Build a label-ID map from your segmenter's IDs → MAISI 132-class IDs by matching anatomical structure name to the entries in [`configs/label_dict.json`](../configs/label_dict.json). Structures not present in MAISI's 132 classes must be dropped (set to `0`). Apply the map voxel-wise. **If you skip this step or get the mapping wrong, the generated CT will be unusable** — the ControlNet was trained on a specific label vocabulary and silently produces garbage for unfamiliar label IDs.
 4. **Add the body envelope** (label `200`) as in Option A step 3.
 5. **Save** as a 1-channel integer NIfTI.
