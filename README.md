@@ -55,7 +55,7 @@ synthesis.
   - [2.3 CT Paired Image/Mask Generation](#23-ct-paired-imagemask-generation)
   - [2.4 CT Image Generation](#24-ct-image-generation)
   - [2.5 MR Image Generation](#25-mr-image-generation)
-  - [2.6 Bring Your Own Mask (CT)](#26-bring-your-own-mask-ct)
+  - [2.6 CT Image Generation from Your Own Mask](#26-ct-image-generation-from-your-own-mask)
   - [2.7 Example Application: MR-to-CT Image Synthesis](#27-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
 - [3. Documentation: details of data preparation, training, and inference tutorials](#3-documentation-details-of-data-preparation-training-and-inference-tutorials)
 - [4. Performance: accuracy, speed, and GPU memory usage](#4-performance-accuracy-speed-and-gpu-memory-usage)
@@ -170,7 +170,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 2.6 Bring Your Own Mask (CT)
+### 2.6 CT Image Generation from Your Own Mask
 
 If you already have a 3D label mask in the **MAISI 132-class vocabulary** with the body envelope (label `200`) added, you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
 
