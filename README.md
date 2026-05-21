@@ -172,7 +172,7 @@ python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -
 
 ### 2.6 Bring Your Own Mask (CT)
 
-If you already have a 3D label mask (e.g. produced by `nv-segment-ct` on a real CT), you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
+If you already have a 3D label mask (it must be produced by `nv-segment-ct` on a real CT, then have the body envelope added), you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
 
 ```bash
 network="rflow"
