@@ -1,5 +1,5 @@
 ---
-name: infer_download-models
+name: download-models
 description: How to download pretrained checkpoints (CT, MR, MR-Brain variants) and optional auxiliary data (mask database, anatomy-size-conditions JSON) for NV-Generate-CTMR inference. Trigger when the user asks "where are the checkpoints", "how do I download the model weights", "what does download_model_data.py do", or hits a missing-checkpoint error.
 ---
 

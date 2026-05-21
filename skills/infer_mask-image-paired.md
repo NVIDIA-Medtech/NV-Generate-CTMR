@@ -178,4 +178,4 @@ For each successful generation, two files are saved to `output_dir`:
 - `infer_mask-generation` — algorithm details for the mask stage.
 - `infer_image-from-mask` — algorithm details for the image stage.
 - `infer_image-only` — image-only path (no mask); covers FOV/dim/spacing table.
-- `infer_download-models` — fetch checkpoints first.
+- `download-models` — fetch checkpoints first.

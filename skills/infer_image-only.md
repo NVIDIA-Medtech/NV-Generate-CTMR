@@ -149,7 +149,7 @@ Slots correspond to `[head, chest, abdomen, pelvis]`. `rflow-ct` / `rflow-mr` / 
 
 ## Related skills
 
-- `infer_download-models` — fetch the right checkpoints.
+- `download-models` — fetch the right checkpoints.
 - `infer_mask-generation` — generate a mask from scratch (the other algorithm in this repo).
 - `infer_image-from-mask` — generate an image FROM an existing mask (uses ControlNet).
 - `infer_mask-image-paired` — full mask + image paired pipeline (chains both).
