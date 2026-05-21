@@ -325,7 +325,7 @@ def check_input_mr(
     else:
         raise ValueError(f"The output_size[2] have to be chosen from [128, 256], yet got {output_size}.")
 
-    if any(spacing) < 0.4 or any(spacing) > 5.0:
+    if any(s < 0.4 for s in spacing) or any(s > 5.0 for s in spacing):
         raise ValueError(f"spacing have to be between 0.4 and 5.0 mm, yet got {spacing}.")
 
     # check anatomy_list format

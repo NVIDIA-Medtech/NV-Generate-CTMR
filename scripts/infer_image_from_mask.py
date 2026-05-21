@@ -103,7 +103,9 @@ def ldm_conditional_sample_one_image_from_mask(
     Returns ``(synthetic_image, combine_label)`` — the mask is returned for
     downstream filtering (e.g. ``filter_mask_with_organs``).
     """
-    if modality_tensor is not None and modality_tensor <= 7:
+    # modality_tensor can be scalar (single mask) or shape (B,) (batch infer);
+    # collapse to a single int so `if` doesn't choke on a multi-element bool tensor.
+    if modality_tensor is not None and int(modality_tensor.flatten()[0]) <= 7:
         a_min = -1000  # CT background floor
     else:
         a_min = 0  # MR background floor
@@ -311,12 +313,17 @@ def validate_user_mask(label_path: str | os.PathLike) -> dict:
     label = data["label"]  # shape (1, H, W, D)
 
     current_shape = tuple(label.shape[1:])
-    current_spacing = tuple(float(label.affine[i, i]) for i in range(3))
+    # L2 norm of each affine column gives true voxel spacing regardless of any
+    # residual rotation in the affine — Orientationd reorders/flips axes but
+    # does not strip rotation for oblique acquisitions, so affine[i, i] alone
+    # underestimates spacing for oblique scans.
+    current_spacing = tuple(float(torch.norm(label.affine[:3, i])) for i in range(3))
     print(f"[validate] loaded {label_path.name}: shape={current_shape}, spacing={current_spacing}", file=sys.stderr)
 
     # Check label vocabulary
     unique_labels = torch.unique(label).tolist()
-    unknown = [int(v) for v in unique_labels if int(v) not in _MAISI_VALID_LABELS]
+    unique_label_ints = {int(v) for v in unique_labels}
+    unknown = sorted(v for v in unique_label_ints if v not in _MAISI_VALID_LABELS)
     if unknown:
         print(
             f"[validate] ⚠️  mask contains {len(unknown)} label value(s) outside the MAISI 132-class vocabulary: "
@@ -326,6 +333,18 @@ def validate_user_mask(label_path: str | os.PathLike) -> dict:
         print("[validate]    These will be passed through unchanged — generated image quality on unknown labels is unpredictable.", file=sys.stderr)
     else:
         print(f"[validate] ✓ all {len(unique_labels)} unique label values are in the MAISI 132-class vocabulary.", file=sys.stderr)
+
+    # The released CT ControlNet expects label 200 (body envelope) for every body
+    # voxel not labeled with a specific organ. Missing it is the single most common
+    # mistake — see scripts.utils.add_body_envelope.
+    if 200 not in unique_label_ints:
+        print(
+            "[validate] ⚠️  mask does NOT contain label 200 (body envelope). The released CT "
+            "ControlNet expects label 200 on every body voxel not assigned a specific organ. "
+            "Generated image quality will be poor without it — run scripts.utils.add_body_envelope "
+            "on the mask first. See skills/infer_image-from-mask.md.",
+            file=sys.stderr,
+        )
 
     # Check shape + spacing constraints
     if _is_valid_target(current_shape, current_spacing):

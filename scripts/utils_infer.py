@@ -303,7 +303,10 @@ def run_controlnet_conditioned_image_dm(
             device=torch.device("cpu"),
         )
         synthetic_images = dynamic_infer(inferer, recon_model, latents)
-        if modality_tensor is not None and modality_tensor <= 7:
+        # modality_tensor can be scalar (single mask) or shape (B,) (batch infer).
+        # Use the first element so a >1-batch boolean tensor doesn't blow up in `if`.
+        # All batch items share the same modality in our call sites.
+        if modality_tensor is not None and int(modality_tensor.flatten()[0]) <= 7:
             synthetic_images = torch.clip(synthetic_images, b_min, b_max).cpu()
         else:
             synthetic_images = torch.clip(synthetic_images, b_min, None).cpu()
@@ -338,7 +341,7 @@ def load_image_models(args, device: torch.device):
     from .utils import define_instance
 
     autoencoder = define_instance(args, "autoencoder_def").to(device)
-    ckpt = torch.load(args.trained_autoencoder_path)
+    ckpt = torch.load(args.trained_autoencoder_path, weights_only=False)
     if "unet_state_dict" in ckpt:
         ckpt = ckpt["unet_state_dict"]
     autoencoder.load_state_dict(ckpt)
