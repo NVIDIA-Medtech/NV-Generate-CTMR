@@ -11,7 +11,7 @@ Code entry point: `scripts.infer_image_from_mask.ldm_conditional_sample_one_imag
 
 ## TL;DR
 
-```
+```text
                        [mask label NIfTI]
                                 │ binarize_labels (8-bit encoding)
                                 ▼
@@ -120,6 +120,7 @@ for t, next_t in zip(timesteps, next_timesteps):
 ```
 
 Two model-variant differences:
+
 - **rflow-ct / rflow-mr / rflow-mr-brain** use `RFlowScheduler` (30 steps, much faster). The `set_timesteps` call also passes `input_img_size_numel` so step sizes adapt to volume.
 - **ddpm-ct** uses `DDPMScheduler` (1000 steps). It also sets `include_body_region=True` so the UNet receives `top_region_index_tensor` / `bottom_region_index_tensor`.
 
@@ -162,6 +163,7 @@ synthetic_images = crop_img_body_mask(synthetic_images, combine_label, a_min=a_m
 ## Output
 
 A 2-tuple `(synthetic_images, combine_label)`:
+
 - `synthetic_images`: `(1, 1, H, W, D)` float tensor in HU range (CT) or `[0, +∞)` (MR).
 - `combine_label`: the mask at `output_size`, returned for downstream filtering (`filter_mask_with_organs`).
 
@@ -178,6 +180,7 @@ A 2-tuple `(synthetic_images, combine_label)`:
 ## Output-size + spacing constraints
 
 Validated by `check_input_ct` and `check_input_mr` (in `scripts/sample_mask.py`):
+
 - `output_size[0] == output_size[1]`
 - `output_size[0] ∈ {256, 384, 512}`
 - `output_size[2] ∈ {128, 256, 384, 512, 640, 768}`

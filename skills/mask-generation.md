@@ -11,7 +11,7 @@ Code entry point: `scripts.sample_mask.ldm_conditional_sample_one_mask`.
 
 ## TL;DR
 
-```
+```text
 [anatomy_size  ──┐
  (10-d vector)]   │  cross-attention conditioning
                   ▼
@@ -59,6 +59,7 @@ The 10-d vector has organ-fixed slots:
 | 4 | colon | 9 | bone lesion |
 
 Each value is one of:
+
 - A float in `[0, 1]` — desired size on a normalized scale
 - `-1.0` — "no preference / don't care"
 
@@ -103,7 +104,7 @@ latents = inferer_ddpm.sample(
 
 `DiffusionInferer.sample` runs the standard DDPM denoising loop:
 
-```
+```text
 for t = T, T-1, ..., 1:
     eps_hat = diffusion_unet(latents, timesteps=t, context=anatomy_size)
     latents = scheduler.step(eps_hat, t, latents)
@@ -160,6 +161,7 @@ data = general_mask_generation_post_process(data, target_tumor_label, device)
 ```
 
 `general_mask_generation_post_process` (in `scripts/utils.py`):
+
 - Suppresses spurious non-largest connected components for major organs
 - Keeps only the largest tumor component for the requested tumor (if any)
 - Dilates/erodes to clean boundaries

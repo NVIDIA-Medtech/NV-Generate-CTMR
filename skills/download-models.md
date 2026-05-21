@@ -24,6 +24,7 @@ Source: HuggingFace Hub via `huggingface_hub.hf_hub_download`. The script also p
 ### `rflow-ct` (CT, Rectified Flow — recommended for CT)
 
 Always downloaded (`models/`):
+
 - `autoencoder_v1.pt` (image AE) — from `nvidia/NV-Generate-CT`
 - `mask_generation_autoencoder.pt` — from `nvidia/NV-Generate-CT`
 - `mask_generation_diffusion_unet.pt` — from `nvidia/NV-Generate-CT`
@@ -31,6 +32,7 @@ Always downloaded (`models/`):
 - `controlnet_3d_rflow-ct.pt` — from `nvidia/NV-Generate-CT`
 
 If **`--model_only` is NOT set**, also downloads (`datasets/`):
+
 - `all_anatomy_size_conditions.json` — anatomy-size database for `prepare_anatomy_size_condition` (Path A in mask-image paired inference)
 - `all_masks_flexible_size_and_spacing_4000.zip` — training-mask database for `find_masks` (Path B)
 - `candidate_masks_flexible_size_and_spacing_4000.json` — index for the mask DB
@@ -38,6 +40,7 @@ If **`--model_only` is NOT set**, also downloads (`datasets/`):
 ### `ddpm-ct` (CT, DDPM — slower but supports body_region input)
 
 Same as `rflow-ct` but swaps:
+
 - `diff_unet_3d_ddpm-ct.pt` + `controlnet_3d_ddpm-ct.pt` (instead of the rflow variants)
 
 And uses `candidate_masks_flexible_size_and_spacing_3000.json` (smaller mask index).
@@ -45,6 +48,7 @@ And uses `candidate_masks_flexible_size_and_spacing_3000.json` (smaller mask ind
 ### `rflow-mr-brain` (Brain MRI, Rectified Flow)
 
 Only the image-DM stack (no mask DM, no ControlNet):
+
 - `autoencoder_v1.pt` — from `nvidia/NV-Generate-CT` (yes, MR-Brain reuses the CT image AE)
 - `diff_unet_3d_rflow-mr-brain_v0.pt` — from `nvidia/NV-Generate-MR-Brain`
 
@@ -55,7 +59,7 @@ Only the image-DM stack (no mask DM, no ControlNet):
 
 ## Output layout
 
-```
+```text
 ./
 ├── models/
 │   ├── autoencoder_v1.pt                      # image AE (CT + MR-Brain)
@@ -80,6 +84,7 @@ The paths above are exactly what the `environment_<variant>.json` configs expect
 ## License gating
 
 Some HuggingFace repos require you to accept their license terms before downloading. If you hit a 403, visit the repo page and accept terms:
+
 - [nvidia/NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) — NVIDIA Open Model License
 - [nvidia/NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) — NVIDIA Non-Commercial
 - [nvidia/NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) — NVIDIA Open Model License

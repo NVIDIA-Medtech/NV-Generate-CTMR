@@ -40,8 +40,11 @@ from monai.utils import set_determinism
 
 from .augmentation import augmentation
 from .find_masks import find_masks
+from .infer_image_from_mask import (  # noqa: F401  (re-exported)
+    crop_img_body_mask,
+    ldm_conditional_sample_one_image,
+)
 from .quality_check import is_outlier
-from .utils import get_body_region_index_from_mask
 
 # Backward-compat re-exports — existing callers ``from scripts.sample import X``
 # keep working. ``X`` now physically lives in sample_mask / infer_image_from_mask.
@@ -53,10 +56,7 @@ from .sample_mask import (  # noqa: F401  (re-exported)
     initialize_noise_latents,
     ldm_conditional_sample_one_mask,
 )
-from .infer_image_from_mask import (  # noqa: F401  (re-exported)
-    crop_img_body_mask,
-    ldm_conditional_sample_one_image,
-)
+from .utils import get_body_region_index_from_mask
 
 
 class LDMSampler:
