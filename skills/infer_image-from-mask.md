@@ -74,7 +74,7 @@ The expected preprocessing chain (for the released CT ControlNet) is:
 
 1. **Start with a CT NIfTI.**
 2. **Run [`nv-segment-ct`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR)** (the NV-Segment-CTMR bundle, modality `CT_BODY`) on the CT. It outputs a 1-channel NIfTI in the MAISI vocabulary, but excludes ~15 label values (dummies + tumors + airway — see `ct_body` in [`NV-Segment-CTMR/configs/inference.json`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR/blob/main/NV-Segment-CTMR/configs/inference.json)). The output contains ~117 organ labels and no `body=200`.
-3. **Add the body envelope** (label `200`): threshold the CT (e.g. `HU > -500`), apply morphological closing to fill internal holes, take the largest connected component, then set every voxel inside that body silhouette that nv-segment didn't already label to `200`.
+3. **Add the body envelope** (label `200`): call [`scripts.utils.add_body_envelope(seg_mask, ct_image)`](../scripts/utils.py). It thresholds the CT (default `HU > -500`), unions with `seg_mask > 0` to keep lung-lobe voxels, takes the largest connected component, applies morphological closing to fill internal cavities, then sets every voxel inside the silhouette that nv-segment didn't already label to `body_label` (default 200).
 4. **Save** as a 1-channel integer NIfTI.
 
 The output of step 4 is the `--mask` argument the CLI accepts, or the `combine_label_or` argument when calling the library function directly.

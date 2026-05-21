@@ -425,6 +425,85 @@ def get_body_region_index_from_mask(input_mask):
     return top_region_index, bottom_region_index
 
 
+def add_body_envelope(
+    seg_mask,
+    ct_image=None,
+    body_label: int = 200,
+    hu_threshold: float = -500.0,
+    morph_close_kernel: int = 5,
+    device: str = "cuda:0",
+):
+    """
+    Add the body envelope label (default 200) to a segmentation mask.
+
+    The released MAISI CT ControlNet expects every body voxel that is NOT
+    labeled by a specific organ to carry label 200 (the "body" / outer-body
+    label). nv-segment-ct produces ~117 organ labels in the MAISI vocabulary
+    but never the body envelope, so users must add it before running
+    ``ldm_conditional_sample_one_image_from_mask``. This helper does that.
+
+    The body silhouette is computed as the **largest connected component**
+    of the union of:
+
+      - ``ct_image > hu_threshold`` (if a CT is supplied), and
+      - ``seg_mask > 0`` (any voxel nv-segment already labeled)
+
+    Combining the two handles lung-tissue voxels — they're below the HU
+    threshold but are labeled by nv-segment as lung lobes, so the union
+    keeps them. Internal holes are then closed via morphological closing
+    (dilate then erode) so the silhouette covers the whole interior body.
+    Finally, every voxel inside the silhouette that the segmentation didn't
+    already label is set to ``body_label``.
+
+    Args:
+        seg_mask: ``(H, W, D)`` integer label volume (numpy ndarray or torch
+            Tensor). Output of nv-segment-ct or any compatible segmenter.
+        ct_image: optional ``(H, W, D)`` CT volume in HU. When provided, the
+            HU threshold is used for the silhouette; when ``None`` the
+            silhouette is derived from ``seg_mask > 0`` alone (less robust
+            for cases with missing organ labels).
+        body_label: integer to fill non-organ body voxels with. Default 200,
+            matching MAISI's ``label_dict.json``.
+        hu_threshold: HU below which a voxel is treated as air/outside-body
+            when ``ct_image`` is provided. Default -500.
+        morph_close_kernel: kernel size for morphological closing (dilate
+            then erode). Larger values fill larger internal cavities. Default 5.
+        device: torch device used for the morphology ops.
+
+    Returns:
+        np.ndarray of the same shape and dtype as the input ``seg_mask``,
+        with non-organ body voxels filled with ``body_label``.
+    """
+    seg_np = seg_mask.detach().cpu().numpy() if isinstance(seg_mask, torch.Tensor) else np.asarray(seg_mask)
+    orig_dtype = seg_np.dtype
+
+    # 1. Initial body silhouette: union of HU-thresholded CT (if any) and any
+    #    voxel nv-segment already labeled.
+    silhouette = seg_np > 0
+    if ct_image is not None:
+        ct_np = ct_image.detach().cpu().numpy() if isinstance(ct_image, torch.Tensor) else np.asarray(ct_image)
+        silhouette = np.logical_or(silhouette, ct_np > hu_threshold)
+
+    # 2. Largest connected component (drops table, IV pole, gantry artifacts).
+    silhouette_int = silhouette.astype(np.uint8)
+    silhouette_int, _ = supress_non_largest_components(silhouette_int, target_label=[1])
+    silhouette = silhouette_int > 0
+
+    # 3. Morphological closing (dilate → erode) to fill internal cavities like
+    #    air-filled lung pockets or bowel gas that the HU threshold missed.
+    s_t = torch.from_numpy(silhouette.astype(np.float32)).to(device)
+    s_t = dilate_one_img(s_t, filter_size=morph_close_kernel, pad_value=0.0)
+    s_t = erode_one_img(s_t, filter_size=morph_close_kernel, pad_value=1.0)
+    silhouette = s_t.detach().cpu().numpy() > 0
+
+    # 4. Fill: every voxel inside the silhouette that the segmentation didn't
+    #    already label gets body_label.
+    out = seg_np.copy()
+    fill_mask = silhouette & (out == 0)
+    out[fill_mask] = body_label
+    return out.astype(orig_dtype)
+
+
 def general_mask_generation_post_process(volume_t, target_tumor_label=None, device="cuda:0"):
     """
     Perform post-processing on a generated mask volume.
