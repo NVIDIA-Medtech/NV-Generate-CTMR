@@ -5,6 +5,14 @@ description: How to run image-only inference (no mask, no ControlNet) with NV-Ge
 
 # Image-only inference (no mask)
 
+> ## ⚠️ Why FOV matters (read this first)
+>
+> **FOV = `dim × spacing`** (mm per axis). This is the single biggest knob for output quality. The model has only seen FOVs from the **training-data distribution** for its target anatomy — asking it to synthesize at a numerically-valid but out-of-distribution FOV produces unrealistic output, even when `check_input_ct`/`check_input_mr` accept the inputs.
+>
+> **The "Recommended (dim, spacing) by anatomical target" table below is not a list of preferences** — those values are where the training data actually lives. Stay close to them; the further you deviate the worse the output.
+>
+> **Common failure mode**: user picks `dim=(256,256,256), spacing=(0.5,0.5,0.5)` to "make a high-res small volume." Validator accepts it (FOV=128mm cube). The DM produces noise because it never saw 128 mm body FOVs at training. **Fix**: match a row in the recommended table below.
+
 This skill covers running the **image-only** diffusion model — no ControlNet, no mask input. The CLI is `scripts.diff_model_infer`. Three Quick Start subsections of the README use this path:
 
 - §2.2 MR Brain Image Generation (`rflow-mr-brain`)
@@ -23,6 +31,7 @@ This is distinct from the mask-image-paired pipeline in §2.3, which uses `scrip
 | `ddpm-ct` | CT | MAISI-v1 (DDPM) | 1000 | **Yes** | 512×512×768 | Whole-body CT with explicit body-region indices |
 
 Pick the variant by:
+
 1. Modality + anatomy (brain MRI → `rflow-mr-brain`; CT → `rflow-ct`; other MRI → `rflow-mr`).
 2. Whether you need explicit body-region conditioning (use `ddpm-ct` if you want `top_region_index` / `bottom_region_index` as inputs; else prefer `rflow-ct` — 33× faster, similar FID).
 
@@ -63,6 +72,7 @@ The **field of view (FOV)** in each axis is `dim[i] × spacing[i]` mm. Pick the 
 ### Hard constraints (validated by `check_input_ct` / `check_input_mr`)
 
 For CT (`rflow-ct`, `ddpm-ct`):
+
 - `dim[0] == dim[1]`
 - `dim[0] ∈ {256, 384, 512}`
 - `dim[2] ∈ {128, 256, 384, 512, 640, 768}`
@@ -71,6 +81,7 @@ For CT (`rflow-ct`, `ddpm-ct`):
 - Recommended `FOV_xy ≥ 256` mm for head, `≥ 384` mm for abdomen/body
 
 For MR (`rflow-mr`, `rflow-mr-brain`):
+
 - At least two of `dim[0..2]` must be equal
 - If `dim[2]=128`: `dim[0]=dim[1] ∈ {128, 256, 384, 512}`
 - If `dim[2]=256`: `dim ∈ {[128,256,256], [256,128,256], [256,256,256]}`

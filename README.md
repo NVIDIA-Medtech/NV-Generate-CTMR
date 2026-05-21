@@ -20,8 +20,6 @@ Please cite all the following papers if you are using code or model from this re
 |![MR-Brain example](assets/combined_grid.gif)| ![MR example](assets/MR_example.png) | ![Generated CT and segmentation](assets/typical-generated-ct-image-corresponding-segmentation-condition.gif) |
 |*Generated MR Brain with `rflow-mr-brain`*| *Generated MR T2w prostate and T1w brain image with  with `rflow-mr`* | *Generated CT image/mask pair with  with `rflow-ct`* |
 
-
-
 ## Overview
 
 NV-Generate-CTMR generates high-resolution synthetic 3D medical volumes using latent diffusion models built on the MAISI (Medical AI for Synthetic Imaging) framework. It produces CT images with paired segmentation masks and MRI volumes across multiple contrasts — enabling synthetic training data generation, data augmentation for rare pathologies, and privacy-preserving data sharing.
@@ -101,6 +99,8 @@ This repository provides **four model variants** for medical image generation: `
 | **Model: ControlNet**     | Coming soon | N/A | generate image/mask pairs, with contrastive loss | generate image/mask pairs, no contrastive loss |
 
 ## 2. Quick Start (requires at least a 16G GPU)
+
+> ⚠️ **Picking the right `dim` and `spacing` is the single biggest factor in output quality.** The product `dim × spacing` defines the field of view (FOV). Each model variant has only ever seen FOVs in the **training-data distribution** for its target anatomy — asking it to synthesize at a numerically-valid but out-of-distribution FOV (e.g. a 128 mm-cube whole-body CT) produces unusable output. Use the recommended `(dim, spacing)` per anatomy in [docs/inference.md](docs/inference.md) and the `image-only-inference` / `mask-image-paired-inference` skills under [skills/](skills/), and stay near those values.
 
 ### 2.1 Installation
 

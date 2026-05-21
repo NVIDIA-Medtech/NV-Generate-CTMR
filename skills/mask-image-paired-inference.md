@@ -8,6 +8,7 @@ description: How to run paired mask + image generation with NV-Generate-CTMR. Ge
 This skill covers the **paired generation** pipeline: mask first, then image conditioned on that mask. The CLI is `scripts.inference`, which instantiates `LDMSampler` and calls `sample_multiple_images`. This is the path used in README §2.3 (CT Paired Image/Mask Generation).
 
 Two algorithms run sequentially:
+
 1. **Mask stage** — see the `mask-generation` skill.
 2. **Image stage** — see the `image-from-mask` skill.
 
@@ -29,13 +30,14 @@ python -m scripts.inference \
 > ⚠️ **`ddpm-ct` requires `num_inference_steps = 1000`** (vs 30 for `rflow-ct`). The notebook auto-applies this when `generate_version == "ddpm-ct"` (see cell 12). If you call the API directly, set this explicitly — DDPM scheduler will not produce usable output with fewer steps. This is 33× slower than `rflow-ct` but produces equivalent quality.
 
 Three configs are passed:
+
 - `-t` network architecture (`config_network_rflow.json` or `config_network_ddpm.json`).
 - `-i` inference parameters (`config_infer.json` — `body_region`, `anatomy_list`, `output_size`, `spacing`, `controllable_anatomy_size`, etc.).
 - `-e` environment paths (`environment_rflow-ct.json` or `environment_ddpm-ct.json` — checkpoint paths, label dicts, mask database).
 
 ## How `LDMSampler.sample_multiple_images` chooses the mask path
 
-```
+```text
 controllable_anatomy_size non-empty?
             │
    ┌────────┴─────────┐
@@ -71,6 +73,7 @@ save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
 ### Two paths in detail
 
 **Path A — `controllable_anatomy_size` non-empty** (diffusion-generated mask):
+
 - User provides e.g. `[("pancreas", 0.5), ("liver", 0.7)]` in `config_infer.json`.
 - `prepare_anatomy_size_condition` builds the 10-d vector (see `mask-generation` skill).
 - `sample_one_mask` runs the mask DDPM.
@@ -78,6 +81,7 @@ save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
 - `ensure_output_size_and_spacing` resamples to the user's requested `output_size` + `spacing`.
 
 **Path B — `controllable_anatomy_size` empty** (real training mask):
+
 - `find_masks` queries `configs/all_mask_files_*.json` for masks matching `body_region` + `anatomy_list` + `spacing` + `output_size`.
 - If no exact match, `find_closest_masks` picks the closest by FOV / dim / spacing.
 - `read_mask_information` loads the mask via `val_transforms` (LoadImaged + Orientationd("RAS") + spacing scaling).
@@ -106,9 +110,14 @@ Both paths then call `sample_one_pair` for the image stage.
 
 ## `dim` and `spacing` — same FOV rules as image-only
 
+> ⚠️ **FOV (= `dim × spacing`) is the #1 quality knob.** See the **"Why FOV matters"** section at the top of [`image-only-inference.md`](image-only-inference.md) — same warning applies here. Out-of-distribution FOVs produce unusable output even when the validator accepts the inputs.
+
 The mask + image pipeline uses **the same** `output_size` and `spacing` constraints as image-only inference — see the `image-only-inference` skill for the table of recommended `(dim, spacing)` per anatomical target and the hard constraints from `check_input_ct` / `check_input_mr`.
 
-Additional note: the mask DM was **pretrained at 256³ × 1.5 mm iso**. Generating a mask at significantly different shape requires the `ensure_output_size_and_spacing` resampling step, which can degrade label boundaries.
+Additional FOV considerations specific to the paired pipeline:
+
+- The **mask DM** was pretrained at **256³ × 1.5 mm iso** (= 384 mm cube FOV). Generating a mask at significantly different shape forces the `ensure_output_size_and_spacing` resampling, which degrades label boundaries. Stay at or near 256³ × 1.5mm for Path A.
+- For Path B (mask DB lookup), the candidate masks are themselves drawn from a training-FOV distribution — `find_closest_masks` picks the closest matches, but the closer your requested FOV is to a mode of that distribution, the less reshaping is needed.
 
 ## Quality check loop
 
@@ -121,6 +130,7 @@ Additional note: the mask DM was **pretrained at 256³ × 1.5 mm iso**. Generati
 ## Configuration knobs
 
 Live in the three configs:
+
 - `config_network_*.json` — fixed network architecture; not usually edited.
 - `config_infer.json` — user intent (see below).
 - `environment_*.json` — paths.
@@ -142,6 +152,7 @@ Key `config_infer.json` knobs:
 ## Output
 
 For each successful generation, two files are saved to `output_dir`:
+
 - `sample_<timestamp>_image.nii.gz` — synthetic CT/MR
 - `sample_<timestamp>_label.nii.gz` — paired mask (filtered to `anatomy_list`)
 
