@@ -427,10 +427,11 @@ def get_body_region_index_from_mask(input_mask):
 
 def add_body_envelope(
     seg_mask,
-    ct_image=None,
+    ct_image,
     body_label: int = 200,
-    hu_threshold: float = -500.0,
-    morph_close_kernel: int = 5,
+    hu_threshold: float = -800.0,
+    closing_kernel: int = 3,
+    bed_cleanup_kernel: int = 5,
     device: str = "cuda:0",
 ):
     """
@@ -442,65 +443,91 @@ def add_body_envelope(
     but never the body envelope, so users must add it before running
     ``ldm_conditional_sample_one_image_from_mask``. This helper does that.
 
-    The body silhouette is computed as the **largest connected component**
-    of the union of:
+    Algorithm follows ``find_body_maskv2`` from pengfeig's ``3d_ldm_monai``
+    (find-air-then-invert with a two-stage bed/table cleanup), which is
+    more robust than naively largest-CC'ing the body voxels directly —
+    the patient bed often touches the body, so a simple largest-CC keeps
+    it. Steps:
 
-      - ``ct_image > hu_threshold`` (if a CT is supplied), and
-      - ``seg_mask > 0`` (any voxel nv-segment already labeled)
-
-    Combining the two handles lung-tissue voxels — they're below the HU
-    threshold but are labeled by nv-segment as lung lobes, so the union
-    keeps them. Internal holes are then closed via morphological closing
-    (dilate then erode) so the silhouette covers the whole interior body.
-    Finally, every voxel inside the silhouette that the segmentation didn't
-    already label is set to ``body_label``.
+      1. **Air mask**: largest connected component of voxels with
+         ``CT < hu_threshold`` (default -800 HU). Closed via dilate→erode
+         so air pockets internal to organs don't fragment it.
+      2. **Force-not-air**: labeled voxels (``seg_mask > 0``) are removed
+         from the air mask — they're body, not air.
+      3. **Body = NOT air**.
+      4. **Bed/table cleanup**: erode (shrinks body away from the bed),
+         take largest CC (drops the bed), dilate back (restores body size).
+      5. **Internal-hole close**: dilate→erode to seal small gas pockets.
+      6. **Force-include labels**: labeled voxels are forced inside body.
+      7. **Fill**: every voxel inside the silhouette that the segmentation
+         didn't already label is set to ``body_label``.
 
     Args:
         seg_mask: ``(H, W, D)`` integer label volume (numpy ndarray or torch
             Tensor). Output of nv-segment-ct or any compatible segmenter.
-        ct_image: optional ``(H, W, D)`` CT volume in HU. When provided, the
-            HU threshold is used for the silhouette; when ``None`` the
-            silhouette is derived from ``seg_mask > 0`` alone (less robust
-            for cases with missing organ labels).
+        ct_image: ``(H, W, D)`` CT volume in HU (numpy ndarray or torch
+            Tensor). **Required** — the algorithm uses HU thresholding.
         body_label: integer to fill non-organ body voxels with. Default 200,
             matching MAISI's ``label_dict.json``.
-        hu_threshold: HU below which a voxel is treated as air/outside-body
-            when ``ct_image`` is provided. Default -500.
-        morph_close_kernel: kernel size for morphological closing (dilate
-            then erode). Larger values fill larger internal cavities. Default 5.
+        hu_threshold: HU below which a voxel is treated as air/outside-body.
+            Default -800 (matches pengfeig's find_body_maskv2).
+        closing_kernel: kernel size for the morphological closing passes
+            (steps 1 and 5). Default 3.
+        bed_cleanup_kernel: kernel size for the bed/table cleanup
+            erode→LCC→dilate (step 4). Default 5 (slightly larger than
+            ``closing_kernel`` so the body fully separates from the bed
+            before the LCC selects it).
         device: torch device used for the morphology ops.
 
     Returns:
         np.ndarray of the same shape and dtype as the input ``seg_mask``,
         with non-organ body voxels filled with ``body_label``.
     """
+    from monai.transforms.utils import get_largest_connected_component_mask
+
     seg_np = seg_mask.detach().cpu().numpy() if isinstance(seg_mask, torch.Tensor) else np.asarray(seg_mask)
+    ct_np = ct_image.detach().cpu().numpy() if isinstance(ct_image, torch.Tensor) else np.asarray(ct_image)
+    if seg_np.shape != ct_np.shape:
+        raise ValueError(f"seg_mask and ct_image must have the same shape; got {seg_np.shape} vs {ct_np.shape}")
     orig_dtype = seg_np.dtype
 
-    # 1. Initial body silhouette: union of HU-thresholded CT (if any) and any
-    #    voxel nv-segment already labeled.
-    silhouette = seg_np > 0
-    if ct_image is not None:
-        ct_np = ct_image.detach().cpu().numpy() if isinstance(ct_image, torch.Tensor) else np.asarray(ct_image)
-        silhouette = np.logical_or(silhouette, ct_np > hu_threshold)
+    seg_t = torch.from_numpy(seg_np > 0).to(device)
 
-    # 2. Largest connected component (drops table, IV pole, gantry artifacts).
-    silhouette_int = silhouette.astype(np.uint8)
-    silhouette_int, _ = supress_non_largest_components(silhouette_int, target_label=[1])
-    silhouette = silhouette_int > 0
+    # 1. Air mask: largest CC of (CT < hu_threshold), closed.
+    air_np = get_largest_connected_component_mask(
+        (ct_np < hu_threshold).astype(np.float32),
+        connectivity=None,
+        num_components=1,
+    )
+    air_t = torch.from_numpy(np.asarray(air_np, dtype=np.float32)).to(device)
+    air_t = dilate_one_img(air_t, filter_size=closing_kernel, pad_value=0.0)
+    air_t = erode_one_img(air_t, filter_size=closing_kernel, pad_value=1.0)
 
-    # 3. Morphological closing (dilate → erode) to fill internal cavities like
-    #    air-filled lung pockets or bowel gas that the HU threshold missed.
-    s_t = torch.from_numpy(silhouette.astype(np.float32)).to(device)
-    s_t = dilate_one_img(s_t, filter_size=morph_close_kernel, pad_value=0.0)
-    s_t = erode_one_img(s_t, filter_size=morph_close_kernel, pad_value=1.0)
-    silhouette = s_t.detach().cpu().numpy() > 0
+    # 2. Force labeled voxels to be not-air.
+    air_t[seg_t] = 0.0
 
-    # 4. Fill: every voxel inside the silhouette that the segmentation didn't
-    #    already label gets body_label.
+    # 3. Body = NOT air.
+    body_t = 1.0 - air_t
+
+    # 4. Bed/table cleanup: erode → largest CC → dilate.
+    body_t = erode_one_img(body_t, filter_size=bed_cleanup_kernel, pad_value=0.0)
+    body_np = (body_t.detach().cpu().numpy() > 0.5).astype(np.float32)
+    body_np = get_largest_connected_component_mask(body_np, connectivity=None, num_components=1)
+    body_t = torch.from_numpy(np.asarray(body_np, dtype=np.float32)).to(device)
+    body_t = dilate_one_img(body_t, filter_size=bed_cleanup_kernel, pad_value=0.0)
+
+    # 5. Close remaining internal cavities (lungs / bowel gas) with dilate→erode.
+    body_t = dilate_one_img(body_t, filter_size=closing_kernel, pad_value=0.0)
+    body_t = erode_one_img(body_t, filter_size=closing_kernel, pad_value=1.0)
+
+    # 6. Force labeled voxels to be inside body.
+    body_t[seg_t] = 1.0
+
+    # 7. Fill: every voxel inside the silhouette that's not already labeled
+    #    becomes body_label.
+    body_np = body_t.detach().cpu().numpy() > 0.5
     out = seg_np.copy()
-    fill_mask = silhouette & (out == 0)
-    out[fill_mask] = body_label
+    out[body_np & (out == 0)] = body_label
     return out.astype(orig_dtype)
 
 
