@@ -70,14 +70,25 @@ The mask is a **1-channel NIfTI** (`.nii` or `.nii.gz`), integer dtype, with vox
 
 ### Producing a valid mask from a CT image
 
-The expected preprocessing chain (for the released CT ControlNet) is:
+The released CT ControlNet expects the MAISI 132-class vocabulary. In concrete terms, **the MAISI 132-class vocabulary is the `nv-segment-ct` output label definition plus the body envelope (label 200)** — so producing a valid mask is really "produce the same labels nv-segment-ct would emit, then add `body=200`". Two practical paths:
+
+#### Option A (recommended): `nv-segment-ct` + add body envelope
 
 1. **Start with a CT NIfTI.**
-2. **Run [`nv-segment-ct`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR)** (the NV-Segment-CTMR bundle, modality `CT_BODY`) on the CT. It outputs a 1-channel NIfTI in the MAISI vocabulary, but excludes ~15 label values (dummies + tumors + airway — see `ct_body` in [`NV-Segment-CTMR/configs/inference.json`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR/blob/main/NV-Segment-CTMR/configs/inference.json)). The output contains ~117 organ labels and no `body=200`.
+2. **Run [`nv-segment-ct`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR)** (the NV-Segment-CTMR bundle, modality `CT_BODY`). It outputs a 1-channel NIfTI **already in the MAISI vocabulary** — no label remapping needed — but excludes ~15 label values (dummies + tumors + airway — see `ct_body` in [`NV-Segment-CTMR/configs/inference.json`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR/blob/main/NV-Segment-CTMR/configs/inference.json)). The output contains ~117 organ labels and no `body=200`.
 3. **Add the body envelope** (label `200`): call [`scripts.utils.add_body_envelope(seg_mask, ct_image)`](../scripts/utils.py). It finds the largest connected component of air (default `HU < -800`), morphologically closes it, treats labeled voxels as not-air, inverts to get the body silhouette, then runs an erode→largest-CC→dilate cleanup that drops the patient bed/table (which often touches the body in CT scans). Every voxel inside the silhouette that nv-segment didn't already label is set to `body_label` (default `200`). Algorithm follows `find_body_maskv2` from pengfeig's `3d_ldm_monai`.
 4. **Save** as a 1-channel integer NIfTI.
 
-The output of step 4 is the `--mask` argument the CLI accepts, or the `combine_label_or` argument when calling the library function directly.
+#### Option B: another segmenter (e.g. TotalSegmentator) + remap + add body envelope
+
+If your mask comes from TotalSegmentator or any other segmenter whose label IDs differ from MAISI, you must first remap the integer label IDs to the MAISI 132-class space defined in [`configs/label_dict.json`](../configs/label_dict.json).
+
+1. **Run your segmenter** on the CT. Note the label-ID convention it uses (e.g. TotalSegmentator's `total` task uses its own IDs, listed in [TotalSegmentator's docs](https://github.com/wasserth/TotalSegmentator#class-details)).
+2. **Build a label-ID map** from your segmenter's IDs → MAISI 132-class IDs by matching anatomical structure name to the entries in [`configs/label_dict.json`](../configs/label_dict.json). Structures not present in MAISI's 132 classes must be dropped (set to `0`). Apply the map voxel-wise.
+3. **Add the body envelope** (label `200`) as in Option A step 3.
+4. **Save** as a 1-channel integer NIfTI.
+
+Either way, the final output is the `--mask` argument the CLI accepts, or the `combine_label_or` argument when calling the library function directly.
 
 ### Common pitfall: the AE-channel space (0..124) is NOT the right space
 

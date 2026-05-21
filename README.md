@@ -172,7 +172,7 @@ python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -
 
 ### 2.6 Bring Your Own Mask (CT)
 
-If you already have a 3D label mask (it must be produced by `nv-segment-ct` on a real CT, then have the body envelope added), you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
+If you already have a 3D label mask in the **MAISI 132-class vocabulary** with the body envelope (label `200`) added, you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
 
 ```bash
 network="rflow"
@@ -186,7 +186,12 @@ python -m scripts.infer_image_from_mask \
   --version ${generate_version}
 ```
 
-> ⚠️ **The mask must be in the MAISI 132-class label vocabulary AND include the body envelope (label 200).** `nv-segment-ct` produces ~117 organ labels but never the body envelope — you must add it yourself before inference. See the [`infer_image-from-mask` skill](skills/infer_image-from-mask.md) for the full preprocessing chain (CT → `nv-segment-ct` → `scripts.utils.add_body_envelope` → mask NIfTI) and the complete spec of "valid mask format".
+> ⚠️ **The mask must be in the MAISI 132-class label vocabulary AND include the body envelope (label 200).** In concrete terms, the MAISI 132-class vocabulary is the same as the `nv-segment-ct` output label definition **plus the body envelope (label 200)**. The authoritative reference is [`configs/label_dict.json`](configs/label_dict.json). Two practical ways to produce a valid mask:
+>
+> - **From `nv-segment-ct`** (recommended — already in MAISI vocabulary): run `nv-segment-ct` on the CT, then add the body envelope via `scripts.utils.add_body_envelope` (label 200 is never emitted by `nv-segment-ct`).
+> - **From TotalSegmentator or another segmenter**: remap the output labels to the MAISI 132-class IDs in `configs/label_dict.json`, then add the body envelope.
+>
+> See the [`infer_image-from-mask` skill](skills/infer_image-from-mask.md) for the full preprocessing chain and the complete spec of "valid mask format".
 
 For batch generation from many masks listed in a JSON, see [`scripts.infer_image_from_mask_batch`](scripts/infer_image_from_mask_batch.py).
 
