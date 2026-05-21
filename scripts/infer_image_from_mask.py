@@ -423,7 +423,7 @@ def main() -> int:
         "--num-inference-steps",
         type=int,
         default=None,
-        help="Inference steps. If omitted, taken from -i config's `num_inference_steps`; required if -i is not passed.",
+        help="Inference steps. If omitted, taken from -i config's `num_inference_steps`; falls back to 30 for RFlow / 1000 for DDPM.",
     )
     parser.add_argument("--random-seed", type=int, default=0)
     parser.add_argument(
@@ -505,16 +505,11 @@ def main() -> int:
     # ── Step 4: inference ───────────────────────────────────────────────────
     from monai.networks.schedulers import DDPMScheduler
 
-    if args.num_inference_steps is None:
-        print(
-            "[error] num_inference_steps not set. Pass --num-inference-steps, or supply "
-            "-i with a config json that defines `num_inference_steps` (e.g. "
-            "./configs/config_infer.json).",
-            file=sys.stderr,
-        )
-        return 2
+    is_ddpm = isinstance(noise_scheduler, DDPMScheduler)
     num_inference_steps = args.num_inference_steps
-    if isinstance(noise_scheduler, DDPMScheduler) and num_inference_steps != 1000:
+    if num_inference_steps is None:
+        num_inference_steps = 1000 if is_ddpm else 30
+    if is_ddpm and num_inference_steps != 1000:
         print(
             f"[warn] DDPM scheduler typically requires num_inference_steps=1000; got {num_inference_steps}. Output quality not guaranteed.",
             file=sys.stderr,
