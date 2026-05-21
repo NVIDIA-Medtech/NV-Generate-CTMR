@@ -28,10 +28,10 @@ Two ways to use this file:
    to ``utils_infer.run_controlnet_conditioned_image_dm``.
 
 2. **As a CLI** — run ``python -m scripts.infer_image_from_mask --mask
-   /path/to/mask.nii.gz --version rflow-ct`` to generate a CT/MR image from
-   a user-provided mask file. The CLI loads checkpoints, validates the
-   input mask, auto-resamples to a valid (dim, spacing) target, runs
-   inference, and saves the output.
+   /path/to/mask.nii.gz -t <network-config>.json -e <env-config>.json``
+   to generate a CT/MR image from a user-provided mask file. The CLI
+   loads checkpoints, validates the input mask, auto-resamples to a valid
+   (dim, spacing) target, runs inference, and saves the output.
 
 The user-provided mask must contain integer labels in the MAISI 132-class
 vocabulary (see ``configs/label_dict.json``). Unknown label values are
@@ -194,7 +194,9 @@ def crop_img_body_mask(synthetic_images, combine_label, a_min=-1000):
 #
 # Usage:
 #   python -m scripts.infer_image_from_mask --mask /path/to/mask.nii.gz \
-#       --version rflow-ct --modality 1 --output-dir ./output_user_mask
+#       -t ./configs/config_network_rflow.json \
+#       -e ./configs/environment_rflow-ct.json \
+#       --modality 1 --output-dir ./output_user_mask
 # =============================================================================
 
 
@@ -386,54 +388,84 @@ def main() -> int:
         ),
     )
     parser.add_argument("--mask", required=True, help="Path to the user-provided mask NIfTI file.")
-    parser.add_argument("--version", required=True, choices=["rflow-ct", "ddpm-ct"], help="Model variant to use.")
+    parser.add_argument(
+        "-t",
+        "--config-file",
+        required=True,
+        help="Config json file that stores network hyper-parameters (e.g. ./configs/config_network_rflow.json).",
+    )
+    parser.add_argument(
+        "-e",
+        "--environment-file",
+        required=True,
+        help="Environment json file that stores environment paths (e.g. ./configs/environment_rflow-ct.json).",
+    )
+    parser.add_argument(
+        "-i",
+        "--inference-file",
+        default=None,
+        help=(
+            "Optional config json file that stores inference hyper-parameters (e.g. "
+            "./configs/config_infer.json). If provided, any of num_inference_steps, "
+            "autoencoder_sliding_window_infer_size, autoencoder_sliding_window_infer_overlap, "
+            "cfg_guidance_scale defined there is applied as the default — explicit CLI flags still win."
+        ),
+    )
     parser.add_argument("--modality", type=int, default=1, help="Modality code (CT=1; see configs/modality_mapping.json).")
     parser.add_argument("--output-dir", default="./output_user_mask", help="Where to save the generated image NIfTI.")
     parser.add_argument(
         "--cfg-guidance-scale",
         type=float,
-        default=0.0,
-        help="Classifier-free guidance scale (0=off; tumor-strengthening when >0).",
+        default=None,
+        help="Classifier-free guidance scale (0=off; tumor-strengthening when >0). Default 0.0.",
     )
     parser.add_argument(
         "--num-inference-steps",
         type=int,
         default=None,
-        help="Inference steps. Default: 30 for rflow-ct, 1000 for ddpm-ct (auto-applied).",
+        help="Inference steps. Auto-derived from scheduler when omitted: 30 for RFlow, 1000 for DDPM.",
     )
     parser.add_argument("--random-seed", type=int, default=0)
-    parser.add_argument(
-        "--env-config",
-        default=None,
-        help="Path to environment config JSON. Defaults to ./configs/environment_<version>.json",
-    )
-    parser.add_argument(
-        "--network-config",
-        default=None,
-        help="Path to network config JSON. Defaults to ./configs/config_network_<rflow|ddpm>.json",
-    )
     parser.add_argument(
         "--sliding-window-roi",
         type=int,
         nargs=3,
-        default=[96, 96, 96],
-        help="Sliding-window ROI size for image-AE decode.",
+        default=None,
+        help="Sliding-window ROI size for image-AE decode. Default [96, 96, 96].",
     )
-    parser.add_argument("--sliding-window-overlap", type=float, default=0.6667)
+    parser.add_argument("--sliding-window-overlap", type=float, default=None, help="Default 0.6667.")
 
     args = parser.parse_args()
     set_determinism(seed=args.random_seed)
 
     _print_mask_format_warning()
 
+    # ── Optional overrides from -i/--inference-file (CLI flags still win) ───
+    infer_cfg = {}
+    if args.inference_file is not None:
+        if not Path(args.inference_file).exists():
+            print(f"[error] file not found: {args.inference_file}", file=sys.stderr)
+            return 2
+        import json as _json
+
+        with open(args.inference_file) as f:
+            infer_cfg = _json.load(f)
+    if args.num_inference_steps is None and "num_inference_steps" in infer_cfg:
+        args.num_inference_steps = int(infer_cfg["num_inference_steps"])
+    if args.sliding_window_roi is None:
+        args.sliding_window_roi = infer_cfg.get("autoencoder_sliding_window_infer_size", [96, 96, 96])
+    if args.sliding_window_overlap is None:
+        args.sliding_window_overlap = float(infer_cfg.get("autoencoder_sliding_window_infer_overlap", 0.6667))
+    if args.cfg_guidance_scale is None:
+        args.cfg_guidance_scale = float(infer_cfg.get("cfg_guidance_scale", 0.0))
+
     # ── Resolve config paths ────────────────────────────────────────────────
-    network = "rflow" if args.version.startswith("rflow") else "ddpm"
-    env_config = args.env_config or f"./configs/environment_{args.version}.json"
-    network_config = args.network_config or f"./configs/config_network_{network}.json"
-    for p in (args.mask, env_config, network_config):
+    for p in (args.mask, args.environment_file, args.config_file):
         if not Path(p).exists():
             print(f"[error] file not found: {p}", file=sys.stderr)
             return 2
+    env_config = args.environment_file
+    network_config = args.config_file
 
     # ── Step 1: validate + load the user's mask ─────────────────────────────
     print("[step 1/4] validating user mask...", file=sys.stderr)
@@ -471,12 +503,15 @@ def main() -> int:
     )
 
     # ── Step 4: inference ───────────────────────────────────────────────────
+    from monai.networks.schedulers import DDPMScheduler
+
+    is_ddpm = isinstance(noise_scheduler, DDPMScheduler)
     num_inference_steps = args.num_inference_steps
     if num_inference_steps is None:
-        num_inference_steps = 1000 if args.version == "ddpm-ct" else 30
-    if args.version == "ddpm-ct" and num_inference_steps != 1000:
+        num_inference_steps = 1000 if is_ddpm else 30
+    if is_ddpm and num_inference_steps != 1000:
         print(
-            f"[warn] ddpm-ct requires num_inference_steps=1000; got {num_inference_steps}. " f"Output quality not guaranteed.",
+            f"[warn] DDPM scheduler requires num_inference_steps=1000; got {num_inference_steps}. Output quality not guaranteed.",
             file=sys.stderr,
         )
 

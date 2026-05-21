@@ -182,8 +182,7 @@ python -m scripts.infer_image_from_mask \
   -t ./configs/config_network_${network}.json \
   -i ./configs/config_infer.json \
   -e ./configs/environment_${generate_version}.json \
-  --mask /path/to/your_mask.nii.gz \
-  --version ${generate_version}
+  --mask /path/to/your_mask.nii.gz
 ```
 
 > ⚠️ **The mask must be in the MAISI 132-class label vocabulary AND include the body envelope (label 200).** In concrete terms, the MAISI 132-class vocabulary is the same as the `nv-segment-ct` output label definition **plus the body envelope (label 200)**. The authoritative reference is [`configs/label_dict.json`](configs/label_dict.json). Two practical ways to produce a valid mask:
