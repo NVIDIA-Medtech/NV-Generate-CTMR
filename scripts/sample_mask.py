@@ -36,56 +36,12 @@ from .utils import (
     remap_labels,
 )
 
-
-class ReconModel(torch.nn.Module):
-    """
-    A PyTorch module for reconstructing images from latent representations.
-
-    Attributes:
-        autoencoder: The autoencoder model used for decoding.
-        scale_factor: Scaling factor applied to the input before decoding.
-    """
-
-    def __init__(self, autoencoder, scale_factor):
-        super().__init__()
-        self.autoencoder = autoencoder
-        self.scale_factor = scale_factor
-
-    def forward(self, z):
-        """
-        Decode the input latent representation to an image.
-
-        Args:
-            z (torch.Tensor): The input latent representation.
-
-        Returns:
-            torch.Tensor: The reconstructed image.
-        """
-        recon_pt_nda = self.autoencoder.decode_stage_2_outputs(z / self.scale_factor)
-        return recon_pt_nda
-
-
-def initialize_noise_latents(latent_shape, device):
-    """
-    Initialize random noise latents for image generation with float16.
-
-    Args:
-        latent_shape (tuple): The shape of the latent space.
-        device (torch.device): The device to create the tensor on.
-
-    Returns:
-        torch.Tensor: Initialized noise latents.
-    """
-    return (
-        torch.randn(
-            [
-                1,
-            ]
-            + list(latent_shape)
-        )
-        .half()
-        .to(device)
-    )
+# ReconModel + initialize_noise_latents are shared with the image-from-mask
+# pipeline (and any future conditioning-modality wrapper), so they live in
+# utils_infer. Re-export them from this module's namespace for backward
+# compatibility with callers that imported them from scripts.sample_mask
+# (or via the scripts.sample shim).
+from .utils_infer import ReconModel, initialize_noise_latents  # noqa: F401
 
 
 def ldm_conditional_sample_one_mask(
