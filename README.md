@@ -189,7 +189,7 @@ python -m scripts.infer_image_from_mask \
 > ⚠️ **The mask must be in the MAISI 132-class label vocabulary AND include the body envelope (label 200).** In concrete terms, the MAISI 132-class vocabulary is the same as the `nv-segment-ct` output label definition **plus the body envelope (label 200)**. The authoritative reference is [`configs/label_dict.json`](configs/label_dict.json). Two practical ways to produce a valid mask:
 >
 > - **From `nv-segment-ct`** (recommended — already in MAISI vocabulary): run `nv-segment-ct` on the CT, then add the body envelope via `scripts.utils.add_body_envelope` (label 200 is never emitted by `nv-segment-ct`).
-> - **From TotalSegmentator or another segmenter**: remap the output labels to the MAISI 132-class IDs in `configs/label_dict.json`, then add the body envelope.
+> - **From another segmenter**: remap the output labels to the MAISI 132-class IDs in `configs/label_dict.json`, then add the body envelope.
 >
 > See the [`infer_image-from-mask` skill](skills/infer_image-from-mask.md) for the full preprocessing chain and the complete spec of "valid mask format".
 
