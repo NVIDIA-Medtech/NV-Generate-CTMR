@@ -55,7 +55,8 @@ synthesis.
   - [2.3 CT Paired Image/Mask Generation](#23-ct-paired-imagemask-generation)
   - [2.4 CT Image Generation](#24-ct-image-generation)
   - [2.5 MR Image Generation](#25-mr-image-generation)
-  - [2.6 Example Application: MR-to-CT Image Synthesis](#26-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
+  - [2.6 Bring Your Own Mask (CT)](#26-bring-your-own-mask-ct)
+  - [2.7 Example Application: MR-to-CT Image Synthesis](#27-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
 - [3. Documentation: details of data preparation, training, and inference tutorials](#3-documentation-details-of-data-preparation-training-and-inference-tutorials)
 - [4. Performance: accuracy, speed, and GPU memory usage](#4-performance-accuracy-speed-and-gpu-memory-usage)
 - [5. License](#5-license)
@@ -169,7 +170,27 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-### 2.6 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
+### 2.6 Bring Your Own Mask (CT)
+
+If you already have a 3D label mask (e.g. produced by `nv-segment-ct` on a real CT), you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
+
+```bash
+network="rflow"
+generate_version="rflow-ct" # can change to "ddpm-ct"
+python -m scripts.download_model_data --version ${generate_version} --root_dir "./"
+python -m scripts.infer_image_from_mask \
+  -t ./configs/config_network_${network}.json \
+  -i ./configs/config_infer.json \
+  -e ./configs/environment_${generate_version}.json \
+  --mask /path/to/your_mask.nii.gz \
+  --version ${generate_version}
+```
+
+> ⚠️ **The mask must be in the MAISI 132-class label vocabulary AND include the body envelope (label 200).** `nv-segment-ct` produces ~117 organ labels but never the body envelope — you must add it yourself before inference. See the [`infer_image-from-mask` skill](skills/infer_image-from-mask.md) for the full preprocessing chain (CT → `nv-segment-ct` → `scripts.utils.add_body_envelope` → mask NIfTI) and the complete spec of "valid mask format".
+
+For batch generation from many masks listed in a JSON, see [`scripts.infer_image_from_mask_batch`](scripts/infer_image_from_mask_batch.py).
+
+### 2.7 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
 
 A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (rflow-ct) is available here: <https://github.com/brudfors/maisi-mr-to-ct>.
 
