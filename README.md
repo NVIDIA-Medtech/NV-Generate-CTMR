@@ -100,7 +100,7 @@ This repository provides **four model variants** for medical image generation: `
 
 ## 2. Quick Start (requires at least a 16G GPU)
 
-> ⚠️ **Picking the right `dim` and `spacing` is the single biggest factor in output quality.** The product `dim × spacing` defines the field of view (FOV). Each model variant has only ever seen FOVs in the **training-data distribution** for its target anatomy — asking it to synthesize at a numerically-valid but out-of-distribution FOV (e.g. a 128 mm-cube whole-body CT) produces unusable output. Use the recommended `(dim, spacing)` per anatomy in [docs/inference.md](docs/inference.md) and the `image-only-inference` / `mask-image-paired-inference` skills under [skills/](skills/), and stay near those values.
+> ⚠️ **Picking the right `dim` and `spacing` is the single biggest factor in output quality.** The product `dim × spacing` defines the field of view (FOV). Each model variant has only ever seen FOVs in the **training-data distribution** for its target anatomy — asking it to synthesize at a numerically-valid but out-of-distribution FOV (e.g. a 128 mm-cube whole-body CT) produces unusable output. Start from the recommended `(dim, spacing)` per anatomy in [docs/inference.md](docs/inference.md) and the `image-only-inference` / `mask-image-paired-inference` skills under [skills/](skills/), and stay near those values.
 
 ### 2.1 Installation
 
