@@ -35,11 +35,30 @@ Code entry point: `scripts.infer_image_from_mask.ldm_conditional_sample_one_imag
 
 ## Valid input mask format
 
-The ControlNet was trained on masks in the **MAISI 132-class label vocabulary** (see [`configs/label_dict.json`](../configs/label_dict.json)). A user-provided mask must use the same convention or the generated image will be unusable.
+> ⚠️ **Scope of this section: the released CT ControlNet checkpoints only.**
+>
+> Everything below applies specifically to the pretrained
+> `controlnet_3d_rflow-ct.pt` and `controlnet_3d_ddpm-ct.pt` checkpoints
+> (downloaded by `scripts.download_model_data --version {rflow-ct,ddpm-ct}`).
+> Those checkpoints were trained on CT masks in the **MAISI 132-class label
+> vocabulary**, so a user-provided mask must use the same convention or the
+> generated CT will be unusable.
+>
+> If you train your own ControlNet on a different label vocabulary (e.g.
+> binary body silhouette, a different segmentation tool's output, or a
+> non-CT modality), the input format is whatever your training pipeline
+> used — see `scripts/train_controlnet.py` line 190
+> (`controlnet_cond = binarize_labels(labels.as_tensor().to(torch.long))`)
+> — labels are bit-encoded as-is, so inference must match training.
+>
+> Released NV-Generate-CTMR also ships `rflow-mr-brain` and `rflow-mr`
+> variants, but those models are **image-only** (no ControlNet, no mask
+> input) — they go through `scripts.diff_model_infer` and the
+> `infer_image-only` skill, not this skill.
 
-### What "valid" means
+### What "valid" means (for the released CT ControlNet checkpoints)
 
-The mask is a **1-channel NIfTI** (`.nii` or `.nii.gz`), integer dtype, with voxel values drawn from this vocabulary:
+The mask is a **1-channel NIfTI** (`.nii` or `.nii.gz`), integer dtype, with voxel values drawn from the MAISI 132-class vocabulary (see [`configs/label_dict.json`](../configs/label_dict.json)):
 
 | Value | Meaning |
 |---|---|
@@ -47,11 +66,11 @@ The mask is a **1-channel NIfTI** (`.nii` or `.nii.gz`), integer dtype, with vox
 | `1..132` (with some unused values — see `label_dict.json`) | organ / structure labels (e.g. `1`=liver, `3`=spleen, `4`=pancreas, `5`=right kidney, `14`=left kidney, `28..32`=lung lobes, `33..57`=vertebrae) |
 | `200` | **body envelope** — every body voxel not labeled with a specific organ |
 
-`200` is the critical "outer-body" label. **The ControlNet expects it; nv-segment does not produce it. You must add it yourself** during preprocessing.
+`200` is the critical "outer-body" label. **The CT ControlNet expects it; nv-segment does not produce it. You must add it yourself** during preprocessing.
 
 ### Producing a valid mask from a CT image
 
-The expected preprocessing chain is:
+The expected preprocessing chain (for the released CT ControlNet) is:
 
 1. **Start with a CT NIfTI.**
 2. **Run [`nv-segment-ct`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR)** (the NV-Segment-CTMR bundle, modality `CT_BODY`) on the CT. It outputs a 1-channel NIfTI in the MAISI vocabulary, but excludes ~15 label values (dummies + tumors + airway — see `ct_body` in [`NV-Segment-CTMR/configs/inference.json`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR/blob/main/NV-Segment-CTMR/configs/inference.json)). The output contains ~117 organ labels and no `body=200`.
@@ -62,22 +81,22 @@ The output of step 4 is the `--mask` argument the CLI accepts, or the `combine_l
 
 ### Common pitfall: the AE-channel space (0..124) is NOT the right space
 
-The mask AE in the repo decodes to a **125-channel softmax** that gets `argmax`'d to integer labels in `[0, 124]` (the "AE-channel space"). Those `0..124` values are then **remapped to the MAISI 132-class vocabulary** via [`configs/label_dict_124_to_132.json`](../configs/label_dict_124_to_132.json) (`remap_labels`) before the ControlNet ever sees them. So:
+The mask AE in the repo decodes to a **125-channel softmax** that gets `argmax`'d to integer labels in `[0, 124]` (the "AE-channel space"). Those `0..124` values are then **remapped to the MAISI 132-class vocabulary** via [`configs/label_dict_124_to_132.json`](../configs/label_dict_124_to_132.json) (`remap_labels`) before the CT ControlNet ever sees them. So:
 
-- ✅ **Correct input to the ControlNet** (and to this CLI): MAISI 132-class labels, including `body=200`.
-- ❌ **Incorrect**: feeding `0..124` AE-channel-space labels directly. The remap is internal to the **mask DM** decoding pipeline only; it does NOT belong in user-mask preprocessing.
+- ✅ **Correct input to the released CT ControlNet** (and to this CLI): MAISI 132-class labels, including `body=200`.
+- ❌ **Incorrect**: feeding `0..124` AE-channel-space labels directly. The remap is internal to the **mask DM** decoding pipeline only; it does NOT belong in user-mask preprocessing for the released CT ControlNet.
 
 If you have a mask in `0..124` space (e.g. from intermediate steps of a custom mask-DM pipeline), apply `remap_labels(mask, configs/label_dict_124_to_132.json)` first to convert it to the 132-class space before passing it here.
 
 ### Validation in the CLI
 
-`scripts/infer_image_from_mask.py::validate_user_mask` will:
+`scripts/infer_image_from_mask.py::validate_user_mask` assumes the released CT ControlNet convention and will:
 
 - Confirm the mask is 1-channel integer NIfTI
 - Warn (not error) if any voxel value is outside the MAISI 132-class vocabulary (`{0..132} ∪ {200}`)
 - Auto-resample shape/spacing to a valid `(dim, spacing)` target (with a warning) if needed
 
-If many voxel values fall outside the vocabulary you almost certainly forgot a remap step.
+If many voxel values fall outside the vocabulary you almost certainly forgot a remap step — or you're trying to use a custom-trained ControlNet whose vocab differs from the released one.
 
 ## Inputs to `ldm_conditional_sample_one_image`
 
