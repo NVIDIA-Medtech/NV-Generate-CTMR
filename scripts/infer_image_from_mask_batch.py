@@ -171,19 +171,24 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
-        "--env_config_path",
-        type=str,
-        default="./configs/environment_maisi_diff_model.json",
-        help="Path to environment configuration file",
+        "-t",
+        "--config-file",
+        required=True,
+        help="Config json file that stores network hyper-parameters (e.g. ./configs/config_network_rflow.json).",
     )
     parser.add_argument(
-        "--model_config_path",
-        type=str,
-        default="./configs/config_maisi_diff_model.json",
-        help="Path to model training/inference configuration",
+        "-e",
+        "--environment-file",
+        required=True,
+        help="Environment json file that stores environment paths (e.g. ./configs/environment_rflow-ct.json).",
     )
-    parser.add_argument("--model_def_path", type=str, default="./configs/config_maisi.json", help="Path to model definition file")
-    parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
+    parser.add_argument(
+        "-i",
+        "--inference-file",
+        required=True,
+        help="Config json file that stores inference hyper-parameters (e.g. ./configs/config_maisi_diff_model_rflow-ct.json).",
+    )
+    parser.add_argument("-g", "--num-gpus", type=int, default=1, help="Number of GPUs to use")
 
     args = parser.parse_args()
-    infer_image_from_mask_batch(args.env_config_path, args.model_config_path, args.model_def_path, args.num_gpus)
+    infer_image_from_mask_batch(args.environment_file, args.inference_file, args.config_file, args.num_gpus)
