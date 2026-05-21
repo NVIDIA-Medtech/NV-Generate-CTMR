@@ -403,69 +403,25 @@ def main() -> int:
     parser.add_argument(
         "-i",
         "--inference-file",
-        default=None,
+        required=True,
         help=(
-            "Optional config json file that stores inference hyper-parameters (e.g. "
-            "./configs/config_infer.json). If provided, any of num_inference_steps, "
-            "autoencoder_sliding_window_infer_size, autoencoder_sliding_window_infer_overlap, "
-            "cfg_guidance_scale defined there is applied as the default — explicit CLI flags still win."
+            "Config json file that stores inference hyper-parameters (e.g. "
+            "./configs/config_infer.json). Source of modality, num_inference_steps, "
+            "autoencoder_sliding_window_infer_size/overlap, cfg_guidance_scale."
         ),
     )
-    parser.add_argument("--modality", type=int, default=1, help="Modality code (CT=1; see configs/modality_mapping.json).")
-    parser.add_argument("--output-dir", default="./output_user_mask", help="Where to save the generated image NIfTI.")
-    parser.add_argument(
-        "--cfg-guidance-scale",
-        type=float,
-        default=None,
-        help="Classifier-free guidance scale (0=off; tumor-strengthening when >0). Default 0.0.",
-    )
-    parser.add_argument(
-        "--num-inference-steps",
-        type=int,
-        default=None,
-        help="Inference steps. If omitted, taken from -i config's `num_inference_steps`; falls back to 30 for RFlow / 1000 for DDPM.",
-    )
     parser.add_argument("--random-seed", type=int, default=0)
-    parser.add_argument(
-        "--sliding-window-roi",
-        type=int,
-        nargs=3,
-        default=None,
-        help="Sliding-window ROI size for image-AE decode. Default [96, 96, 96].",
-    )
-    parser.add_argument("--sliding-window-overlap", type=float, default=None, help="Default 0.6667.")
 
     args = parser.parse_args()
     set_determinism(seed=args.random_seed)
 
     _print_mask_format_warning()
 
-    # ── Optional overrides from -i/--inference-file (CLI flags still win) ───
-    infer_cfg = {}
-    if args.inference_file is not None:
-        if not Path(args.inference_file).exists():
-            print(f"[error] file not found: {args.inference_file}", file=sys.stderr)
-            return 2
-        import json as _json
-
-        with open(args.inference_file) as f:
-            infer_cfg = _json.load(f)
-    if args.num_inference_steps is None and "num_inference_steps" in infer_cfg:
-        args.num_inference_steps = int(infer_cfg["num_inference_steps"])
-    if args.sliding_window_roi is None:
-        args.sliding_window_roi = infer_cfg.get("autoencoder_sliding_window_infer_size", [96, 96, 96])
-    if args.sliding_window_overlap is None:
-        args.sliding_window_overlap = float(infer_cfg.get("autoencoder_sliding_window_infer_overlap", 0.6667))
-    if args.cfg_guidance_scale is None:
-        args.cfg_guidance_scale = float(infer_cfg.get("cfg_guidance_scale", 0.0))
-
     # ── Resolve config paths ────────────────────────────────────────────────
-    for p in (args.mask, args.environment_file, args.config_file):
+    for p in (args.mask, args.environment_file, args.config_file, args.inference_file):
         if not Path(p).exists():
             print(f"[error] file not found: {p}", file=sys.stderr)
             return 2
-    env_config = args.environment_file
-    network_config = args.config_file
 
     # ── Step 1: validate + load the user's mask ─────────────────────────────
     print("[step 1/4] validating user mask...", file=sys.stderr)
@@ -476,13 +432,16 @@ def main() -> int:
     print(f"[step 2/4] loading models on {device}...", file=sys.stderr)
     from .diff_model_setting import load_config
 
-    cfg = load_config(env_config, None, network_config)
+    # cfg now carries every config key from env + inference + network configs:
+    # output_dir, modality, num_inference_steps,
+    # autoencoder_sliding_window_infer_size/overlap, cfg_guidance_scale, etc.
+    cfg = load_config(args.environment_file, args.inference_file, args.config_file)
     autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler = load_image_models(cfg, device)
 
     include_body_region = diffusion_unet.include_top_region_index_input
     include_modality = diffusion_unet.num_class_embeds is not None
     if include_modality:
-        print(f"[step 2/4] image DM uses modality conditioning; passing modality={args.modality}.", file=sys.stderr)
+        print(f"[step 2/4] image DM uses modality conditioning; passing modality={cfg.modality}.", file=sys.stderr)
     if include_body_region:
         print("[step 2/4] image DM uses body-region conditioning; will derive top/bottom_region_index from mask.", file=sys.stderr)
 
@@ -497,7 +456,7 @@ def main() -> int:
     spacing_tensor, top_region_index_tensor, bottom_region_index_tensor, modality_tensor = build_conditioning_tensors(
         label,
         spacing,
-        args.modality,
+        cfg.modality,
         include_body_region,
         device,
     )
@@ -505,17 +464,14 @@ def main() -> int:
     # ── Step 4: inference ───────────────────────────────────────────────────
     from monai.networks.schedulers import DDPMScheduler
 
-    is_ddpm = isinstance(noise_scheduler, DDPMScheduler)
-    num_inference_steps = args.num_inference_steps
-    if num_inference_steps is None:
-        num_inference_steps = 1000 if is_ddpm else 30
-    if is_ddpm and num_inference_steps != 1000:
+    num_inference_steps = int(cfg.num_inference_steps)
+    if isinstance(noise_scheduler, DDPMScheduler) and num_inference_steps != 1000:
         print(
             f"[warn] DDPM scheduler typically requires num_inference_steps=1000; got {num_inference_steps}. Output quality not guaranteed.",
             file=sys.stderr,
         )
 
-    print(f"[step 4/4] running inference (steps={num_inference_steps}, cfg={args.cfg_guidance_scale})...", file=sys.stderr)
+    print(f"[step 4/4] running inference (steps={num_inference_steps}, cfg={cfg.cfg_guidance_scale})...", file=sys.stderr)
     synthetic_image, returned_label = ldm_conditional_sample_one_image(
         autoencoder=autoencoder,
         diffusion_unet=diffusion_unet,
@@ -532,13 +488,13 @@ def main() -> int:
         bottom_region_index_tensor=bottom_region_index_tensor,
         modality_tensor=modality_tensor,
         num_inference_steps=num_inference_steps,
-        autoencoder_sliding_window_infer_size=args.sliding_window_roi,
-        autoencoder_sliding_window_infer_overlap=args.sliding_window_overlap,
-        cfg_guidance_scale=args.cfg_guidance_scale,
+        autoencoder_sliding_window_infer_size=cfg.autoencoder_sliding_window_infer_size,
+        autoencoder_sliding_window_infer_overlap=cfg.autoencoder_sliding_window_infer_overlap,
+        cfg_guidance_scale=cfg.cfg_guidance_scale,
     )
 
     # ── Save output ─────────────────────────────────────────────────────────
-    output_dir = Path(args.output_dir)
+    output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     src_stem = Path(args.mask).name.replace(".nii.gz", "").replace(".nii", "")
