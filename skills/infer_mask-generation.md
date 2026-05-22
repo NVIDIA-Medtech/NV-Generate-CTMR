@@ -177,7 +177,7 @@ The pretrained mask DM was trained at **256×256×256 × 1.5 mm isotropic**. Dow
 ## Two paths to obtain a mask in `LDMSampler.sample_multiple_images`
 
 1. **Generate from scratch** — triggered when `controllable_anatomy_size` is non-empty. Calls `ldm_conditional_sample_one_mask`.
-2. **Pick a real training mask** — triggered when `controllable_anatomy_size` is empty. Uses `find_masks` / `find_closest_masks` to retrieve a database entry that matches `body_region` + `anatomy_list`. The do mask augmentation ot make it different from the original real mask. No diffusion involved.
+2. **Pick a real training mask** — triggered when `controllable_anatomy_size` is empty. Uses `find_masks` / `find_closest_masks` to retrieve a database entry that matches `body_region` + `anatomy_list`. Then do mask augmentation to make it different from the original real mask. No diffusion involved.
 
 Both paths produce a label tensor that then feeds the `infer_image-from-mask` skill.
 
