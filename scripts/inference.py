@@ -116,6 +116,9 @@ def main():
     for k, v in config_infer_dict.items():
         setattr(args, k, v)
         logger.info(f"{k}: {v}")
+    if not hasattr(args, "cfg_guidance_scale"):
+        args.cfg_guidance_scale = 0
+        logger.info("cfg_guidance_scale: 0 (default)")
 
     #
     # ## Read in optional extra configuration setting - typically acceleration options (TRT)
