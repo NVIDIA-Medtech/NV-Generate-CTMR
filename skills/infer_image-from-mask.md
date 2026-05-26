@@ -129,7 +129,7 @@ If many voxel values fall outside the vocabulary you almost certainly forgot a r
 | `num_inference_steps` | int | RFlow → 30; **DDPM → 1000 (must, not optional)**. DDPM at < 1000 steps emits a warning and produces low-quality output. |
 | `autoencoder_sliding_window_infer_size` | list[int] | ROI for AE decode; default `[96, 96, 96]`. |
 | `autoencoder_sliding_window_infer_overlap` | float | Default `0.6667`. |
-| `cfg_guidance_scale` | float | Classifier-free guidance scale on the tumor signal. `0` disables CFG. |
+| `cfg_guidance_scale` | float | Strengthens **tumor** signal (CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. See §6 — and note this is a different CFG from the modality-CFG used by MR inference in [`infer_image-only`](infer_image-only.md). |
 
 ## Algorithm step by step
 
@@ -201,25 +201,29 @@ Two model-variant differences:
 - **rflow-ct / rflow-mr / rflow-mr-brain** use `RFlowScheduler` (30 steps, much faster). The `set_timesteps` call also passes `input_img_size_numel` so step sizes adapt to volume.
 - **ddpm-ct** uses `DDPMScheduler` (1000 steps). It also sets `include_body_region=True` so the UNet receives `top_region_index_tensor` / `bottom_region_index_tensor`.
 
-### 6. Classifier-free guidance (CFG) — optional
+### 6. Classifier-free guidance (CFG) — optional, CT-only
 
-When `cfg_guidance_scale > 0`:
+In this script, `cfg_guidance_scale` strengthens the **tumor signal** by contrasting a tumor-bearing mask against a tumor-free version (`remove_tumors()`) of the same mask:
 
 ```python
-# Build a tumor-free version of the conditioning mask via remove_tumors()
 combine_label_no_tumor = F.interpolate(remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(),
                                        size=output_size, mode="nearest")
 controlnet_cond_vis_no_tumor = binarize_labels(combine_label_no_tumor.as_tensor().long()).half()
-```
 
-Each forward then batches `(tumor-conditioned, tumor-free)` together and combines:
-
-```python
 eps_t, eps_uncond = diffusion_unet(...).chunk(2)
 eps = eps_uncond + cfg_guidance_scale * (eps_t - eps_uncond)
 ```
 
-The unconditional branch keeps the body+organs but **drops tumor labels**, so CFG specifically strengthens the tumor signal. Set `cfg_guidance_scale=0` to disable.
+Effect of the value:
+
+- **`0`** (default) — no tumor enforcement; the model synthesizes tumors as it learned them. Correct default for this pipeline; use it whenever your mask has no tumors or you want unsteered output.
+- **`1..5`** — typical tumor-enforcement values. Higher = stronger tumor commitment but more risk of textural artifacts.
+- **Much above 5** — over-saturated, visibly artifactual tumors.
+- **Any value `> 0`** doubles UNet compute and VRAM per step.
+
+This entire pipeline is **CT-only** (the mask DM and ControlNet are CT-only — no MR ControlNet exists in this repo), so this CFG never applies to MR.
+
+> ⚠️ A `cfg_guidance_scale` key also appears in the image-only path ([`infer_image-only`](infer_image-only.md), `scripts.diff_model_infer`). Same key name, different effect — there it steers the *modality* conditioning and `~10` is **required** for MR. Don't transfer the "`0` is the default" rule from this skill to MR inference.
 
 ### 7. Sliding-window image-AE decode + HU mapping
 
