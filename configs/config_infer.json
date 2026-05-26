@@ -25,5 +25,5 @@
     "mask_generation_autoencoder": "$@mask_generation_autoencoder_def",
     "mask_generation_diffusion": "$@mask_generation_diffusion_def",
     "modality": 1,
-    "cfg_guidance_scale": 0
+    "cfg_guidance_scale": 0.0
 }
