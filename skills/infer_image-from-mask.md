@@ -129,7 +129,7 @@ If many voxel values fall outside the vocabulary you almost certainly forgot a r
 | `num_inference_steps` | int | RFlow → 30; **DDPM → 1000 (must, not optional)**. DDPM at < 1000 steps emits a warning and produces low-quality output. |
 | `autoencoder_sliding_window_infer_size` | list[int] | ROI for AE decode; default `[96, 96, 96]`. |
 | `autoencoder_sliding_window_infer_overlap` | float | Default `0.6667`. |
-| `cfg_guidance_scale` | float | Strengthens **tumor** signal (CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. See §6 — and note this is a different CFG from the modality-CFG used by MR inference in [`infer_image-only`](infer_image-only.md). |
+| `cfg_guidance_scale_tumor` | float | Strengthens **tumor** signal (CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. See §6 — and note this is a different CFG from the modality-CFG (`cfg_guidance_scale`) used by MR inference in [`infer_image-only`](infer_image-only.md). |
 
 ## Algorithm step by step
 
@@ -203,7 +203,7 @@ Two model-variant differences:
 
 ### 6. Classifier-free guidance (CFG) — optional, CT-only
 
-In this script, `cfg_guidance_scale` strengthens the **tumor signal** by contrasting a tumor-bearing mask against a tumor-free version (`remove_tumors()`) of the same mask:
+In this script, `cfg_guidance_scale_tumor` strengthens the **tumor signal** by contrasting a tumor-bearing mask against a tumor-free version (`remove_tumors()`) of the same mask:
 
 ```python
 combine_label_no_tumor = F.interpolate(remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(),
@@ -211,7 +211,7 @@ combine_label_no_tumor = F.interpolate(remove_tumors(combine_label.squeeze(0)).u
 controlnet_cond_vis_no_tumor = binarize_labels(combine_label_no_tumor.as_tensor().long()).half()
 
 eps_t, eps_uncond = diffusion_unet(...).chunk(2)
-eps = eps_uncond + cfg_guidance_scale * (eps_t - eps_uncond)
+eps = eps_uncond + cfg_guidance_scale_tumor * (eps_t - eps_uncond)
 ```
 
 Effect of the value:
@@ -223,7 +223,7 @@ Effect of the value:
 
 This entire pipeline is **CT-only** (the mask DM and ControlNet are CT-only — no MR ControlNet exists in this repo), so this CFG never applies to MR.
 
-> ⚠️ A `cfg_guidance_scale` key also appears in the image-only path ([`infer_image-only`](infer_image-only.md), `scripts.diff_model_infer`). Same key name, different effect — there it steers the *modality* conditioning and `~10` is **required** for MR. Don't transfer the "`0` is the default" rule from this skill to MR inference.
+> ⚠️ The image-only path ([`infer_image-only`](infer_image-only.md), `scripts.diff_model_infer`) has its own CFG key called `cfg_guidance_scale` — same idea, different semantics: there it steers the *modality* conditioning and `~10` is **required** for MR. The two keys are now distinct (`cfg_guidance_scale_tumor` here vs. `cfg_guidance_scale` there). Don't transfer the "`0` is the default" rule from this skill to MR inference.
 
 ### 7. Sliding-window image-AE decode + HU mapping
 
@@ -253,7 +253,7 @@ A 2-tuple `(synthetic_images, combine_label)`:
 | Knob | Where | Effect |
 |---|---|---|
 | `num_inference_steps` | `LDMSampler.__init__` | Quality / speed trade-off. RFlow → 30 is the validated setting; DDPM → 1000. |
-| `cfg_guidance_scale` | `LDMSampler.__init__` | `0` = off, typical values `1..5`. Higher = stronger tumor enforcement, but more artifacts. |
+| `cfg_guidance_scale_tumor` | `LDMSampler.__init__` | `0` = off, typical values `1..5`. Higher = stronger tumor enforcement, but more artifacts. |
 | `autoencoder_sliding_window_infer_size` | `LDMSampler.__init__` | Must be divisible by 16. Larger = fewer tiles but more VRAM. |
 | `autoencoder_sliding_window_infer_overlap` | `LDMSampler.__init__` | `[0, 1)`. Higher = smoother blending, more compute. |
 | `noise_factor` | hardcoded `1.0` in `LDMSampler.__init__` | Scales the initial noise. |

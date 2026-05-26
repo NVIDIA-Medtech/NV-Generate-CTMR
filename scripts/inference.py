@@ -16,6 +16,7 @@ import logging
 import os
 import sys
 import tempfile
+import warnings
 
 import monai
 import torch
@@ -116,9 +117,21 @@ def main():
     for k, v in config_infer_dict.items():
         setattr(args, k, v)
         logger.info(f"{k}: {v}")
-    if not hasattr(args, "cfg_guidance_scale"):
-        args.cfg_guidance_scale = 0.0
-        logger.info("cfg_guidance_scale: 0.0 (default)")
+    # Accept the legacy key name with a deprecation notice; rename to
+    # cfg_guidance_scale_tumor — the image-from-mask path uses CFG to
+    # steer tumor signal, distinct from the modality-CFG used by
+    # diff_model_infer.py.
+    if hasattr(args, "cfg_guidance_scale") and not hasattr(args, "cfg_guidance_scale_tumor"):
+        warnings.warn(
+            "`cfg_guidance_scale` in image-from-mask configs is deprecated; "
+            "rename it to `cfg_guidance_scale_tumor`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        args.cfg_guidance_scale_tumor = args.cfg_guidance_scale
+    if not hasattr(args, "cfg_guidance_scale_tumor"):
+        args.cfg_guidance_scale_tumor = 0.0
+        logger.info("cfg_guidance_scale_tumor: 0.0 (default)")
 
     #
     # ## Read in optional extra configuration setting - typically acceleration options (TRT)
@@ -217,7 +230,7 @@ def main():
         random_seed=args.random_seed,
         autoencoder_sliding_window_infer_size=args.autoencoder_sliding_window_infer_size,
         autoencoder_sliding_window_infer_overlap=args.autoencoder_sliding_window_infer_overlap,
-        cfg_guidance_scale=args.cfg_guidance_scale,
+        cfg_guidance_scale_tumor=args.cfg_guidance_scale_tumor,
     )
 
     logger.info(f"The generated image/mask pairs will be saved in {args.output_dir}.")

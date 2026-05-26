@@ -142,7 +142,7 @@ Recommended values per variant (these are the shipped defaults — keep them):
 | `rflow-mr-brain` | **10** |
 | `rflow-mr` | **10** |
 
-> ⚠️ A `cfg_guidance_scale` key also appears in the **mask-conditioned CT pipelines** ([`infer_image-from-mask`](infer_image-from-mask.md), [`infer_mask-image-paired`](infer_mask-image-paired.md)). Same key name, different effect — there it controls *tumor* strength on a CT ControlNet, and `0` is the correct default. Don't transfer the "`0` is fine" rule from those skills to MR inference here.
+> ⚠️ The **mask-conditioned CT pipelines** ([`infer_image-from-mask`](infer_image-from-mask.md), [`infer_mask-image-paired`](infer_mask-image-paired.md)) use a separate CFG knob called `cfg_guidance_scale_tumor` for *tumor* strength on a CT ControlNet, where `0` is the correct default. The two keys are now distinct (`cfg_guidance_scale` here vs. `cfg_guidance_scale_tumor` there); don't transfer the "`0` is fine" rule from those skills to MR inference here.
 
 ## Body-region indices (`ddpm-ct` only)
 
