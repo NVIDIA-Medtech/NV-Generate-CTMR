@@ -157,7 +157,7 @@ Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N
 | MRA | sagittal | 158 × 250 × 250 | 98 |
 | MRA | coronal | 240 × 179 × 240 | 11 |
 
-Pick the row matching your target acquisition plane, then pick the modality code for the skull condition you want (`9..20` whole-brain or `29..33` skull-stripped — see [Modality codes](#modality-codes)). Set `dim` and `spacing` so `dim[i] × spacing[i]` matches the median FOV; the slice-stacking axis (smallest FOV) should map to the smaller `dim` axis: axial → `dim[2]=128`, sagittal → `dim[0]=128`, coronal → `dim[1]=128`.
+Pick the row matching your target acquisition plane, then pick the modality code (see [Modality codes](#modality-codes); `9..20` for whole-brain or `29..33` for skull-stripped). The median FOV is a starting point — feel free to vary `dim` and `spacing` as long as `dim[i] × spacing[i]` lands near it.
 
 ## Modality codes
 
