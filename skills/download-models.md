@@ -69,7 +69,7 @@ Only the image-DM stack (no mask DM, no ControlNet):
 │   ├── diff_unet_3d_<variant>.pt              # image DM
 │   └── controlnet_3d_<variant>.pt             # ControlNet (CT only)
 └── datasets/
-    ├── all_anatomy_size_conditions.json       # CT infer_mask-only database
+    ├── all_anatomy_size_conditions.json       # CT infer_mask-generation database
     ├── all_masks_flexible_size_and_spacing_4000.zip
     └── candidate_masks_flexible_size_and_spacing_4000.json
 ```
@@ -100,15 +100,16 @@ After accepting, pass `--token YOUR_HF_TOKEN` or set `HF_TOKEN` in the environme
 | Partial file (size mismatch) | Interrupted download | Delete the partial file in `./models/` or `./datasets/` and re-run |
 | Wrong checkpoint shape at inference | Stale cached checkpoint after a model update | Re-run with `--overwrite` (if available) or manually delete the local file |
 
-## Related scripts
+## Code reference
 
-| Script | Role |
+| Symbol | File |
 |---|---|
-| `scripts/download_model_data.py` | CLI for this skill. Contains the HF download loop (`fetch_to_hf_path_cmd`) and the per-repo counter ping (`ensure_hf_download_tracked`). |
+| `download_model_data` | `scripts/download_model_data.py` |
+| `fetch_to_hf_path_cmd` | `scripts/download_model_data.py` (the HF download loop with counter ping) |
+| `ensure_hf_download_tracked` | `scripts/download_model_data.py` (pings `config.json` per repo) |
 
 ## Related skills
 
-- [`infer_image-only`](infer_image-only.md) — uses the image DM only (no ControlNet, no mask DM). Run with `--model_only`.
-- [`infer_mask-image-paired`](infer_mask-image-paired.md) — needs the full set (mask AE + mask DM + image DM + ControlNet). Run without `--model_only` if you'll use Path B.
-- [`infer_mask-only`](infer_mask-only.md) — mask-stage details.
-- [`infer_image-from-mask`](infer_image-from-mask.md) — image-stage details.
+- `infer_image-only` — uses the image DM only (no ControlNet, no mask DM). Run with `--model_only`.
+- `infer_mask-image-paired` — needs the full set (mask AE + mask DM + image DM + ControlNet). Run without `--model_only` if you'll use Path B.
+- `infer_mask-generation` / `infer_image-from-mask` — algorithm details for the two stages.
