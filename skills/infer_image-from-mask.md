@@ -33,6 +33,38 @@ Arguments:
 - `--mask` — your mask NIfTI (see [Input: the mask](#input-the-mask) for the required format).
 - `--random-seed` — optional integer for deterministic sampling.
 
+### End-to-end example: synthesize a CT from a MAISI-vocabulary mask
+
+Concrete worked example, assuming `~/your_mask.nii.gz` already contains MAISI 132-class labels with `body=200` (see [Input: the mask](#input-the-mask) for how to produce one):
+
+```bash
+# 1. Download weights (one-time, ~5 GB).
+python -m scripts.download_model_data --version rflow-ct --root_dir "./"
+
+# 2. Pick a config_infer preset matching your GPU memory + target output_size.
+#    Example for a 24 GB GPU targeting 512×512×128 output:
+#    use configs/config_infer_24g_512x512x128.json as-is (no edits needed
+#    for a default CT run). Key values it already sets:
+#      "output_size": [512, 512, 128],
+#      "spacing":     [0.75, 0.75, 4.0],
+#      "modality":                            1,    # CT
+#      "cfg_guidance_scale_tumor":            0.0,  # off, the correct default
+#      "num_inference_steps":                 30,
+#      "autoencoder_sliding_window_infer_size":    [80, 80, 32],
+#      "autoencoder_sliding_window_infer_overlap": 0.4,
+#      "autoencoder_tp_num_splits":                2
+
+# 3. Run inference.
+python -m scripts.infer_image_from_mask \
+    -t ./configs/config_network_rflow.json \
+    -i ./configs/config_infer_24g_512x512x128.json \
+    -e ./configs/environment_rflow-ct.json \
+    --mask ~/your_mask.nii.gz \
+    --random-seed 0
+```
+
+**Expected output**: two NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (the synthesized CT, HU range `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (your mask, resampled if needed).
+
 ## Input: the mask
 
 ### Format

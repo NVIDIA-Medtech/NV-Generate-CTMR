@@ -35,6 +35,38 @@ Three configs are passed:
 - `-i` inference parameters (`config_infer.json` — `body_region`, `anatomy_list`, `output_size`, `spacing`, `controllable_anatomy_size`, etc.).
 - `-e` environment paths (`environment_rflow-ct.json` or `environment_ddpm-ct.json` — checkpoint paths, label dicts, mask database).
 
+### End-to-end example: paired chest CT (Path B — training-mask DB lookup)
+
+Concrete worked example for a 24 GB GPU. Path B is the simpler default — you ask for a chest CT and the pipeline finds a matching training mask, augments it, and synthesizes the paired image.
+
+```bash
+# 1. Download all required weights + the mask database (one-time, ~10 GB).
+#    No --model_only flag — the mask DB and anatomy-size JSON are also needed.
+python -m scripts.download_model_data --version rflow-ct --root_dir "./"
+
+# 2. Pick a config_infer_<XXg>_<dim>.json preset matching your GPU + output_size.
+#    For 24 GB + 512×512×128 chest CT, use config_infer_24g_512x512x128.json.
+#    Edit it to set:
+#      "body_region":                   ["chest"],
+#      "anatomy_list":                  ["liver", "spleen", "lung"],   # whatever organs you need
+#      "controllable_anatomy_size":     [],                            # empty list → Path B
+#      "num_output_samples":            1,
+#      # leave the AE knobs, output_size, spacing, cfg_guidance_scale_tumor,
+#      # num_inference_steps at the preset's shipped values.
+
+# 3. Run inference.
+export MONAI_DATA_DIRECTORY="./temp_work_dir"
+python -m scripts.inference \
+    -t ./configs/config_network_rflow.json \
+    -i ./configs/config_infer_24g_512x512x128.json \
+    -e ./configs/environment_rflow-ct.json \
+    --random-seed 0 --version rflow-ct
+```
+
+**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (paired mask filtered to `anatomy_list`).
+
+For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a non-empty list of `(organ_name, size)` tuples, e.g. `[["pancreas", 0.5], ["hepatic tumor", 0.3]]`, and leave `body_region` empty. The dispatch flowchart below shows where this branches.
+
 ## How `LDMSampler.sample_multiple_images` chooses the mask path
 
 ```text
