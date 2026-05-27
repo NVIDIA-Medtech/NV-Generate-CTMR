@@ -209,7 +209,8 @@ For each successful generation, two files are saved to `output_dir`:
 |---|---|
 | `scripts/inference.py` | CLI entry point for this skill. |
 | `scripts/sample.py` (`LDMSampler`) | Orchestrator: dispatches the mask stage and the image stage, applies the QC retry loop. |
-| `scripts/sample_mask.py` | Mask-generation pipeline (Path A + Path B helpers). |
+| `scripts/sample_mask.py` | Path A mask DM (`ldm_conditional_sample_one_mask`). |
+| `scripts/find_masks.py` | Path B exact-match DB lookup (`find_masks`). |
 | `scripts/infer_image_from_mask.py` | Image-from-mask pipeline (called from the orchestrator's image stage). |
 | `scripts/download_model_data.py` | Downloads mask DM + image DM + ControlNet weights. |
 

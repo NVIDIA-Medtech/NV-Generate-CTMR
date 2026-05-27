@@ -81,8 +81,9 @@ The pretrained mask DM was trained at **256×256×256 × 1.5 mm isotropic** (Pat
 
 | Script | Role |
 |---|---|
-| `scripts/sample_mask.py` | Mask-generation pipeline. Contains `ldm_conditional_sample_one_mask` (Path A) and the DB-lookup helpers `find_masks` / `find_closest_masks` (Path B). |
-| `scripts/sample.py` (`LDMSampler`) | Orchestrator: chooses Path A or B based on `controllable_anatomy_size`, then chains the image stage. |
+| `scripts/sample_mask.py` | Path A core sampler: `ldm_conditional_sample_one_mask` (DDPM → softmax/argmax → label remap → post-process). |
+| `scripts/find_masks.py` | Path B exact-match DB lookup: `find_masks(body_region, anatomy_list, spacing, output_size, ...)`. |
+| `scripts/sample.py` (`LDMSampler`) | Orchestrator: chooses Path A or B based on `controllable_anatomy_size`, then chains the image stage. Hosts `LDMSampler.find_closest_masks` for Path B's closest-match fallback. |
 | `scripts/inference.py` | CLI entry point for the paired pipeline (mask stage + image stage together). |
 | `scripts/utils.py` | Label utilities: `binarize_labels`, `remap_labels`, `general_mask_generation_post_process`. |
 
