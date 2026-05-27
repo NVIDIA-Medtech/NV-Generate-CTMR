@@ -308,6 +308,14 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         )
         args.cfg_guidance_scale_modality = args.diffusion_unet_inference["cfg_guidance_scale"]
     else:
+        warnings.warn(
+            "Neither `cfg_guidance_scale_modality` nor the legacy `cfg_guidance_scale` was found "
+            "in `diffusion_unet_inference`; defaulting to 0.0. "
+            "MR models (rflow-mr, rflow-mr-brain) require a non-zero value (e.g. 10) for "
+            "contrast-faithful output.",
+            UserWarning,
+            stacklevel=2,
+        )
         args.cfg_guidance_scale_modality = 0.0
 
     autoencoder, unet, scale_factor = load_models(args, device, logger)
