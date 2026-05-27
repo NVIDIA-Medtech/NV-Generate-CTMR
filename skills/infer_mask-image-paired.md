@@ -163,6 +163,14 @@ This pipeline is CT-only and modality is fixed at `CT=1`, so modality-CFG has no
 
 CT-only, strengthens tumor signal. `0` (default) = off. `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Distinct from the modality-CFG above (same math, different unconditional branch).
 
+### 6. `num_inference_steps`
+
+Driven by the scheduler the variant uses, not by GPU memory:
+
+- `rflow-ct` → **30** (RFlow scheduler).
+- `ddpm-ct` → **1000** (DDPM scheduler). Lower values emit a warning and degrade quality — not optional.
+- `mask_generation_num_inference_steps` → always **1000**: the mask DM is DDPM regardless of which image-DM variant you pick.
+
 ## Quality check loop
 
 `LDMSampler.quality_check_ct` runs after each image is generated (CT only; MR codes ≥ 8 skip the check):
