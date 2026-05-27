@@ -100,12 +100,16 @@ For MR (`rflow-mr`, `rflow-mr-brain`):
 
 ### Quick formula
 
-1. Pick `spacing` first to control voxel anisotropy and resolution.
-2. Pick `dim` so `dim × spacing` covers your target anatomy plus ~10% margin.
-3. Round `dim` to the nearest allowed value (constraints above).
-4. Check the resulting FOV with `print([dim[i]*spacing[i] for i in range(3)])` before running.
+The relationship is **`FOV[i] = dim[i] × spacing[i]`**, i.e. **`spacing[i] = FOV[i] / dim[i]`**. So pick FOV first (anatomy-driven) and `dim` second (resolution / VRAM budget); `spacing` then falls out.
+
+1. Pick the target FOV from the recommended table above (or `docs/inference.md`).
+2. Pick `dim` to balance resolution against VRAM, rounding to the nearest allowed value (constraints above).
+3. Compute `spacing[i] = FOV[i] / dim[i]`.
+4. Sanity-check the resulting FOV with `print([dim[i]*spacing[i] for i in range(3)])` before running.
 
 See `docs/inference.md` for the full per-modality table.
+
+> ℹ️ The image-only path (`scripts.diff_model_infer`) **does not expose** `autoencoder_sliding_window_infer_size` / `_overlap` / `autoencoder_tp_num_splits` in its config — those knobs are hardcoded (`roi_size=[80, 80, 80]`, `overlap=0.4`, no TP split). If you hit OOM on the AE decode in this path, your only knob is reducing `dim`. The mask-conditioned pipelines ([`infer_mask-image-paired`](infer_mask-image-paired.md), [`infer_image-from-mask`](infer_image-from-mask.md)) do expose those knobs — see the GPU-memory presets table in `infer_mask-image-paired.md`.
 
 ## Modality codes
 
