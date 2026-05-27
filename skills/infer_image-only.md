@@ -133,7 +133,7 @@ Sanity-check the resulting FOV with `print([dim[i]*spacing[i] for i in range(3)]
 
 ### 4. `cfg_guidance_scale_modality`
 
-This knob steers the output toward the requested **modality** (the `class_labels` / modality tensor). Effect of the value:
+Classifier-free guidance (CFG) scale for the modality conditioning. CFG runs the model twice per step (once with the modality label, once with it zeroed) and amplifies the difference — so this knob steers the output toward the requested **modality** (the `class_labels` / modality tensor). Effect of the value:
 
 - **`0`** — modality conditioning is effectively ignored. For CT this is fine (modality is fixed at `CT=1`, so guidance has nothing to amplify). For **MR variants this is the failure mode** ([issue #29](https://github.com/NVIDIA-Medtech/NV-Generate-CTMR/issues/29)): the output is washed-out and doesn't commit to the requested contrast (T1 / T2 / FLAIR / SWI).
 - **`~10`** — validated value for MR. Output looks like the requested contrast.

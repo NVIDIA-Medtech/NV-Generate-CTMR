@@ -132,7 +132,7 @@ This pipeline is CT-only and modality is fixed at `CT=1`, so modality-CFG has no
 
 ### 5. `cfg_guidance_scale_tumor`
 
-CT-only, strengthens tumor signal. `0` (default) = off. `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Distinct from the modality-CFG above (same math, different unconditional branch).
+Classifier-free guidance (CFG) scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. CT-only. `0` (default) = off. `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Distinct from the modality-CFG above (same math, different unconditional branch).
 
 ### 6. `num_inference_steps`
 

@@ -87,7 +87,7 @@ The config you pass to `-i` is `config_infer.json` (or one of the `config_infer_
 
 Quick reminder of the CT-specific knob most relevant to this skill:
 
-- `cfg_guidance_scale_tumor` — strengthens tumor signal in the synthesized image. `0` (default) = off, correct whenever the mask has no tumors or you want unsteered output. `1..5` = stronger tumor enforcement (more artifact risk above 5). Doubles per-step compute when `> 0`. Distinct from the modality-CFG (`cfg_guidance_scale_modality`) used by MR image-only inference — same key-name pattern, different unconditional branch.
+- `cfg_guidance_scale_tumor` — classifier-free guidance (CFG) scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. `0` (default) = off, correct whenever the mask has no tumors or you want unsteered output. `1..5` = stronger tumor enforcement (more artifact risk above 5). Doubles per-step compute when `> 0`. Distinct from the modality-CFG (`cfg_guidance_scale_modality`) used by MR image-only inference — same key-name pattern, different unconditional branch.
 
 ### Hard constraints on `output_size` + `spacing`
 
