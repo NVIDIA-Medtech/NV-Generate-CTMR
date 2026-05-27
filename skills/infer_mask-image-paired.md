@@ -70,7 +70,14 @@ sample_one_mask()      read_mask_information(mask_file)
 save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
 ```
 
-Which path runs is driven by `controllable_anatomy_size` in `config_infer.json`: empty → Path B (pick from the training-mask DB), non-empty → Path A (generate from scratch). For details on the mask-generation stage, see the [`infer_mask-only`](infer_mask-only.md) skill; for the image-from-mask stage, see [`infer_image-from-mask`](infer_image-from-mask.md).
+### Two paths to obtain a mask
+
+Which path runs is driven by `controllable_anatomy_size` in `config_infer.json`:
+
+- **Path A — diffusion from scratch** (`controllable_anatomy_size` non-empty): the user provides `(organ, size)` tuples; the mask DM samples a new mask conditioned on the resulting `anatomy_size` 10-d vector. Use this when you want to *control* organ/tumor presence and size.
+- **Path B — training-mask database lookup** (`controllable_anatomy_size` empty): a real training mask matching `body_region` + `anatomy_list` + `spacing` + `output_size` is retrieved and lightly augmented so the output isn't a verbatim copy. No diffusion runs in the mask stage. Use this when you only need a plausible mask of the right anatomy and don't care about controlling specific organ sizes.
+
+Both paths produce a MAISI-vocabulary mask that then feeds the image stage. For the per-path knobs and the `anatomy_size` slot table, see [`infer_mask-only`](infer_mask-only.md). The image stage that consumes the mask is documented in [`infer_image-from-mask`](infer_image-from-mask.md).
 
 ## `dim` and `spacing` — same FOV rules as image-only
 
