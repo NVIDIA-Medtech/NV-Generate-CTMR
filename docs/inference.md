@@ -137,6 +137,8 @@ Contrast-enhanced MRI is not supported. For brain MRI, prefer the dedicated `rfl
 
 Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N` counts unique source images; whole-brain and skull-stripped share the same FOV since they're two preprocessings of the same subject. Total unique images per skull condition (sum of the rows below): **318 825**.
 
+> ℹ️ The table covers axial, sagittal, and coronal scans only. The training set also includes images acquired in oblique orientations (not summarized here); the model has seen those during training but they are excluded from this reference table because the axial/sagittal/coronal cases are what users typically request at inference.
+
 | Modality | Plane | Median FOV (mm) | N |
 |---|---|---|---:|
 | T1 | axial | 240 × 240 × 174 | 47 810 |
