@@ -1,5 +1,5 @@
 ---
-name: infer_mask-generation
+name: infer_mask-only
 description: Explains how NV-Generate-CTMR generates a 3D organ-label mask from scratch (no input image needed) using anatomy_size conditioning. Trigger when the user asks "how does mask generation work", "how do I generate a synthetic mask", "what does ldm_conditional_sample_one_mask do", "explain the mask diffusion model", or any low-level question about the mask LDM pipeline.
 ---
 

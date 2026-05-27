@@ -69,7 +69,7 @@ Only the image-DM stack (no mask DM, no ControlNet):
 │   ├── diff_unet_3d_<variant>.pt              # image DM
 │   └── controlnet_3d_<variant>.pt             # ControlNet (CT only)
 └── datasets/
-    ├── all_anatomy_size_conditions.json       # CT infer_mask-generation database
+    ├── all_anatomy_size_conditions.json       # CT infer_mask-only database
     ├── all_masks_flexible_size_and_spacing_4000.zip
     └── candidate_masks_flexible_size_and_spacing_4000.json
 ```
@@ -112,4 +112,4 @@ After accepting, pass `--token YOUR_HF_TOKEN` or set `HF_TOKEN` in the environme
 
 - `infer_image-only` — uses the image DM only (no ControlNet, no mask DM). Run with `--model_only`.
 - `infer_mask-image-paired` — needs the full set (mask AE + mask DM + image DM + ControlNet). Run without `--model_only` if you'll use Path B.
-- `infer_mask-generation` / `infer_image-from-mask` — algorithm details for the two stages.
+- `infer_mask-only` / `infer_image-from-mask` — algorithm details for the two stages.

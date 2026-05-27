@@ -9,7 +9,7 @@ This skill covers the **paired generation** pipeline: mask first, then image con
 
 Two algorithms run sequentially:
 
-1. **Mask stage** — see the `infer_mask-generation` skill.
+1. **Mask stage** — see the `infer_mask-only` skill.
 2. **Image stage** — see the `infer_image-from-mask` skill.
 
 This skill explains how they're chained, the LDMSampler state required, and the configuration knobs.
@@ -75,7 +75,7 @@ save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
 **Path A — `controllable_anatomy_size` non-empty** (diffusion-generated mask):
 
 - User provides e.g. `[("pancreas", 0.5), ("liver", 0.7)]` in `config_infer.json`.
-- `prepare_anatomy_size_condition` builds the 10-d vector (see `infer_mask-generation` skill).
+- `prepare_anatomy_size_condition` builds the 10-d vector (see `infer_mask-only` skill).
 - `sample_one_mask` runs the mask DDPM.
 - Result is at fixed shape `256×256×256 × 1.5mm iso` (the mask DM's pretrained shape).
 - `ensure_output_size_and_spacing` resamples to the user's requested `output_size` + `spacing`.
@@ -227,7 +227,7 @@ For each successful generation, two files are saved to `output_dir`:
 
 ## Related skills
 
-- `infer_mask-generation` — algorithm details for the mask stage.
+- `infer_mask-only` — algorithm details for the mask stage.
 - `infer_image-from-mask` — algorithm details for the image stage.
 - `infer_image-only` — image-only path (no mask); covers FOV/dim/spacing table.
 - `download-models` — fetch checkpoints first.

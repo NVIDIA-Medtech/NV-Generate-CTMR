@@ -5,7 +5,7 @@ description: Explains how NV-Generate-CTMR generates a CT or MR image from an ex
 
 # Image-from-mask inference (NV-Generate-CTMR)
 
-This skill explains how NV-Generate-CTMR takes a **3D label mask** (typically produced by the `infer_mask-generation` skill or pulled from the training-mask database) and **synthesizes a paired CT or MR image** from it. The image LDM is conditioned on the mask via a ControlNet branch.
+This skill explains how NV-Generate-CTMR takes a **3D label mask** (typically produced by the `infer_mask-only` skill or pulled from the training-mask database) and **synthesizes a paired CT or MR image** from it. The image LDM is conditioned on the mask via a ControlNet branch.
 
 Code entry point: `scripts.infer_image_from_mask.ldm_conditional_sample_one_image`.
 
