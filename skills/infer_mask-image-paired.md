@@ -14,7 +14,7 @@ Two algorithms run sequentially:
 
 This skill explains how they're chained, the LDMSampler state required, and the configuration knobs.
 
-## Quick Start command
+## Command to run
 
 ```bash
 export MONAI_DATA_DIRECTORY="./temp_work_dir"

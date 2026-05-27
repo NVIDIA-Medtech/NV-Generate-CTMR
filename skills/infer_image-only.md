@@ -35,7 +35,7 @@ Pick the variant by:
 1. Modality + anatomy (brain MRI → `rflow-mr-brain`; CT → `rflow-ct`; other MRI → `rflow-mr`).
 2. Whether you need explicit body-region conditioning (use `ddpm-ct` if you want `top_region_index` / `bottom_region_index` as inputs; else prefer `rflow-ct` — 33× faster, similar FID).
 
-## Quick Start commands
+## Command to run
 
 Each variant follows the same two-step pattern: download weights, then run inference.
 
