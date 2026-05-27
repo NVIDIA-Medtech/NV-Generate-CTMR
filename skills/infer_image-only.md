@@ -55,9 +55,9 @@ For `ddpm-ct`: use `network="ddpm"` and the corresponding `config_network_ddpm.j
 
 > ⚠️ **`ddpm-ct` requires `num_inference_steps = 1000`** (vs 30 for `rflow-ct` / `rflow-mr*`). Lower values silently degrade output — the DDPM scheduler emits a warning but still runs. This makes `ddpm-ct` ~33× slower than `rflow-ct`. Prefer `rflow-ct` unless you specifically need body-region indices.
 
-### End-to-end example: T2-weighted whole-brain MRI
+### End-to-end example: T1-weighted whole-brain axial MRI
 
-Concrete worked example (run from the repo root):
+Most-supported combination in the MR-RATE training set (47 810 axial T1 images — see the [per-plane FOV table](#per-plane-fov-table-for-rflow-mr-brain) below). Median training FOV is 240 × 240 × 174 mm; `dim` and `spacing` below reproduce that.
 
 ```bash
 # 1. Download weights (one-time, ~3 GB).
@@ -65,9 +65,9 @@ python -m scripts.download_model_data --version rflow-mr-brain --root_dir "./" -
 
 # 2. Edit configs/config_maisi_diff_model_rflow-mr-brain.json so the
 #    `diffusion_unet_inference` block contains:
-#      "dim":     [256, 256, 256],
-#      "spacing": [1.0, 1.0, 1.0],
-#      "modality": 10,                       # T2 whole-brain (modality codes below)
+#      "dim":     [256, 256, 128],           # axial: slice-stack axis on z (smaller dim)
+#      "spacing": [0.94, 0.94, 1.36],        # → FOV 240×240×174 mm, matches T1-axial median
+#      "modality": 9,                        # T1 whole-brain (29 for T1 skull-stripped)
 #      "cfg_guidance_scale_modality": 10,    # required for MR; this is the shipped default
 #      "num_inference_steps": 30,
 #      "random_seed": 0
@@ -79,9 +79,9 @@ python -m scripts.diff_model_infer \
     -c ./configs/config_maisi_diff_model_rflow-mr-brain.json
 ```
 
-**Expected output**: a NIfTI under the `output_dir` set in `environment_maisi_diff_model_rflow-mr-brain.json`, named like `unet_3d_seed0_size256x256x256_spacing1.00x1.00x1.00_<timestamp>_rank0_modality10.nii.gz`.
+**Expected output**: a NIfTI under the `output_dir` set in `environment_maisi_diff_model_rflow-mr-brain.json`, named like `unet_3d_seed0_size256x256x128_spacing0.94x0.94x1.36_<timestamp>_rank0_modality9.nii.gz`.
 
-For another modality / body region, swap `generate_version` to the right variant and change `modality` / `dim` / `spacing` per the tables in [How to configure a run](#how-to-configure-a-run) below.
+For another (modality, plane) combination, look up the median FOV in the [per-plane FOV table](#per-plane-fov-table-for-rflow-mr-brain), set `dim` so the slice-stacking axis maps to the smaller `dim[i]=128` (axial → z, sagittal → x, coronal → y), and compute `spacing[i] = FOV[i] / dim[i]`. Swap `modality` to the matching code (`9..20` whole-brain or `29..32` skull-stripped).
 
 ## How to configure a run
 
