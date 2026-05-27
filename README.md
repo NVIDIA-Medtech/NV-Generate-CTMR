@@ -129,8 +129,6 @@ Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutoria
 
 You can also run it in command line to generate MR image without mask. Please change "modality" in [configs/config_maisi_diff_model_rflow-mr-brain.json](configs/config_maisi_diff_model_rflow-mr-brain.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Currently we support both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images.
 
-> ℹ️ `config_maisi_diff_model_rflow-mr-brain.json` ships with `cfg_guidance_scale_modality: 10`. Keep it — MR needs classifier-free guidance on the modality conditioning to produce a contrast-faithful brain. See the CFG callout at the top of §2.
-
 ```json
 "mri":8, # MRI without specifying contrast or skull condition, can be any of them
 "mri_t1":9, # T1w whole-brain MRI
@@ -175,8 +173,6 @@ python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -
 ### 2.5 MR Image Generation
 
 Change `"modality"` in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Supported contrasts: T1/T2 brain, FLAIR skull-stripped brain, T2 prostate, T1 breast, T1/T2 abdomen. But if you are going to synthesize brain images, we recommend using `rflow-mr-brain` model instead. Please see [2.2 MR Brain Image Generation](#22-mr-brain-image-generation). Different body region has different recommended FOV, please see [detailed inference guide](./docs/inference.md#recommended-fov-for-mr-rflow-mr-model).
-
-> ℹ️ `config_maisi_diff_model_rflow-mr.json` ships with `cfg_guidance_scale_modality: 10`. Keep it — without modality-CFG the model ignores the requested contrast/anatomy. See the CFG callout at the top of §2.
 
 ```bash
 network="rflow"
