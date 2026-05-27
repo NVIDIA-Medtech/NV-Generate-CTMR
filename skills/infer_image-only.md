@@ -131,18 +131,13 @@ The most important knobs. Live in the `diffusion_unet_inference` block of `confi
 
 The relationship is **`FOV[i] = dim[i] × spacing[i]`**, i.e. **`spacing[i] = FOV[i] / dim[i]`**. Pick FOV first (anatomy-driven), then `dim` (resolution / VRAM budget); `spacing` falls out.
 
-**Recommended `(dim, spacing)` by anatomical target** (these values are where the training data actually lives — stay close):
+**Recommended `(dim, spacing)` by anatomical target** — see the canonical FOV tables in [`docs/inference.md`](../docs/inference.md):
 
-| Target | `dim` | `spacing` (mm) | Resulting FOV (mm) | Variant |
-|---|---|---|---|---|
-| Brain MRI — see [per-plane FOV table](../docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model) in docs/inference.md | per row | per row | per row | `rflow-mr-brain` |
-| Non-brain MRI (prostate, breast, abdomen) — see [`rflow-mr` FOV table](../docs/inference.md#recommended-fov-for-mr-rflow-mr-model) in docs/inference.md | per row | per row | per row | `rflow-mr` |
-| Chest CT (single-slice axial coverage) | `(512, 512, 128)` | `(0.78, 0.78, 4.0)` | `400 × 400 × 512` | `rflow-ct` |
-| Abdomen CT | `(512, 512, 256)` | `(1.0, 1.0, 1.5)` | `512 × 512 × 384` | `rflow-ct` |
-| Whole body CT (torso → mid-femur) | `(512, 512, 512)` | `(1.5, 1.5, 1.5)` | `768 × 768 × 768` | `rflow-ct` |
-| Long-axis whole-body CT (head → feet) | `(512, 512, 768)` | `(1.5, 1.5, 1.5)` | `768 × 768 × 1152` | `rflow-ct` (max supported) |
-
-See [`docs/inference.md`](../docs/inference.md) for the full per-modality FOV tables for all four variants.
+| Target | Variant | FOV reference |
+|---|---|---|
+| CT (chest / abdomen / whole-body / long-axis) | `rflow-ct`, `ddpm-ct` | [Recommended Spacing for CT](../docs/inference.md#recommended-spacing-for-ct) |
+| Non-brain MRI (prostate, breast, abdomen) | `rflow-mr` | [Recommended FOV for MR `rflow-mr`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-model) |
+| Brain MRI (T1/T2/FLAIR/SWI × axial/sagittal/coronal × whole-brain or skull-stripped) | `rflow-mr-brain` | [Recommended FOV for MR `rflow-mr-brain`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model) |
 
 **Hard constraints** (validated by `check_input_ct` / `check_input_mr`):
 
