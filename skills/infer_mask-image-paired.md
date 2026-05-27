@@ -121,57 +121,47 @@ Additional FOV considerations specific to the paired pipeline:
 
 ## How to configure a run
 
-The five things you actually set in `config_infer.json`:
-
 ### 1. `modality` → driven by your anatomy
 
-Pick the modality code matching what you want to generate (full list in `configs/modality_mapping.json`). The mask-image paired pipeline in this skill is **CT-only** (the mask DM and ControlNet are CT-only — no MR ControlNet exists), so for this pipeline `modality = 1`. For MR image-only generation use [`infer_image-only`](infer_image-only.md).
+Pick the modality code matching what you want to generate (full list in `configs/modality_mapping.json`). This mask-image paired pipeline is **CT-only** (the mask DM and ControlNet are CT-only — no MR ControlNet exists), so `modality = 1`. For MR generation use [`infer_image-only`](infer_image-only.md). For recommended FOVs per anatomy, see `docs/inference.md#recommended-spacing-for-ct`.
 
-### 2. `output_size` and `spacing` → from FOV
+### 2. `autoencoder_sliding_window_infer_size`, `autoencoder_sliding_window_infer_overlap`, `autoencoder_tp_num_splits` → from GPU memory + `output_size`
 
-FOV (mm per axis) is the model's anchoring signal — it must match the training-data distribution for your anatomy. Pick FOV first, then split it into `output_size` (voxels) and `spacing` (mm/voxel):
+Validated presets (drawn from `configs/config_infer_<XXg>_<dim>.json`):
+
+| GPU mem | `output_size` | `autoencoder_sliding_window_infer_size` | `autoencoder_sliding_window_infer_overlap` | `autoencoder_tp_num_splits` |
+|---|---|---|---|---|
+| 16 GB | 256×256×128 | [96, 96, 96] | 0.25 | 2 |
+| 16 GB | 256×256×256 | [48, 48, 64] | 0.6666 | 4 |
+| 16 GB | 512×512×128 | [64, 64, 32] | 0.5 | 2 |
+| 24 GB | 256×256×256 | [64, 64, 64] | 0.25 | 4 |
+| 24 GB | 512×512×128 | [80, 80, 32] | 0.4 | 2 |
+| 24 GB | 512×512×512 | [64, 64, 48] | 0.4 | 2 |
+| 32 GB | 512×512×512 | [80, 80, 48] | 0.4 | 4 |
+| 80 GB | 512×512×512 | [80, 80, 80] | 0.4 | 4 |
+| 80 GB | 512×512×768 | [80, 80, 96] | 0.4 | 4 |
+
+Tuning rules if no preset matches:
+
+- **OOM** → shrink `autoencoder_sliding_window_infer_size` (must be divisible by 16), or raise `autoencoder_tp_num_splits` to the next value in `{2, 4, 8, 16}`.
+- **Seam artifacts** → raise `autoencoder_sliding_window_infer_overlap` toward `0.6667`.
+- **Speed** → lower the overlap toward `0.25`, then enlarge the sliding-window size if VRAM permits.
+
+### 3. `spacing` → from FOV and `output_size`
 
 ```text
 spacing[i] = FOV[i] / output_size[i]
 ```
 
-For recommended FOVs per CT body region, see `docs/inference.md#recommended-spacing-for-ct`. For MR (image-only path) see the recommended-FOV table in `docs/inference.md`. The hard constraints (`check_input_ct`) are documented in [`infer_image-only`](infer_image-only.md).
+Pick FOV from the anatomy-recommended table (step 1), pick `output_size` from the GPU preset (step 2), compute `spacing`.
 
-### 3. `autoencoder_sliding_window_infer_size`, `autoencoder_sliding_window_infer_overlap`, `autoencoder_tp_num_splits` → from GPU memory + output_size
+### 4. `cfg_guidance_scale_modality` — not used in this pipeline
 
-The image AE decodes the latent in tiles (sliding-window) to fit memory. Three knobs control the memory/speed/quality trade-off:
+This pipeline is CT-only and modality is fixed at `CT=1`, so modality-CFG has nothing to amplify. The `cfg_guidance_scale_modality` knob lives in `scripts.diff_model_infer` ([`infer_image-only`](infer_image-only.md)), where it is required for MR — see that skill.
 
-- `autoencoder_sliding_window_infer_size` — ROI per tile, must be divisible by 16. Larger = fewer tiles, faster, more VRAM.
-- `autoencoder_sliding_window_infer_overlap` — `[0, 1)`. Higher = smoother seams, more compute (each voxel decoded by more tiles).
-- `autoencoder_tp_num_splits` — tensor-parallel splits inside each AE forward (`∈ {1, 2, 4, 8, 16}`). Higher = lower per-GPU VRAM, slower.
+### 5. `cfg_guidance_scale_tumor`
 
-Validated presets (drawn from the `configs/config_infer_<XXg>_<dim>.json` files — pick the row matching your GPU + target `output_size`):
-
-| GPU mem | `output_size` | `spacing` (mm) | `autoencoder_sliding_window_infer_size` | `..._overlap` | `autoencoder_tp_num_splits` | `num_inference_steps` | Config file |
-|---|---|---|---|---|---|---|---|
-| 16 GB | 256×256×128 | 1.5, 1.5, 4.0 | [96, 96, 96] | 0.25 | 2 | 30 | `config_infer_16g_256x256x128.json` |
-| 16 GB | 256×256×256 | 1.5, 1.5, 2.0 | [48, 48, 64] | 0.6666 | 4 | 30 | `config_infer_16g_256x256x256.json` |
-| 16 GB | 512×512×128 | 0.75, 0.75, 4.0 | [64, 64, 32] | 0.5 | 2 | 30 | `config_infer_16g_512x512x128.json` |
-| 24 GB | 256×256×256 | 1.5, 1.5, 2.0 | [64, 64, 64] | 0.25 | 4 | 1000 (DDPM) | `config_infer_24g_256x256x256.json` |
-| 24 GB | 512×512×128 | 0.75, 0.75, 4.0 | [80, 80, 32] | 0.4 | 2 | 30 | `config_infer_24g_512x512x128.json` |
-| 24 GB | 512×512×512 | 0.75, 0.75, 1.0 | [64, 64, 48] | 0.4 | 2 | 30 | `config_infer_24g_512x512x512.json` |
-| 32 GB | 512×512×512 | 0.75, 0.75, 1.0 | [80, 80, 48] | 0.4 | 4 | 30 | `config_infer_32g_512x512x512.json` |
-| 80 GB | 512×512×512 | 0.75, 0.75, 1.0 | [80, 80, 80] | 0.4 | 4 | 1000 (DDPM) | `config_infer_80g_512x512x512.json` |
-| 80 GB | 512×512×768 | 0.75, 0.75, 0.667 | [80, 80, 96] | 0.4 | 4 | 30 | `config_infer_80g_512x512x768.json` |
-
-Tuning rules of thumb if no preset matches:
-
-- **OOM** → reduce `autoencoder_sliding_window_infer_size`, or increase `autoencoder_tp_num_splits` (try the next value in `{2, 4, 8, 16}`).
-- **Seam artifacts** → raise `autoencoder_sliding_window_infer_overlap` toward `0.6667`.
-- **Speed** → lower the overlap (toward `0.25`), then enlarge the sliding-window size if VRAM permits.
-
-### 4. `cfg_guidance_scale_tumor`
-
-CT-only, controls tumor signal strength. `0` = off (correct default). `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Distinct from the modality-CFG (`cfg_guidance_scale_modality`) used by MR image-only inference — see [`infer_image-only`](infer_image-only.md).
-
-### 5. `num_inference_steps`
-
-`rflow-ct` → **30**. `ddpm-ct` → **1000** (mandatory; the DDPM scheduler runs with fewer but emits a warning and degrades quality). `mask_generation_num_inference_steps` is always **1000** — the mask DM is DDPM regardless of which image-DM variant you pick.
+CT-only, strengthens tumor signal. `0` (default) = off. `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Distinct from the modality-CFG above (same math, different unconditional branch).
 
 ## Quality check loop
 

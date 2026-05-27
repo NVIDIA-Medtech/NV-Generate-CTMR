@@ -259,7 +259,7 @@ A 2-tuple `(synthetic_images, combine_label)`:
 | `autoencoder_tp_num_splits` | `LDMSampler.__init__` (via `config_infer.json`) | Tensor-parallel splits inside the AE forward, `∈ {1, 2, 4, 8, 16}`. Higher = lower per-GPU VRAM, slower. |
 | `noise_factor` | hardcoded `1.0` in `LDMSampler.__init__` | Scales the initial noise. |
 
-For **validated presets** mapping (GPU memory, `output_size`) → (`autoencoder_sliding_window_infer_size`, overlap, `autoencoder_tp_num_splits`, `num_inference_steps`), and the full "five things to set in `config_infer.json`" walkthrough (modality, output_size/spacing from FOV, AE knobs, CFG tumor, num_inference_steps), see the **"How to configure a run"** section in [`infer_mask-image-paired.md`](infer_mask-image-paired.md). The same presets apply here — this script consumes the same `config_infer.json`.
+For **validated presets** mapping (GPU memory, `output_size`) → (`autoencoder_sliding_window_infer_size`, overlap, `autoencoder_tp_num_splits`), and the per-knob walkthrough (modality, AE knobs by GPU, `spacing = FOV / output_size`, `cfg_guidance_scale_tumor`), see the **"How to configure a run"** section in [`infer_mask-image-paired.md`](infer_mask-image-paired.md). The same presets apply here — this script consumes the same `config_infer.json`.
 
 ## Output-size + spacing constraints
 
