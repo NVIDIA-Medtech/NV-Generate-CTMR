@@ -35,6 +35,7 @@ Key capabilities:
 
 ## News
 
+- **[May 2026]** — Added operator-focused [inference skills](skills/) (`infer_image-only`, `infer_image-from-mask`, `infer_mask-image-paired`, `infer_mask-only`, `download-models`) with end-to-end worked examples per variant. Disambiguated the two flavors of classifier-free guidance into `cfg_guidance_scale_modality` (image-only path; required `> 0` for MR) and `cfg_guidance_scale_tumor` (CT mask-conditioned path); legacy `cfg_guidance_scale` is accepted with a `DeprecationWarning` for one release.
 - **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain v0 models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images. The training data of this version v0 is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE).
 - **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI
 repo to this NV-Generate-CTMR repo.
