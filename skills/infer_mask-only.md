@@ -1,15 +1,15 @@
 ---
 name: infer_mask-only
-description: Explains how NV-Generate-CTMR generates a 3D organ-label mask from scratch (no input image needed) using anatomy_size conditioning. Trigger when the user asks "how does mask generation work", "how do I generate a synthetic mask", "what does ldm_conditional_sample_one_mask do", "explain the mask diffusion model", or any low-level question about the mask LDM pipeline.
+description: Explains the mask-generation stage of NV-Generate-CTMR — how to drive it via config_infer.json (Path A "diffusion from scratch" vs Path B "training-mask database"), the anatomy_size conditioning vector, and the output mask format. Trigger when the user asks "how do I control the mask shape", "what does controllable_anatomy_size do", "how does Path A / Path B differ", or wants to understand the mask stage of the paired pipeline.
 ---
 
-# Mask generation (NV-Generate-CTMR)
+# Mask-only generation (NV-Generate-CTMR)
 
-This skill explains how NV-Generate-CTMR samples a **3D body-region label mask** from scratch, conditioned on a small organ-size vector. The mask is the input to the ControlNet-conditioned image LDM (see the `infer_image-from-mask` skill).
+This skill covers the **mask-generation stage** that runs inside the paired pipeline (`scripts.inference`). It is not a standalone CLI — masks come out of the same `python -m scripts.inference` invocation that generates the paired image (see [`infer_mask-image-paired`](infer_mask-image-paired.md) for the run command).
 
-Code entry point: `scripts.sample_mask.ldm_conditional_sample_one_mask`.
+The mask stage produces a 3D MAISI-labeled volume that subsequently conditions the image LDM. **CT-only** — the mask DM was trained on CT masks, and there is no MR equivalent.
 
-## TL;DR
+## Workflow
 
 ```text
 [anatomy_size  ──┐
@@ -31,24 +31,28 @@ Code entry point: `scripts.sample_mask.ldm_conditional_sample_one_mask`.
                                           [final mask]
 ```
 
-## Inputs to `ldm_conditional_sample_one_mask`
+## Configuration: Path A vs Path B
 
-| Argument | Type | Description |
+The mask stage has two paths, dispatched by `controllable_anatomy_size` in `config_infer.json`:
+
+| Path | Trigger | What happens |
 |---|---|---|
-| `autoencoder` | `AutoencoderKlMaisi` | The frozen 8-bit-input / 125-channel-output mask AE. Loaded from `models/mask_generation_autoencoder.pt`. |
-| `diffusion_unet` | `DiffusionModelUNet` | The mask DM (operating on the AE's 4-channel latents). Loaded from `models/mask_generation_diffusion_unet.pt`. |
-| `noise_scheduler` | `DDPMScheduler` | **Mask DM is trained with DDPM**, so `num_inference_steps` should equal `num_train_timesteps` (typically 1000). |
-| `scale_factor` | float | Latent normalization factor used at AE training. Default `1.0055984258651733`. |
-| `anatomy_size` | list/Tensor of length 10 | Conditioning vector — see slot table below. |
-| `latent_shape` | tuple | Mask latent shape; e.g. `(4, 64, 64, 64)` for a 256³ output. |
-| `label_dict_remap_json` | str | Path to `configs/label_dict_124_to_132.json` (the AE-channel → MAISI-label crosswalk). |
-| `num_inference_steps` | int | DDPM sampling steps. Match `noise_scheduler.num_train_timesteps` for best quality. |
-| `autoencoder_sliding_window_infer_size` | list[int] | ROI for AE-decode sliding window. Default `[96, 96, 96]`. |
-| `autoencoder_sliding_window_infer_overlap` | float | Window overlap fraction. Default `0.6667`. |
+| **Path A** — diffusion from scratch | `controllable_anatomy_size` non-empty | Mask DM samples a new mask conditioned on the anatomy_size vector. |
+| **Path B** — training-mask DB lookup | `controllable_anatomy_size` empty | Look up a real training mask from `configs/all_mask_files_*.json` matching `body_region` + `anatomy_list` + `spacing` + `output_size`; apply light augmentation so the output isn't a verbatim copy. |
 
-### The `anatomy_size` slot table
+Knobs that drive these:
 
-The 10-d vector has organ-fixed slots:
+| Knob | Path | Effect |
+|---|---|---|
+| `controllable_anatomy_size` | A vs B switch | Non-empty list of `(organ_name, size)` tuples — at most 10 entries, at most 1 tumor — triggers Path A. Empty triggers Path B. |
+| `body_region` | B | Filters the mask DB. Any subset of `["head", "chest", "thorax", "abdomen", "pelvis", "lower"]`. |
+| `anatomy_list` | A and B | Required organs. Used by Path B's `find_masks` filter; also used by both paths as the post-process `filter_mask_with_organs` (only listed organs survive in the output). |
+| `output_size`, `spacing` | A and B | Target shape and voxel spacing — see [`infer_mask-image-paired`](infer_mask-image-paired.md) for the GPU-memory presets table. |
+| `mask_generation_num_inference_steps` | A | Always **1000** — the mask DM is DDPM regardless of the image-DM variant; lowering it silently degrades mask quality. |
+
+## Input: the `anatomy_size` slot vector (Path A only)
+
+When Path A runs, the user-specified `(organ_name, size)` tuples are turned into a 10-d vector with fixed slots:
 
 | Index | Organ | Index | Tumor |
 |---|---|---|---|
@@ -58,135 +62,32 @@ The 10-d vector has organ-fixed slots:
 | 3 | pancreas | 8 | colon cancer primaries |
 | 4 | colon | 9 | bone lesion |
 
-Each value is one of:
+Each slot value is either:
 
-- A float in `[0, 1]` — desired size on a normalized scale
-- `-1.0` — "no preference / don't care"
+- A float in `[0, 1]` — desired size on a normalized scale, **or**
+- `-1.0` — "no preference / don't care".
 
-`LDMSampler.prepare_anatomy_size_condition` constructs the fully-specified vector:
-
-1. Builds a sparse 10-d vector from user-specified `(organ, size)` tuples.
-2. Looks up `configs/all_anatomy_size_conditions.json` — a database of size vectors from real training cases.
-3. Picks the database entry with minimum L1 distance to the user's specified slots (`-1.0`/None ignored).
-4. **Overwrites** the user-specified slots in the chosen database vector with the user's exact values.
-
-The result lies near the training distribution — the model has actually seen similar combinations.
-
-## Algorithm step by step
-
-### 1. Initialize random noise
-
-```python
-latents = initialize_noise_latents(latent_shape, device)  # shape (1, 4, H, W, D) in fp16
-```
-
-### 2. Prepare the conditioning tensor
-
-```python
-anatomy_size = torch.FloatTensor(anatomy_size).unsqueeze(0).unsqueeze(0).half().to(device)
-# shape: (1, 1, 10) — batch × seq_len × cross_attention_dim
-```
-
-`cross_attention_dim=10` in the mask DM config matches this exactly.
-
-### 3. DDPM sampling loop
-
-```python
-noise_scheduler.set_timesteps(num_inference_steps=num_inference_steps)
-inferer_ddpm = DiffusionInferer(noise_scheduler)
-latents = inferer_ddpm.sample(
-    input_noise=latents,
-    diffusion_model=diffusion_unet,
-    scheduler=noise_scheduler,
-    conditioning=anatomy_size,    # passed as cross-attention context
-)
-```
-
-`DiffusionInferer.sample` runs the standard DDPM denoising loop:
-
-```text
-for t = T, T-1, ..., 1:
-    eps_hat = diffusion_unet(latents, timesteps=t, context=anatomy_size)
-    latents = scheduler.step(eps_hat, t, latents)
-```
-
-The UNet has `with_conditioning=true` so the `context=anatomy_size` argument routes through cross-attention layers.
-
-### 4. Decode latent through the mask AE (sliding window)
-
-The mask AE decoder produces a **125-channel softmax** per spatial location. For 3D volumes the full pass doesn't fit in GPU memory, so a sliding-window inferer tiles the volume:
-
-```python
-inferer = SlidingWindowInferer(
-    roi_size=autoencoder_sliding_window_infer_size,   # default [96, 96, 96]
-    sw_batch_size=1,
-    mode="gaussian",                                  # blended overlap
-    overlap=autoencoder_sliding_window_infer_overlap, # default 0.6667
-    sw_device=device,
-    device=torch.device("cpu"),                       # store on CPU to save VRAM
-)
-synthetic_mask = dynamic_infer(inferer, recon_model, latents)
-# shape: (1, 125, H_full, W_full, D_full)
-```
-
-`ReconModel.forward(z) = autoencoder.decode_stage_2_outputs(z / scale_factor)` undoes the latent normalization before decoding.
-
-### 5. Softmax → argmax → labels 0..124
-
-```python
-synthetic_mask = torch.softmax(synthetic_mask, dim=1)
-synthetic_mask = torch.argmax(synthetic_mask, dim=1, keepdim=True)
-# (1, 1, H, W, D) integer values in 0..124
-```
-
-These are **AE-channel indices**, not the final MAISI label values.
-
-### 6. Remap to MAISI vocabulary
-
-```python
-synthetic_mask = remap_labels(synthetic_mask, label_dict_remap_json)
-```
-
-`configs/label_dict_124_to_132.json` is a 125-entry table where each row reads `organ_name: [ae_channel, maisi_label_value]`. E.g. `"spleen": [2, 3]` means AE channel 2 → MAISI label 3. The remap converts the 0..124 image into the MAISI label vocabulary (1..132 with gaps, plus `body=200`).
-
-### 7. Post-processing
-
-```python
-labels = [23, 24, 26, 27, 128]  # lung/panc/hep/colon-cancer/bone-lesion
-target_tumor_label = None
-for index, size in enumerate(anatomy_size[0, 0, 5:10]):
-    if size.item() != -1.0:
-        target_tumor_label = labels[index]
-data = general_mask_generation_post_process(data, target_tumor_label, device)
-```
-
-`general_mask_generation_post_process` (in `scripts/utils.py`):
-
-- Suppresses spurious non-largest connected components for major organs
-- Keeps only the largest tumor component for the requested tumor (if any)
-- Dilates/erodes to clean boundaries
+The pipeline snaps the user-specified vector to the closest entry in `configs/all_anatomy_size_conditions.json` (a database of size vectors from real training cases), then **overwrites** the user-specified slots with the user's exact values. This keeps the conditioning vector near the training distribution while honouring user intent.
 
 ## Output
 
-A single 3D tensor of integer MAISI labels with shape `(1, 1, H, W, D)`. Includes standard MAISI organ labels (1..132 with gaps) and `body=200`.
+A 3D integer NIfTI of MAISI labels with shape `(H, W, D)`. Contains MAISI organ labels (1..132 with gaps) and the body envelope `200`. Saved by the paired CLI as `sample_<timestamp>_label.nii.gz` alongside the paired image.
 
 ## Output-size and spacing constraints
 
-The pretrained mask DM was trained at **256×256×256 × 1.5 mm isotropic**. Downstream resampling (`LDMSampler.ensure_output_size_and_spacing`) maps the generated mask to the user's requested `output_size` + `spacing`; major upsampling will degrade boundaries.
+The pretrained mask DM was trained at **256×256×256 × 1.5 mm isotropic** (Path A). Resampling to your requested `output_size` and `spacing` happens automatically; major upsampling degrades label boundaries, so stay close to 256³ × 1.5 mm when feasible. For Path B, mask candidates are drawn from a training-FOV distribution — the closer your requested FOV is to a mode of that distribution, the less reshaping is needed.
 
-## Two paths to obtain a mask in `LDMSampler.sample_multiple_images`
+## Related scripts
 
-1. **Generate from scratch** — triggered when `controllable_anatomy_size` is non-empty. Calls `ldm_conditional_sample_one_mask`.
-2. **Pick a real training mask** — triggered when `controllable_anatomy_size` is empty. Uses `find_masks` / `find_closest_masks` to retrieve a database entry that matches `body_region` + `anatomy_list`. Then do mask augmentation to make it different from the original real mask. No diffusion involved.
+| Script | Role |
+|---|---|
+| `scripts/sample_mask.py` | Mask-generation pipeline. Contains `ldm_conditional_sample_one_mask` (Path A) and the DB-lookup helpers `find_masks` / `find_closest_masks` (Path B). |
+| `scripts/sample.py` (`LDMSampler`) | Orchestrator: chooses Path A or B based on `controllable_anatomy_size`, then chains the image stage. |
+| `scripts/inference.py` | CLI entry point for the paired pipeline (mask stage + image stage together). |
+| `scripts/utils.py` | Label utilities: `binarize_labels`, `remap_labels`, `general_mask_generation_post_process`. |
 
-Both paths produce a label tensor that then feeds the `infer_image-from-mask` skill.
+## Related skills
 
-## Code references
-
-| Symbol | File | Notes |
-|---|---|---|
-| `ldm_conditional_sample_one_mask` | `scripts/sample_mask.py` | core sampling function |
-| `LDMSampler.prepare_anatomy_size_condition` | `scripts/sample.py` | sparse user input → fully-specified 10-d vector |
-| `LDMSampler.sample_one_mask` | `scripts/sample.py` | thin wrapper |
-| `LDMSampler.prepare_one_mask_and_meta_info` | `scripts/sample.py` | wraps `sample_one_mask` + spacing affine + body-region indices |
-| `binarize_labels`, `remap_labels`, `general_mask_generation_post_process` | `scripts/utils.py` | label utilities |
+- [`infer_mask-image-paired`](infer_mask-image-paired.md) — the CLI that drives this stage end-to-end.
+- [`infer_image-from-mask`](infer_image-from-mask.md) — what happens to the mask after this stage.
+- [`infer_image-only`](infer_image-only.md) — image-only generation (no mask DM involved).

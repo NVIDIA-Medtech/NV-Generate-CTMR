@@ -70,43 +70,7 @@ sample_one_mask()      read_mask_information(mask_file)
 save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
 ```
 
-### Two paths in detail
-
-**Path A — `controllable_anatomy_size` non-empty** (diffusion-generated mask):
-
-- User provides e.g. `[("pancreas", 0.5), ("liver", 0.7)]` in `config_infer.json`.
-- `prepare_anatomy_size_condition` builds the 10-d vector (see `infer_mask-only` skill).
-- `sample_one_mask` runs the mask DDPM.
-- Result is at fixed shape `256×256×256 × 1.5mm iso` (the mask DM's pretrained shape).
-- `ensure_output_size_and_spacing` resamples to the user's requested `output_size` + `spacing`.
-
-**Path B — `controllable_anatomy_size` empty** (real training mask):
-
-- `find_masks` queries `configs/all_mask_files_*.json` for masks matching `body_region` + `anatomy_list` + `spacing` + `output_size`.
-- If no exact match, `find_closest_masks` picks the closest by FOV / dim / spacing.
-- `read_mask_information` loads the mask via `val_transforms` (LoadImaged + Orientationd("RAS") + spacing scaling).
-- Optional `augmentation()` applies training-style mask augmentation if `if_aug` is set.
-
-Both paths then call `sample_one_pair` for the image stage.
-
-## `LDMSampler.__init__` — required state
-
-| Group | Argument | Source |
-|---|---|---|
-| Mask DM | `mask_generation_autoencoder` | `models/mask_generation_autoencoder.pt` |
-| Mask DM | `mask_generation_diffusion_unet` | `models/mask_generation_diffusion_unet.pt` |
-| Mask DM | `mask_generation_noise_scheduler` | DDPM scheduler (from network def) |
-| Mask DM | `mask_generation_scale_factor` | `1.0055984258651733` |
-| Mask DM | `mask_generation_latent_shape` | `(4, 64, 64, 64)` for 256³ output |
-| Image DM | `autoencoder`, `diffusion_unet`, `controlnet` | variant-specific checkpoints under `models/` |
-| Image DM | `noise_scheduler` | RFlow (rflow-ct/mr) or DDPM (ddpm-ct) |
-| Image DM | `scale_factor`, `latent_shape` | from the variant's network config |
-| Mask DB | `all_mask_files_json`, `all_mask_files_base_dir` | for Path B only |
-| Vocabularies | `label_dict_json`, `label_dict_remap_json` | `configs/label_dict.json`, `configs/label_dict_124_to_132.json` |
-| Anatomy size DB | `all_anatomy_size_conditions_json` | `configs/all_anatomy_size_conditions.json` (used by Path A) |
-| QC | `real_img_median_statistics` | `configs/image_median_statistics_ct.json` (CT-only quality check) |
-| User intent | `body_region`, `anatomy_list`, `controllable_anatomy_size`, `output_size`, `spacing`, `modality` | from `config_infer.json` |
-| Other | `device`, `output_dir`, `num_inference_steps`, `cfg_guidance_scale_tumor`, etc. | runtime / config |
+Which path runs is driven by `controllable_anatomy_size` in `config_infer.json`: empty → Path B (pick from the training-mask DB), non-empty → Path A (generate from scratch). For details on the mask-generation stage, see the [`infer_mask-only`](infer_mask-only.md) skill; for the image-from-mask stage, see [`infer_image-from-mask`](infer_image-from-mask.md).
 
 ## `dim` and `spacing` — same FOV rules as image-only
 
@@ -171,14 +135,6 @@ Driven by the scheduler the variant uses, not by GPU memory:
 - `ddpm-ct` → **1000** (DDPM scheduler). Lower values emit a warning and degrade quality — not optional.
 - `mask_generation_num_inference_steps` → always **1000**: the mask DM is DDPM regardless of which image-DM variant you pick.
 
-## Quality check loop
-
-`LDMSampler.quality_check_ct` runs after each image is generated (CT only; MR codes ≥ 8 skip the check):
-
-- For each label (liver, spleen, pancreas, kidney, lung, brain, tumors, bone), check that the **median HU value** of voxels with that label falls in the per-organ acceptable range stored in `configs/image_median_statistics_ct.json`.
-- If any label is an outlier → fail; retry mask + image generation up to `max_try_time=2` times.
-- If still failing after retries: save the last attempt and log a warning.
-
 ## Configuration knobs
 
 Live in the three configs:
@@ -208,26 +164,19 @@ For each successful generation, two files are saved to `output_dir`:
 - `sample_<timestamp>_image.nii.gz` — synthetic CT/MR
 - `sample_<timestamp>_label.nii.gz` — paired mask (filtered to `anatomy_list`)
 
-## Code references
+## Related scripts
 
-| Symbol | File |
+| Script | Role |
 |---|---|
-| `LDMSampler` | `scripts/sample.py` |
-| `LDMSampler.sample_multiple_images` (orchestrator) | `scripts/sample.py` |
-| `LDMSampler.prepare_anatomy_size_condition` (Path A) | `scripts/sample.py` |
-| `LDMSampler.find_closest_masks`, `read_mask_information` (Path B) | `scripts/sample.py` |
-| `LDMSampler.sample_one_pair` (image stage) | `scripts/sample.py` |
-| `LDMSampler.quality_check_ct` | `scripts/sample.py` |
-| `ldm_conditional_sample_one_mask` (mask DM) | `scripts/sample_mask.py` |
-| `ldm_conditional_sample_one_image` (image DM + ControlNet) | `scripts/infer_image_from_mask.py` |
-| `find_masks` (mask DB lookup) | `scripts/find_masks.py` |
-| `augmentation`, `remove_tumors` | `scripts/augmentation.py` |
-| `is_outlier` (quality check) | `scripts/quality_check.py` |
-| CLI entry point | `scripts/inference.py` |
+| `scripts/inference.py` | CLI entry point for this skill. |
+| `scripts/sample.py` (`LDMSampler`) | Orchestrator: dispatches the mask stage and the image stage, applies the QC retry loop. |
+| `scripts/sample_mask.py` | Mask-generation pipeline (Path A + Path B helpers). |
+| `scripts/infer_image_from_mask.py` | Image-from-mask pipeline (called from the orchestrator's image stage). |
+| `scripts/download_model_data.py` | Downloads mask DM + image DM + ControlNet weights. |
 
 ## Related skills
 
-- `infer_mask-only` — algorithm details for the mask stage.
-- `infer_image-from-mask` — algorithm details for the image stage.
-- `infer_image-only` — image-only path (no mask); covers FOV/dim/spacing table.
-- `download-models` — fetch checkpoints first.
+- [`infer_mask-only`](infer_mask-only.md) — mask-stage details.
+- [`infer_image-from-mask`](infer_image-from-mask.md) — image-stage details.
+- [`infer_image-only`](infer_image-only.md) — image-only path (no mask, including MR); covers the FOV / `dim` / `spacing` recommendations.
+- [`download-models`](download-models.md) — fetch checkpoints first.

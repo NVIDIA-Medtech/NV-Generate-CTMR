@@ -170,11 +170,27 @@ Slots correspond to `[head, chest, abdomen, pelvis]`. `rflow-ct` / `rflow-mr` / 
    - Keep `cfg_guidance_scale_modality` at the shipped default (CT → 0; MR-brain → 10; MR → 10) — see the CFG section above.
    - Optional: `random_seed`, `num_inference_steps`.
 4. Run `python -m scripts.diff_model_infer -t ... -e ... -c ...`.
-5. Output written to the `output_dir` in the environment config.
+
+## Output
+
+One file per sample is saved into `output_dir` (set in the environment config), named like `unet_3d_seed<seed>_size<H>x<W>x<D>_spacing<sx>x<sy>x<sz>_<timestamp>_rank<r>_modality<m>.nii.gz`. Intensity ranges:
+
+| Modality | dtype | Voxel value range |
+|---|---|---|
+| CT (modality `1..7`) | int16 NIfTI | HU, clipped to `[-1000, 1000]` |
+| MR (codes `8..32`) | int16 NIfTI | `[0, +∞)` |
+
+## Related scripts
+
+| Script | Role |
+|---|---|
+| `scripts/diff_model_infer.py` | CLI for this skill. Runs the image DM in isolation (no mask, no ControlNet). |
+| `scripts/download_model_data.py` | Downloads image-DM + AE weights for the chosen variant. |
+| `scripts/diff_model_setting.py` | Helper: distributed-init / config-loading / logger setup. |
 
 ## Related skills
 
-- `download-models` — fetch the right checkpoints.
-- `infer_mask-only` — generate a mask from scratch (the other algorithm in this repo).
-- `infer_image-from-mask` — generate an image FROM an existing mask (uses ControlNet).
-- `infer_mask-image-paired` — full mask + image paired pipeline (chains both).
+- [`download-models`](download-models.md) — fetch the right checkpoints.
+- [`infer_mask-only`](infer_mask-only.md) — mask-generation stage (the other half of the paired pipeline).
+- [`infer_image-from-mask`](infer_image-from-mask.md) — generate an image from an existing mask (CT-only, uses ControlNet).
+- [`infer_mask-image-paired`](infer_mask-image-paired.md) — full mask + image paired pipeline (chains both).
