@@ -151,29 +151,7 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
 
-#### Recommended FOV for MR `rflow-mr-brain` model
-
-Median FOV per (modality, acquisition plane) across the MR-RATE training set (batches 0–27, train+val splits). `N` counts unique source images (one 128³ embedding per image; whole-brain and skull-stripped share the same FOV since they're two preprocessings of the same subject). Total unique images per skull condition: **323 221**.
-
-| Modality | Plane | Median FOV (mm) | N |
-|---|---|---|---:|
-| T1 | axial | 240 × 240 × 174 | 47 810 |
-| T1 | sagittal | 176 × 250 × 250 | 69 268 |
-| T1 | coronal | 240 × 200 × 240 | 38 756 |
-| T2 | axial | 240 × 240 × 158 | 195 |
-| T2 | sagittal | 162 × 240 × 240 | 551 |
-| T2 | coronal | 200 × 180 × 200 | 125 |
-| FLAIR | axial | 250 × 250 × 175 | 27 990 |
-| FLAIR | sagittal | 176 × 250 × 250 | 58 421 |
-| FLAIR | coronal | 250 × 200 × 250 | 27 698 |
-| SWI | axial | 230 × 230 × 145 | 47 859 |
-| SWI | sagittal | 140 × 230 × 230 | 2 |
-| SWI | coronal | 230 × 155 × 230 | 4 |
-| MRA | axial | 220 × 220 × 158 | 37 |
-| MRA | sagittal | 158 × 250 × 250 | 98 |
-| MRA | coronal | 240 × 179 × 240 | 11 |
-
-Pick `dim` and `spacing` so `dim[i] × spacing[i]` matches the median FOV above. The slice-stacking axis (smallest FOV) should map to the smaller `dim` axis: axial → `dim[2]=128`, sagittal → `dim[0]=128`, coronal → `dim[1]=128`.
+For per-(modality, acquisition plane) FOV recommendations on `rflow-mr-brain`, see [detailed inference guide](./docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model).
 
 ### 2.3 CT Paired Image/Mask Generation
 

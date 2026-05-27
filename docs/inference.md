@@ -159,3 +159,27 @@ Recommended FOV is computed from median FOV of training data.
 | abdomen | mri_t2 (10) | 78 | 350.0 × 350.0 × 245.6 |
 
 Contrast-enhanced MRI is not supported.
+
+## Recommended FOV for MR `rflow-mr-brain` model
+
+Median FOV per (modality, acquisition plane) across the MR-RATE training set (batches 0–27, train+val splits). `N` counts unique source images (one 128³ embedding per image; whole-brain and skull-stripped share the same FOV — same subjects, two preprocessings). Total unique images per skull condition: **323 221**.
+
+| Modality | Plane | Median FOV (mm) | N |
+|---|---|---|---:|
+| T1 | axial | 240 × 240 × 174 | 47 810 |
+| T1 | sagittal | 176 × 250 × 250 | 69 268 |
+| T1 | coronal | 240 × 200 × 240 | 38 756 |
+| T2 | axial | 240 × 240 × 158 | 195 |
+| T2 | sagittal | 162 × 240 × 240 | 551 |
+| T2 | coronal | 200 × 180 × 200 | 125 |
+| FLAIR | axial | 250 × 250 × 175 | 27 990 |
+| FLAIR | sagittal | 176 × 250 × 250 | 58 421 |
+| FLAIR | coronal | 250 × 200 × 250 | 27 698 |
+| SWI | axial | 230 × 230 × 145 | 47 859 |
+| SWI | sagittal | 140 × 230 × 230 | 2 |
+| SWI | coronal | 230 × 155 × 230 | 4 |
+| MRA | axial | 220 × 220 × 158 | 37 |
+| MRA | sagittal | 158 × 250 × 250 | 98 |
+| MRA | coronal | 240 × 179 × 240 | 11 |
+
+Pick the row matching your target acquisition plane, then pick the modality code for the skull condition you want (`9..20` whole-brain or `29..32` skull-stripped — see `configs/modality_mapping.json`). Set `dim` and `spacing` so `dim[i] × spacing[i]` matches the median FOV; the slice-stacking axis (smallest FOV) should map to the smaller `dim` axis: axial → `dim[2]=128`, sagittal → `dim[0]=128`, coronal → `dim[1]=128`.
