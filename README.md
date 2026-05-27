@@ -110,15 +110,12 @@ This repository provides **four model variants** for medical image generation: `
 >
 > See also the `infer_image-only` / `infer_mask-image-paired` skills under [skills/](skills/) for end-to-end workflow guidance.
 >
-> ⚠️ **`cfg_guidance_scale_modality` defaults differ by modality.** Classifier-free guidance on the modality conditioning is required for usable **MR** output; **CT** does not need it.
+> ⚠️ **`cfg_guidance_scale_modality` defaults** — keep the shipped values:
 >
-> | Variant | Recommended `cfg_guidance_scale_modality` | Why |
-> |---|---|---|
-> | `rflow-ct`, `ddpm-ct` | **0** | Modality is fixed (`CT=1`); conditional ≈ unconditional, so CFG has no effect. |
-> | `rflow-mr-brain` | **10** (default in `config_maisi_diff_model_rflow-mr-brain.json`) | Contrast (T1/T2/FLAIR/SWI ± skull-stripped) is the conditioning; CFG steers the output toward the requested contrast. Setting `0` produces washed-out, contrast-ambiguous brain images. |
-> | `rflow-mr` | **10** (default in `config_maisi_diff_model_rflow-mr.json`) | Same reason — contrast and anatomy are the conditioning. `0` gives unconditional samples that ignore the requested modality. |
->
-> The shipped per-variant configs already have the correct defaults — do **not** lower the MR values without a deliberate reason.
+> | Variant | `cfg_guidance_scale_modality` |
+> |---|---|
+> | `rflow-ct`, `ddpm-ct` | **0** |
+> | `rflow-mr`, `rflow-mr-brain` | **10** |
 
 ### 2.1 Installation
 
