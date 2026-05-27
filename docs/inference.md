@@ -135,7 +135,7 @@ Contrast-enhanced MRI is not supported. For brain MRI, prefer the dedicated `rfl
 
 ## Recommended FOV for MR `rflow-mr-brain` model
 
-Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N` counts unique source images; whole-brain and skull-stripped share the same FOV since they're two preprocessings of the same subject. Total unique images per skull condition: **323 221**.
+Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N` counts unique source images; whole-brain and skull-stripped share the same FOV since they're two preprocessings of the same subject. Total unique images per skull condition (sum of the rows below): **318 825**.
 
 | Modality | Plane | Median FOV (mm) | N |
 |---|---|---|---:|
@@ -155,7 +155,7 @@ Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N
 | MRA | sagittal | 158 × 250 × 250 | 98 |
 | MRA | coronal | 240 × 179 × 240 | 11 |
 
-Pick the row matching your target acquisition plane, then pick the modality code for the skull condition you want (`9..20` whole-brain or `29..32` skull-stripped — see [Modality codes](#modality-codes)). Set `dim` and `spacing` so `dim[i] × spacing[i]` matches the median FOV; the slice-stacking axis (smallest FOV) should map to the smaller `dim` axis: axial → `dim[2]=128`, sagittal → `dim[0]=128`, coronal → `dim[1]=128`.
+Pick the row matching your target acquisition plane, then pick the modality code for the skull condition you want (`9..20` whole-brain or `29..33` skull-stripped — see [Modality codes](#modality-codes)). Set `dim` and `spacing` so `dim[i] × spacing[i]` matches the median FOV; the slice-stacking axis (smallest FOV) should map to the smaller `dim` axis: axial → `dim[2]=128`, sagittal → `dim[0]=128`, coronal → `dim[1]=128`.
 
 ## Modality codes
 
@@ -168,11 +168,13 @@ Control the MR contrast (and skull-stripping state for `rflow-mr-brain`) by sett
 | 9 | mri_t1 | `rflow-mr`, `rflow-mr-brain` (whole-brain) |
 | 10 | mri_t2 | `rflow-mr`, `rflow-mr-brain` (whole-brain) |
 | 11 | mri_flair | `rflow-mr`, `rflow-mr-brain` (whole-brain) |
+| 16 | mri_mra | `rflow-mr-brain` (whole-brain) |
 | 20 | mri_swi | `rflow-mr-brain` (whole-brain) |
 | 29 | mri_t1_skull_stripped | `rflow-mr-brain` (skull-stripped) |
 | 30 | mri_t2_skull_stripped | `rflow-mr-brain` (skull-stripped) |
 | 31 | mri_flair_skull_stripped | `rflow-mr-brain` (skull-stripped) |
 | 32 | mri_swi_skull_stripped | `rflow-mr-brain` (skull-stripped) |
+| 33 | mri_mra_skull_stripped | `rflow-mr-brain` (skull-stripped) |
 
 ## Configuration parameter reference
 
