@@ -105,6 +105,7 @@ This repository provides **four model variants** for medical image generation: `
 >
 > - **CT** (`rflow-ct`, `ddpm-ct`): [docs/inference.md#recommended-spacing-for-ct](docs/inference.md#recommended-spacing-for-ct)
 > - **MR** (`rflow-mr`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-model)
+> - **MR Brain** (`rflow-mr-brain`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model)
 >
 > See also the `infer_image-only` / `infer_mask-image-paired` skills under [skills/](skills/) for end-to-end workflow guidance.
 >
