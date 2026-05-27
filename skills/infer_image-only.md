@@ -35,7 +35,7 @@ Pick the variant by:
 1. Modality + anatomy (brain MRI → `rflow-mr-brain`; CT → `rflow-ct`; other MRI → `rflow-mr`).
 2. Whether you need explicit body-region conditioning (use `ddpm-ct` if you want `top_region_index` / `bottom_region_index` as inputs; else prefer `rflow-ct` — 33× faster, similar FID).
 
-## Quick Start commands
+## Command to run
 
 Each variant follows the same two-step pattern: download weights, then run inference.
 
@@ -55,61 +55,41 @@ For `ddpm-ct`: use `network="ddpm"` and the corresponding `config_network_ddpm.j
 
 > ⚠️ **`ddpm-ct` requires `num_inference_steps = 1000`** (vs 30 for `rflow-ct` / `rflow-mr*`). Lower values silently degrade output — the DDPM scheduler emits a warning but still runs. This makes `ddpm-ct` ~33× slower than `rflow-ct`. Prefer `rflow-ct` unless you specifically need body-region indices.
 
-## Choosing `dim` and `spacing` — the FOV knob
+### End-to-end example: T1-weighted whole-brain axial MRI
 
-The two most important knobs are **`dim`** (voxel grid size) and **`spacing`** (voxel size in mm). They live in the `diffusion_unet_inference` block of `configs/config_maisi_diff_model_<variant>.json`:
+Most-supported combination in the MR-RATE training set (47 810 axial T1 images — see the [per-plane FOV table for `rflow-mr-brain`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model) below). Median training FOV is 240 × 240 × 174 mm; `dim` and `spacing` below reproduce that.
 
-```json
-"diffusion_unet_inference": {
-    "dim": [256, 256, 256],
-    "spacing": [1, 1, 1],
-    ...
-}
+```bash
+# 1. Download weights (one-time, ~3 GB).
+python -m scripts.download_model_data --version rflow-mr-brain --root_dir "./" --model_only
+
+# 2. Edit configs/config_maisi_diff_model_rflow-mr-brain.json so the
+#    `diffusion_unet_inference` block contains:
+#      "dim":     [256, 256, 128],           # axial: slice-stack axis on z (smaller dim)
+#      "spacing": [0.94, 0.94, 1.36],        # → FOV 240×240×174 mm, matches T1-axial median
+#      "modality": 9,                        # T1 whole-brain (29 for T1 skull-stripped)
+#      "cfg_guidance_scale_modality": 10,    # required for MR; this is the shipped default
+#      "num_inference_steps": 30,
+#      "random_seed": 0
+
+# 3. Run inference (single GPU).
+python -m scripts.diff_model_infer \
+    -t ./configs/config_network_rflow.json \
+    -e ./configs/environment_maisi_diff_model_rflow-mr-brain.json \
+    -c ./configs/config_maisi_diff_model_rflow-mr-brain.json
 ```
 
-The **field of view (FOV)** in each axis is `dim[i] × spacing[i]` mm. Pick the pair so the FOV covers your target anatomy plus ~10% margin.
+**Expected output**: a NIfTI under the `output_dir` set in `environment_maisi_diff_model_rflow-mr-brain.json`, named like `unet_3d_seed0_size256x256x128_spacing0.94x0.94x1.36_<timestamp>_rank0_modality9.nii.gz`.
 
-### Hard constraints (validated by `check_input_ct` / `check_input_mr`)
+For another (modality, plane) combination, look up the median FOV in the [per-plane FOV table for `rflow-mr-brain`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model), set `dim` so the slice-stacking axis maps to the smaller `dim[i]=128` (axial → z, sagittal → x, coronal → y), and compute `spacing[i] = FOV[i] / dim[i]`. Swap `modality` to the matching code (`9..20` whole-brain or `29..32` skull-stripped).
 
-For CT (`rflow-ct`, `ddpm-ct`):
+## How to configure a run
 
-- `dim[0] == dim[1]`
-- `dim[0] ∈ {256, 384, 512}`
-- `dim[2] ∈ {128, 256, 384, 512, 640, 768}`
-- `spacing[0] == spacing[1]`
-- `spacing[0] ∈ [0.5, 3.0]` mm, `spacing[2] ∈ [0.5, 5.0]` mm
-- Recommended `FOV_xy ≥ 256` mm for head, `≥ 384` mm for abdomen/body
+All knobs live in `configs/config_maisi_diff_model_<variant>.json` under the `diffusion_unet_inference` block. The numbered steps below mirror the parallel **"How to configure a run"** in [`infer_mask-image-paired.md`](infer_mask-image-paired.md) so the two skills are easy to compare. Steps that don't apply here (AE sliding-window knobs, `cfg_guidance_scale_tumor`) are flagged N/A.
 
-For MR (`rflow-mr`, `rflow-mr-brain`):
+### 1. `modality` → driven by your anatomy
 
-- At least two of `dim[0..2]` must be equal
-- If `dim[2]=128`: `dim[0]=dim[1] ∈ {128, 256, 384, 512}`
-- If `dim[2]=256`: `dim ∈ {[128,256,256], [256,128,256], [256,256,256]}`
-- `spacing ∈ [0.4, 5.0]` mm per axis
-
-### Recommended `(dim, spacing)` by anatomical target
-
-| Target | `dim` | `spacing` (mm) | Resulting FOV (mm) | Variant |
-|---|---|---|---|---|
-| Brain (whole-brain, T1/T2/FLAIR/SWI) | `(256, 256, 256)` | `(1.0, 1.0, 1.0)` | `256 × 256 × 256` | `rflow-mr-brain` |
-| Brain skull-stripped | `(256, 256, 256)` | `(1.0, 1.0, 1.0)` | `256 × 256 × 256` | `rflow-mr-brain` |
-| Chest (single-slice axial coverage) | `(512, 512, 128)` | `(0.78, 0.78, 4.0)` | `400 × 400 × 512` | `rflow-ct` |
-| Abdomen | `(512, 512, 256)` | `(1.0, 1.0, 1.5)` | `512 × 512 × 384` | `rflow-ct` |
-| Whole body (torso → mid-femur) | `(512, 512, 512)` | `(1.5, 1.5, 1.5)` | `768 × 768 × 768` | `rflow-ct` |
-| Long-axis whole-body (head → feet) | `(512, 512, 768)` | `(1.5, 1.5, 1.5)` | `768 × 768 × 1152` | `rflow-ct` (max supported) |
-
-### Quick formula
-
-1. Pick `spacing` first to control voxel anisotropy and resolution.
-2. Pick `dim` so `dim × spacing` covers your target anatomy plus ~10% margin.
-3. Round `dim` to the nearest allowed value (constraints above).
-4. Check the resulting FOV with `print([dim[i]*spacing[i] for i in range(3)])` before running.
-
-See `docs/inference.md` for the full per-modality table.
-
-## Modality codes
-
-Set `"modality"` in the variant's `config_maisi_diff_model_<variant>.json`. Codes from `configs/modality_mapping.json`:
+Set `"modality"` to the modality code matching what you want to generate. Codes from `configs/modality_mapping.json`:
 
 | Code | Modality | Notes |
 |---|---|---|
@@ -124,32 +104,105 @@ Set `"modality"` in the variant's `config_maisi_diff_model_<variant>.json`. Code
 | 31 | mri_flair_skull_stripped | FLAIR skull-stripped |
 | 32 | mri_swi_skull_stripped | SWI skull-stripped |
 
-## Body-region indices (`ddpm-ct` only)
-
-For `ddpm-ct`, the UNet also accepts one-hot body-region indices:
+**For `ddpm-ct` only**, also set one-hot body-region indices:
 
 ```json
 "top_region_index":    [0, 1, 0, 0],   // chest
 "bottom_region_index": [0, 0, 1, 0]    // abdomen
 ```
 
-Slots correspond to `[head, chest, abdomen, pelvis]`. `rflow-ct` / `rflow-mr` / `rflow-mr-brain` do **not** use these — their `include_top_region_index_input` is False.
+Slots are `[head, chest, abdomen, pelvis]`. `rflow-ct` / `rflow-mr` / `rflow-mr-brain` do **not** use these — `include_top_region_index_input` is False.
 
-## Workflow summary
+### 2. AE sliding-window knobs → N/A in this path
 
-1. Decide variant (CT vs MR vs MR-brain; RFlow vs DDPM).
-2. Download model weights: `python -m scripts.download_model_data --version <variant> --root_dir ./ --model_only`.
-3. Edit `config_maisi_diff_model_<variant>.json`:
-   - Set `dim` and `spacing` per the FOV table above.
-   - Set `modality` per the table above (CT → 1; MR variants → 8..32).
-   - For `ddpm-ct` only: set `top_region_index` / `bottom_region_index`.
-   - Optional: `random_seed`, `num_inference_steps`, `cfg_guidance_scale`.
-4. Run `python -m scripts.diff_model_infer -t ... -e ... -c ...`.
-5. Output written to the `output_dir` in the environment config.
+`autoencoder_sliding_window_infer_size` / `_overlap` / `autoencoder_tp_num_splits` are **not exposed** by `scripts.diff_model_infer` — they're hardcoded (`roi_size=[80, 80, 80]`, `overlap=0.4`, no TP split). If you hit OOM on the AE decode, your only knob is reducing `dim`. See the GPU-memory presets table in [`infer_mask-image-paired.md`](infer_mask-image-paired.md#2-autoencoder_sliding_window_infer_size-autoencoder_sliding_window_infer_overlap-autoencoder_tp_num_splits--from-gpu-memory--output_size) if you need those.
+
+### 3. `dim` and `spacing` → from FOV
+
+The most important knobs. Live in the `diffusion_unet_inference` block of `configs/config_maisi_diff_model_<variant>.json`:
+
+```json
+"diffusion_unet_inference": {
+    "dim": [256, 256, 256],
+    "spacing": [1, 1, 1],
+    ...
+}
+```
+
+The relationship is **`FOV[i] = dim[i] × spacing[i]`**, i.e. **`spacing[i] = FOV[i] / dim[i]`**. Pick FOV first (anatomy-driven), then `dim` (resolution / VRAM budget); `spacing` falls out.
+
+**Recommended `(dim, spacing)` by anatomical target** — see the canonical FOV tables in [`docs/inference.md`](../docs/inference.md):
+
+| Target | Variant | FOV reference |
+|---|---|---|
+| CT (chest / abdomen / whole-body / long-axis) | `rflow-ct`, `ddpm-ct` | [Recommended Spacing for CT](../docs/inference.md#recommended-spacing-for-ct) |
+| Non-brain MRI (prostate, breast, abdomen) | `rflow-mr` | [Recommended FOV for MR `rflow-mr`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-model) |
+| Brain MRI (T1/T2/FLAIR/SWI × axial/sagittal/coronal × whole-brain or skull-stripped) | `rflow-mr-brain` | [Recommended FOV for MR `rflow-mr-brain`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model) |
+
+**Hard constraints** (validated by `check_input_ct` / `check_input_mr`):
+
+For CT (`rflow-ct`, `ddpm-ct`):
+
+- `dim[0] == dim[1]`, `dim[0] ∈ {256, 384, 512}`, `dim[2] ∈ {128, 256, 384, 512, 640, 768}`
+- `spacing[0] == spacing[1]`, `spacing[0] ∈ [0.5, 3.0]` mm, `spacing[2] ∈ [0.5, 5.0]` mm
+- Recommended `FOV_xy ≥ 256` mm for head, `≥ 384` mm for abdomen/body
+
+For MR (`rflow-mr`, `rflow-mr-brain`):
+
+- At least two of `dim[0..2]` must be equal
+- If `dim[2]=128`: `dim[0]=dim[1] ∈ {128, 256, 384, 512}`
+- If `dim[2]=256`: `dim ∈ {[128,256,256], [256,128,256], [256,256,256]}`
+- `spacing ∈ [0.4, 5.0]` mm per axis
+
+Sanity-check the resulting FOV with `print([dim[i]*spacing[i] for i in range(3)])` before running. See `docs/inference.md` for the full per-modality FOV table.
+
+### 4. `cfg_guidance_scale_modality`
+
+Classifier-free guidance (CFG) scale for the modality conditioning. CFG runs the model twice per step (once with the modality label, once with it zeroed) and amplifies the difference — so this knob steers the output toward the requested **modality** (the `class_labels` / modality tensor). Effect of the value:
+
+- **`0`** — modality conditioning is effectively ignored. For CT this is fine (modality is fixed at `CT=1`, so guidance has nothing to amplify). For **MR variants this is the failure mode** ([issue #29](https://github.com/NVIDIA-Medtech/NV-Generate-CTMR/issues/29)): the output is washed-out and doesn't commit to the requested contrast (T1 / T2 / FLAIR / SWI).
+- **`~10`** — validated value for MR. Output looks like the requested contrast.
+- **Much above 10** — over-saturates contrast, introduces artifacts.
+- **Any value `> 0` roughly doubles UNet compute and VRAM** (conditional + unconditional run in one doubled batch). MR inference therefore costs ~2× CT at the same `dim`.
+
+Recommended values per variant (these are the shipped defaults — keep them):
+
+| Variant | `cfg_guidance_scale_modality` |
+|---|---|
+| `rflow-ct` | **0** |
+| `ddpm-ct` | **0** |
+| `rflow-mr-brain` | **10** |
+| `rflow-mr` | **10** |
+
+### 5. `cfg_guidance_scale_tumor` → N/A in this path
+
+### 6. `num_inference_steps`
+
+Driven by the scheduler the variant uses, not by GPU memory:
+
+- `rflow-ct` / `rflow-mr` / `rflow-mr-brain` → **30** (RFlow scheduler).
+- `ddpm-ct` → **1000** (DDPM scheduler). Lower values emit a warning and degrade output quality — not optional.
+
+## Output
+
+One file per sample is saved into `output_dir` (set in the environment config), named like `unet_3d_seed<seed>_size<H>x<W>x<D>_spacing<sx>x<sy>x<sz>_<timestamp>_rank<r>_modality<m>.nii.gz`. Intensity ranges:
+
+| Modality | dtype | Voxel value range |
+|---|---|---|
+| CT (modality `1..7`) | int16 NIfTI | HU, clipped to `[-1000, 1000]` |
+| MR (codes `8..32`) | int16 NIfTI | `[0, +∞)` |
+
+## Related scripts
+
+| Script | Role |
+|---|---|
+| `scripts/diff_model_infer.py` | CLI for this skill. Runs the image DM in isolation (no mask, no ControlNet). |
+| `scripts/download_model_data.py` | Downloads image-DM + AE weights for the chosen variant. |
+| `scripts/diff_model_setting.py` | Helper: distributed-init / config-loading / logger setup. |
 
 ## Related skills
 
-- `download-models` — fetch the right checkpoints.
-- `infer_mask-generation` — generate a mask from scratch (the other algorithm in this repo).
-- `infer_image-from-mask` — generate an image FROM an existing mask (uses ControlNet).
-- `infer_mask-image-paired` — full mask + image paired pipeline (chains both).
+- [`download-models`](download-models.md) — fetch the right checkpoints.
+- [`infer_mask-only`](infer_mask-only.md) — mask-generation stage (the other half of the paired pipeline).
+- [`infer_image-from-mask`](infer_image-from-mask.md) — generate an image from an existing mask (CT-only, uses ControlNet).
+- [`infer_mask-image-paired`](infer_mask-image-paired.md) — full mask + image paired pipeline (chains both).
