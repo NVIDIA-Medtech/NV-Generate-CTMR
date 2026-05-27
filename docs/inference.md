@@ -139,7 +139,7 @@ Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N
 
 > ℹ️ The table covers axial, sagittal, and coronal scans only. The training set also includes images acquired in oblique orientations (not summarized here); the model has seen those during training but they are excluded from this reference table because the axial/sagittal/coronal cases are what users typically request at inference.
 >
-> ⚠️ **MRA** has very few training images across all three planes (37 / 98 / 11), so output quality at `mri_mra` (16) / `mri_mra_skull_stripped` (33) is not guaranteed.
+> ⚠️ Some (modality, plane) combinations have very few training images — output quality is not guaranteed for: **MRA** all planes (37 / 98 / 11), **SWI sagittal** (2), **SWI coronal** (4).
 
 | Modality | Plane | Median FOV (mm) | N |
 |---|---|---|---:|
