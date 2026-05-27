@@ -124,7 +124,7 @@ Set `"modality"` in the variant's `config_maisi_diff_model_<variant>.json`. Code
 | 31 | mri_flair_skull_stripped | FLAIR skull-stripped |
 | 32 | mri_swi_skull_stripped | SWI skull-stripped |
 
-## Classifier-free guidance (`cfg_guidance_scale`)
+## Classifier-free guidance (`cfg_guidance_scale_modality`)
 
 This knob steers the output toward the requested **modality** (the `class_labels` / modality tensor). Effect of the value:
 
@@ -135,14 +135,14 @@ This knob steers the output toward the requested **modality** (the `class_labels
 
 Recommended values per variant (these are the shipped defaults — keep them):
 
-| Variant | `cfg_guidance_scale` |
+| Variant | `cfg_guidance_scale_modality` |
 |---|---|
 | `rflow-ct` | **0** |
 | `ddpm-ct` | **0** |
 | `rflow-mr-brain` | **10** |
 | `rflow-mr` | **10** |
 
-> ⚠️ The **mask-conditioned CT pipelines** ([`infer_image-from-mask`](infer_image-from-mask.md), [`infer_mask-image-paired`](infer_mask-image-paired.md)) use a separate CFG knob called `cfg_guidance_scale_tumor` for *tumor* strength on a CT ControlNet, where `0` is the correct default. The two keys are now distinct (`cfg_guidance_scale` here vs. `cfg_guidance_scale_tumor` there); don't transfer the "`0` is fine" rule from those skills to MR inference here.
+> ⚠️ The **mask-conditioned CT pipelines** ([`infer_image-from-mask`](infer_image-from-mask.md), [`infer_mask-image-paired`](infer_mask-image-paired.md)) use a separate CFG knob called `cfg_guidance_scale_tumor` for *tumor* strength on a CT ControlNet, where `0` is the correct default. The two keys are now distinct (`cfg_guidance_scale_modality` here vs. `cfg_guidance_scale_tumor` there); don't transfer the "`0` is fine" rule from those skills to MR inference here.
 
 ## Body-region indices (`ddpm-ct` only)
 
@@ -163,7 +163,7 @@ Slots correspond to `[head, chest, abdomen, pelvis]`. `rflow-ct` / `rflow-mr` / 
    - Set `dim` and `spacing` per the FOV table above.
    - Set `modality` per the table above (CT → 1; MR variants → 8..32).
    - For `ddpm-ct` only: set `top_region_index` / `bottom_region_index`.
-   - Keep `cfg_guidance_scale` at the shipped default (CT → 0; MR-brain → 10; MR → 10) — see the CFG section above.
+   - Keep `cfg_guidance_scale_modality` at the shipped default (CT → 0; MR-brain → 10; MR → 10) — see the CFG section above.
    - Optional: `random_seed`, `num_inference_steps`.
 4. Run `python -m scripts.diff_model_infer -t ... -e ... -c ...`.
 5. Output written to the `output_dir` in the environment config.

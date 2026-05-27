@@ -15,6 +15,7 @@ import argparse
 import logging
 import os
 import random
+import warnings
 from datetime import datetime
 
 import nibabel as nib
@@ -168,7 +169,7 @@ def run_inference(
         zip(all_timesteps, all_next_timesteps),
         total=min(len(all_timesteps), len(all_next_timesteps)),
     )
-    cfg_guidance_scale = args.cfg_guidance_scale
+    cfg_guidance_scale_modality = args.cfg_guidance_scale_modality
     with torch.amp.autocast("cuda", enabled=True):
         for t, next_t in progress_bar:
             # Create a dictionary to store the inputs
@@ -194,17 +195,17 @@ def run_inference(
                     }
                 )
 
-            if cfg_guidance_scale > 0:
+            if cfg_guidance_scale_modality > 0:
                 for k in unet_inputs.keys():
                     if k != "class_labels":
                         unet_inputs[k] = torch.cat([unet_inputs[k]] * 2)
                     else:
                         unet_inputs[k] = torch.cat([unet_inputs[k], torch.zeros_like(modality_tensor)])
-            if cfg_guidance_scale == 0:
+            if cfg_guidance_scale_modality == 0:
                 model_output = unet(**unet_inputs)
             else:
                 model_t, model_uncond = unet(**unet_inputs).chunk(2)
-                model_output = model_uncond + cfg_guidance_scale * (model_t - model_uncond)
+                model_output = model_uncond + cfg_guidance_scale_modality * (model_t - model_uncond)
 
             if not isinstance(noise_scheduler, RFlowScheduler):
                 image, _ = noise_scheduler.step(model_output, t, image)  # type: ignore
@@ -294,7 +295,20 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
     modality = args.diffusion_unet_inference["modality"]
     if modality >= 1 and modality <= 7:
         check_input_ct(None, None, None, output_size, out_spacing, None)
-    args.cfg_guidance_scale = args.diffusion_unet_inference["cfg_guidance_scale"]
+    # Back-compat: accept the legacy `cfg_guidance_scale` key for one release.
+    # The image-only path uses CFG on the modality class label — distinct from
+    # the tumor-mask CFG (`cfg_guidance_scale_tumor`) used by scripts.inference.
+    if "cfg_guidance_scale_modality" in args.diffusion_unet_inference:
+        args.cfg_guidance_scale_modality = args.diffusion_unet_inference["cfg_guidance_scale_modality"]
+    elif "cfg_guidance_scale" in args.diffusion_unet_inference:
+        warnings.warn(
+            "`cfg_guidance_scale` in config_maisi_diff_model_*.json is deprecated; " "rename it to `cfg_guidance_scale_modality`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        args.cfg_guidance_scale_modality = args.diffusion_unet_inference["cfg_guidance_scale"]
+    else:
+        args.cfg_guidance_scale_modality = 0.0
 
     autoencoder, unet, scale_factor = load_models(args, device, logger)
     num_downsample_level = max(

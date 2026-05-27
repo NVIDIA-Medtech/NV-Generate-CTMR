@@ -123,8 +123,7 @@ def main():
     # diff_model_infer.py.
     if hasattr(args, "cfg_guidance_scale") and not hasattr(args, "cfg_guidance_scale_tumor"):
         warnings.warn(
-            "`cfg_guidance_scale` in image-from-mask configs is deprecated; "
-            "rename it to `cfg_guidance_scale_tumor`.",
+            "`cfg_guidance_scale` in image-from-mask configs is deprecated; " "rename it to `cfg_guidance_scale_tumor`.",
             DeprecationWarning,
             stacklevel=2,
         )

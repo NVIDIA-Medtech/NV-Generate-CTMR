@@ -129,7 +129,7 @@ If many voxel values fall outside the vocabulary you almost certainly forgot a r
 | `num_inference_steps` | int | RFlow → 30; **DDPM → 1000 (must, not optional)**. DDPM at < 1000 steps emits a warning and produces low-quality output. |
 | `autoencoder_sliding_window_infer_size` | list[int] | ROI for AE decode; default `[96, 96, 96]`. |
 | `autoencoder_sliding_window_infer_overlap` | float | Default `0.6667`. |
-| `cfg_guidance_scale_tumor` | float | Strengthens **tumor** signal (CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. See §6 — and note this is a different CFG from the modality-CFG (`cfg_guidance_scale`) used by MR inference in [`infer_image-only`](infer_image-only.md). |
+| `cfg_guidance_scale_tumor` | float | Strengthens **tumor** signal (CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. See §6 — and note this is a different CFG from the modality-CFG (`cfg_guidance_scale_modality`) used by MR inference in [`infer_image-only`](infer_image-only.md). |
 
 ## Algorithm step by step
 
@@ -223,7 +223,7 @@ Effect of the value:
 
 This entire pipeline is **CT-only** (the mask DM and ControlNet are CT-only — no MR ControlNet exists in this repo), so this CFG never applies to MR.
 
-> ⚠️ The image-only path ([`infer_image-only`](infer_image-only.md), `scripts.diff_model_infer`) has its own CFG key called `cfg_guidance_scale` — same idea, different semantics: there it steers the *modality* conditioning and `~10` is **required** for MR. The two keys are now distinct (`cfg_guidance_scale_tumor` here vs. `cfg_guidance_scale` there). Don't transfer the "`0` is the default" rule from this skill to MR inference.
+> ⚠️ The image-only path ([`infer_image-only`](infer_image-only.md), `scripts.diff_model_infer`) has its own CFG key called `cfg_guidance_scale_modality` — same idea, different semantics: there it steers the *modality* conditioning and `~10` is **required** for MR. The two keys are now distinct (`cfg_guidance_scale_tumor` here vs. `cfg_guidance_scale_modality` there). Don't transfer the "`0` is the default" rule from this skill to MR inference.
 
 ### 7. Sliding-window image-AE decode + HU mapping
 

@@ -147,7 +147,7 @@ Key `config_infer.json` knobs:
 | `modality` | Modality code (1=CT, 8..32=MR variants). |
 | `num_inference_steps` | RFlow → 30, **DDPM → 1000**. ⚠️ For `ddpm-ct` you must set this to 1000; the notebook auto-applies this override in cell 12. |
 | `mask_generation_num_inference_steps` | **1000** — the mask DM always uses DDPM regardless of which image-DM variant you pick. Setting this lower silently degrades mask quality. |
-| `cfg_guidance_scale_tumor` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. Distinct from the modality-CFG (`cfg_guidance_scale`) used by MR inference — see [`infer_image-only`](infer_image-only.md). |
+| `cfg_guidance_scale_tumor` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. Distinct from the modality-CFG (`cfg_guidance_scale_modality`) used by MR inference — see [`infer_image-only`](infer_image-only.md). |
 
 ## Output
 
