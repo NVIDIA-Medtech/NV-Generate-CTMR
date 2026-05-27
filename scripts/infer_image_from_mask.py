@@ -448,6 +448,8 @@ def main() -> int:
             stacklevel=2,
         )
         cfg.cfg_guidance_scale_tumor = cfg.cfg_guidance_scale
+    if not hasattr(cfg, "cfg_guidance_scale_tumor"):
+        cfg.cfg_guidance_scale_tumor = 0.0
     autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler = load_image_models(cfg, device)
 
     include_body_region = diffusion_unet.include_top_region_index_input
