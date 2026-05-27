@@ -151,8 +151,6 @@ Recommended values per variant (these are the shipped defaults — keep them):
 
 ### 5. `cfg_guidance_scale_tumor` → N/A in this path
 
-Tumor-CFG is for the CT mask-conditioned pipelines only. See [`infer_image-from-mask`](infer_image-from-mask.md) and [`infer_mask-image-paired`](infer_mask-image-paired.md). Same key-name pattern, different unconditional branch — don't transfer the "`0` is fine" rule from those skills to MR inference here.
-
 ### 6. `num_inference_steps`
 
 Driven by the scheduler the variant uses, not by GPU memory:
