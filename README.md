@@ -102,18 +102,18 @@ This repository provides **four model variants** for medical image generation: `
 
 ## 2. Quick Start (requires at least a 16G GPU)
 
-> ⚠️ **Picking the right `dim` and `spacing` is the single biggest factor in output quality.** The product `dim × spacing` defines the field of view (FOV). Each model variant has only ever seen FOVs in the **training-data distribution** for its target anatomy — asking it to synthesize at a numerically-valid but out-of-distribution FOV (e.g. a 128 mm-cube whole-body CT) produces unusable output. Start from the recommended `(dim, spacing)` per anatomy:
->
-> - **CT** (`rflow-ct`, `ddpm-ct`): [docs/inference.md#recommended-spacing-for-ct](docs/inference.md#recommended-spacing-for-ct)
-> - **MR** (`rflow-mr`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-model)
->
-> 💡 **Using an AI coding agent (Claude Code, Cursor, Codex, etc.)?** Each subsection below links to a per-workflow skill in [`skills/`](skills/). Ask the agent to read this README then use the corresponding skill file — it will run the matching workflow end-to-end, including model download, config edits, and the inference command. The same files also work as standalone reference if you'd rather drive the workflow yourself.
+> 💡 **Using an AI coding agent (Claude Code, Cursor, Codex, etc.)?** Each subsection below links to a per-workflow skill in [`skills/`](skills/). Ask the agent to read this README then use the corresponding skill file — it will run the matching workflow end-to-end, including model download, config edits, and the inference command.
 >
 > **Example prompt — copy into your agent:**
 >
 > ```text
-> Read the README in this repo and use the matching skill to generate a T1 whole-brain MR image.
+> Read the README in this repo and use the matching skill to generate a T1 whole-brain MR image. Please first summarize what you plan to do, and let me know where the output will be saved.
 > ```
+>
+> ⚠️ **Run inference manually?** `dim` and `spacing` are the single biggest factor in output quality — their product `dim × spacing` defines the field of view (FOV). Each model variant has only ever seen FOVs in the **training-data distribution** for its target anatomy; asking it to synthesize at a numerically-valid but out-of-distribution FOV (e.g. a 128 mm-cube whole-body CT) produces unusable output. Start from the recommended `(dim, spacing)` per anatomy:
+>
+> - **CT** (`rflow-ct`, `ddpm-ct`): [docs/inference.md#recommended-spacing-for-ct](docs/inference.md#recommended-spacing-for-ct)
+> - **MR** (`rflow-mr`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-model)
 
 ### 2.1 Installation
 
