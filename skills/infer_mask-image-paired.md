@@ -9,12 +9,12 @@ This skill covers the **paired generation** pipeline: mask first, then image con
 
 Two algorithms run sequentially:
 
-1. **Mask stage** — see the `infer_mask-generation` skill.
+1. **Mask stage** — see the `infer_mask-only` skill.
 2. **Image stage** — see the `infer_image-from-mask` skill.
 
 This skill explains how they're chained, the LDMSampler state required, and the configuration knobs.
 
-## Quick Start command
+## Command to run
 
 ```bash
 export MONAI_DATA_DIRECTORY="./temp_work_dir"
@@ -34,6 +34,38 @@ Three configs are passed:
 - `-t` network architecture (`config_network_rflow.json` or `config_network_ddpm.json`).
 - `-i` inference parameters (`config_infer.json` — `body_region`, `anatomy_list`, `output_size`, `spacing`, `controllable_anatomy_size`, etc.).
 - `-e` environment paths (`environment_rflow-ct.json` or `environment_ddpm-ct.json` — checkpoint paths, label dicts, mask database).
+
+### End-to-end example: paired chest CT (Path B — training-mask DB lookup)
+
+Concrete worked example for a 24 GB GPU. Path B is the simpler default — you ask for a chest CT and the pipeline finds a matching training mask, augments it, and synthesizes the paired image.
+
+```bash
+# 1. Download all required weights + the mask database (one-time, ~10 GB).
+#    No --model_only flag — the mask DB and anatomy-size JSON are also needed.
+python -m scripts.download_model_data --version rflow-ct --root_dir "./"
+
+# 2. Pick a config_infer_<XXg>_<dim>.json preset matching your GPU + output_size.
+#    For 24 GB + 512×512×128 chest CT, use config_infer_24g_512x512x128.json.
+#    Edit it to set:
+#      "body_region":                   ["chest"],
+#      "anatomy_list":                  ["liver", "spleen", "lung"],   # whatever organs you need
+#      "controllable_anatomy_size":     [],                            # empty list → Path B
+#      "num_output_samples":            1,
+#      # leave the AE knobs, output_size, spacing, cfg_guidance_scale,
+#      # num_inference_steps at the preset's shipped values.
+
+# 3. Run inference.
+export MONAI_DATA_DIRECTORY="./temp_work_dir"
+python -m scripts.inference \
+    -t ./configs/config_network_rflow.json \
+    -i ./configs/config_infer_24g_512x512x128.json \
+    -e ./configs/environment_rflow-ct.json \
+    --random-seed 0 --version rflow-ct
+```
+
+**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (paired mask filtered to `anatomy_list`).
+
+For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a non-empty list of `(organ_name, size)` tuples, e.g. `[["pancreas", 0.5], ["hepatic tumor", 0.3]]`, and leave `body_region` empty. The dispatch flowchart below shows where this branches.
 
 ## How `LDMSampler.sample_multiple_images` chooses the mask path
 
@@ -70,43 +102,14 @@ sample_one_mask()      read_mask_information(mask_file)
 save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
 ```
 
-### Two paths in detail
+### Two paths to obtain a mask
 
-**Path A — `controllable_anatomy_size` non-empty** (diffusion-generated mask):
+Which path runs is driven by `controllable_anatomy_size` in `config_infer.json`:
 
-- User provides e.g. `[("pancreas", 0.5), ("liver", 0.7)]` in `config_infer.json`.
-- `prepare_anatomy_size_condition` builds the 10-d vector (see `infer_mask-generation` skill).
-- `sample_one_mask` runs the mask DDPM.
-- Result is at fixed shape `256×256×256 × 1.5mm iso` (the mask DM's pretrained shape).
-- `ensure_output_size_and_spacing` resamples to the user's requested `output_size` + `spacing`.
+- **Path A — diffusion from scratch** (`controllable_anatomy_size` non-empty): the user provides `(organ, size)` tuples; the mask DM samples a new mask conditioned on the resulting `anatomy_size` 10-d vector. Use this when you want to *control* organ/tumor presence and size.
+- **Path B — training-mask database lookup** (`controllable_anatomy_size` empty): a real training mask matching `body_region` + `anatomy_list` + `spacing` + `output_size` is retrieved and lightly augmented so the output isn't a verbatim copy. No diffusion runs in the mask stage. Use this when you only need a plausible mask of the right anatomy and don't care about controlling specific organ sizes.
 
-**Path B — `controllable_anatomy_size` empty** (real training mask):
-
-- `find_masks` queries `configs/all_mask_files_*.json` for masks matching `body_region` + `anatomy_list` + `spacing` + `output_size`.
-- If no exact match, `find_closest_masks` picks the closest by FOV / dim / spacing.
-- `read_mask_information` loads the mask via `val_transforms` (LoadImaged + Orientationd("RAS") + spacing scaling).
-- Optional `augmentation()` applies training-style mask augmentation if `if_aug` is set.
-
-Both paths then call `sample_one_pair` for the image stage.
-
-## `LDMSampler.__init__` — required state
-
-| Group | Argument | Source |
-|---|---|---|
-| Mask DM | `mask_generation_autoencoder` | `models/mask_generation_autoencoder.pt` |
-| Mask DM | `mask_generation_diffusion_unet` | `models/mask_generation_diffusion_unet.pt` |
-| Mask DM | `mask_generation_noise_scheduler` | DDPM scheduler (from network def) |
-| Mask DM | `mask_generation_scale_factor` | `1.0055984258651733` |
-| Mask DM | `mask_generation_latent_shape` | `(4, 64, 64, 64)` for 256³ output |
-| Image DM | `autoencoder`, `diffusion_unet`, `controlnet` | variant-specific checkpoints under `models/` |
-| Image DM | `noise_scheduler` | RFlow (rflow-ct/mr) or DDPM (ddpm-ct) |
-| Image DM | `scale_factor`, `latent_shape` | from the variant's network config |
-| Mask DB | `all_mask_files_json`, `all_mask_files_base_dir` | for Path B only |
-| Vocabularies | `label_dict_json`, `label_dict_remap_json` | `configs/label_dict.json`, `configs/label_dict_124_to_132.json` |
-| Anatomy size DB | `all_anatomy_size_conditions_json` | `configs/all_anatomy_size_conditions.json` (used by Path A) |
-| QC | `real_img_median_statistics` | `configs/image_median_statistics_ct.json` (CT-only quality check) |
-| User intent | `body_region`, `anatomy_list`, `controllable_anatomy_size`, `output_size`, `spacing`, `modality` | from `config_infer.json` |
-| Other | `device`, `output_dir`, `num_inference_steps`, `cfg_guidance_scale`, etc. | runtime / config |
+Both paths produce a MAISI-vocabulary mask that then feeds the image stage. For the per-path knobs and the `anatomy_size` slot table, see [`infer_mask-only`](infer_mask-only.md). The image stage that consumes the mask is documented in [`infer_image-from-mask`](infer_image-from-mask.md).
 
 ## `dim` and `spacing` — same FOV rules as image-only
 
@@ -119,13 +122,57 @@ Additional FOV considerations specific to the paired pipeline:
 - The **mask DM** was pretrained at **256³ × 1.5 mm iso** (= 384 mm cube FOV). Generating a mask at significantly different shape forces the `ensure_output_size_and_spacing` resampling, which degrades label boundaries. Stay at or near 256³ × 1.5mm for Path A.
 - For Path B (mask DB lookup), the candidate masks are themselves drawn from a training-FOV distribution — `find_closest_masks` picks the closest matches, but the closer your requested FOV is to a mode of that distribution, the less reshaping is needed.
 
-## Quality check loop
+## How to configure a run
 
-`LDMSampler.quality_check_ct` runs after each image is generated (CT only; MR codes ≥ 8 skip the check):
+### 1. `modality` → driven by your anatomy
 
-- For each label (liver, spleen, pancreas, kidney, lung, brain, tumors, bone), check that the **median HU value** of voxels with that label falls in the per-organ acceptable range stored in `configs/image_median_statistics_ct.json`.
-- If any label is an outlier → fail; retry mask + image generation up to `max_try_time=2` times.
-- If still failing after retries: save the last attempt and log a warning.
+Pick the modality code matching what you want to generate (full list in `configs/modality_mapping.json`). This mask-image paired pipeline is **CT-only** (the mask DM and ControlNet are CT-only — no MR ControlNet exists), so `modality = 1`. For MR generation use [`infer_image-only`](infer_image-only.md). For recommended FOVs per anatomy, see `docs/inference.md#recommended-spacing-for-ct`.
+
+### 2. `autoencoder_sliding_window_infer_size`, `autoencoder_sliding_window_infer_overlap`, `autoencoder_tp_num_splits` → from GPU memory + `output_size`
+
+Validated presets (drawn from `configs/config_infer_<XXg>_<dim>.json`):
+
+| GPU mem | `output_size` | `autoencoder_sliding_window_infer_size` | `autoencoder_sliding_window_infer_overlap` | `autoencoder_tp_num_splits` |
+|---|---|---|---|---|
+| 16 GB | 256×256×128 | [96, 96, 96] | 0.25 | 2 |
+| 16 GB | 256×256×256 | [48, 48, 64] | 0.6666 | 4 |
+| 16 GB | 512×512×128 | [64, 64, 32] | 0.5 | 2 |
+| 24 GB | 256×256×256 | [64, 64, 64] | 0.25 | 4 |
+| 24 GB | 512×512×128 | [80, 80, 32] | 0.4 | 2 |
+| 24 GB | 512×512×512 | [64, 64, 48] | 0.4 | 2 |
+| 32 GB | 512×512×512 | [80, 80, 48] | 0.4 | 4 |
+| 80 GB | 512×512×512 | [80, 80, 80] | 0.4 | 4 |
+| 80 GB | 512×512×768 | [80, 80, 96] | 0.4 | 4 |
+
+Tuning rules if no preset matches:
+
+- **OOM** → shrink `autoencoder_sliding_window_infer_size` (must be divisible by 16), or raise `autoencoder_tp_num_splits` to the next value in `{2, 4, 8, 16}`.
+- **Seam artifacts** → raise `autoencoder_sliding_window_infer_overlap` toward `0.6667`.
+- **Speed** → lower the overlap toward `0.25`, then enlarge the sliding-window size if VRAM permits.
+
+### 3. `spacing` → from FOV and `output_size`
+
+```text
+spacing[i] = FOV[i] / output_size[i]
+```
+
+Pick FOV from the anatomy-recommended table (step 1), pick `output_size` from the GPU preset (step 2), compute `spacing`.
+
+### 4. Modality-CFG → not used in this pipeline
+
+This pipeline is CT-only and modality is fixed at `CT=1`, so modality-CFG has nothing to amplify. The modality-CFG version of `cfg_guidance_scale` lives in `config_maisi_diff_model_*.json` and is read by `scripts.diff_model_infer` ([`infer_image-only`](infer_image-only.md)), where it is required for MR — see that skill.
+
+### 5. `cfg_guidance_scale` (tumor-CFG in this pipeline)
+
+Classifier-free guidance (CFG) scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. CT-only. `0` (default) = off. `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Same key name as the modality-CFG (step 4) — semantics depend on which script reads the config: tumor here, modality in `scripts.diff_model_infer`.
+
+### 6. `num_inference_steps`
+
+Driven by the scheduler the variant uses, not by GPU memory:
+
+- `rflow-ct` → **30** (RFlow scheduler).
+- `ddpm-ct` → **1000** (DDPM scheduler). Lower values emit a warning and degrade quality — not optional.
+- `mask_generation_num_inference_steps` → always **1000**: the mask DM is DDPM regardless of which image-DM variant you pick.
 
 ## Configuration knobs
 
@@ -147,7 +194,7 @@ Key `config_infer.json` knobs:
 | `modality` | Modality code (1=CT, 8..32=MR variants). |
 | `num_inference_steps` | RFlow → 30, **DDPM → 1000**. ⚠️ For `ddpm-ct` you must set this to 1000; the notebook auto-applies this override in cell 12. |
 | `mask_generation_num_inference_steps` | **1000** — the mask DM always uses DDPM regardless of which image-DM variant you pick. Setting this lower silently degrades mask quality. |
-| `cfg_guidance_scale` | Image-DM tumor CFG; `0` disables. |
+| `cfg_guidance_scale` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. The same key name in `config_maisi_diff_model_*.json` is the modality-CFG used by MR image-only inference — see [`infer_image-only`](infer_image-only.md). |
 
 ## Output
 
@@ -156,26 +203,20 @@ For each successful generation, two files are saved to `output_dir`:
 - `sample_<timestamp>_image.nii.gz` — synthetic CT/MR
 - `sample_<timestamp>_label.nii.gz` — paired mask (filtered to `anatomy_list`)
 
-## Code references
+## Related scripts
 
-| Symbol | File |
+| Script | Role |
 |---|---|
-| `LDMSampler` | `scripts/sample.py` |
-| `LDMSampler.sample_multiple_images` (orchestrator) | `scripts/sample.py` |
-| `LDMSampler.prepare_anatomy_size_condition` (Path A) | `scripts/sample.py` |
-| `LDMSampler.find_closest_masks`, `read_mask_information` (Path B) | `scripts/sample.py` |
-| `LDMSampler.sample_one_pair` (image stage) | `scripts/sample.py` |
-| `LDMSampler.quality_check_ct` | `scripts/sample.py` |
-| `ldm_conditional_sample_one_mask` (mask DM) | `scripts/sample_mask.py` |
-| `ldm_conditional_sample_one_image` (image DM + ControlNet) | `scripts/infer_image_from_mask.py` |
-| `find_masks` (mask DB lookup) | `scripts/find_masks.py` |
-| `augmentation`, `remove_tumors` | `scripts/augmentation.py` |
-| `is_outlier` (quality check) | `scripts/quality_check.py` |
-| CLI entry point | `scripts/inference.py` |
+| `scripts/inference.py` | CLI entry point for this skill. |
+| `scripts/sample.py` (`LDMSampler`) | Orchestrator: dispatches the mask stage and the image stage, applies the QC retry loop. |
+| `scripts/sample_mask.py` | Path A mask DM (`ldm_conditional_sample_one_mask`). |
+| `scripts/find_masks.py` | Path B exact-match DB lookup (`find_masks`). |
+| `scripts/infer_image_from_mask.py` | Image-from-mask pipeline (called from the orchestrator's image stage). |
+| `scripts/download_model_data.py` | Downloads mask DM + image DM + ControlNet weights. |
 
 ## Related skills
 
-- `infer_mask-generation` — algorithm details for the mask stage.
-- `infer_image-from-mask` — algorithm details for the image stage.
-- `infer_image-only` — image-only path (no mask); covers FOV/dim/spacing table.
-- `download-models` — fetch checkpoints first.
+- [`infer_mask-only`](infer_mask-only.md) — mask-stage details.
+- [`infer_image-from-mask`](infer_image-from-mask.md) — image-stage details.
+- [`infer_image-only`](infer_image-only.md) — image-only path (no mask, including MR); covers the FOV / `dim` / `spacing` recommendations.
+- [`download-models`](download-models.md) — fetch checkpoints first.

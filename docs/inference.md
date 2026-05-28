@@ -194,8 +194,8 @@ The user-facing config knobs live in [`../configs/config_infer.json`](../configs
 | `anatomy_list` | List of organ names from [`configs/label_dict.json`](../configs/label_dict.json) to keep in the output mask. |
 | `modality` | Modality code — see [Modality codes](#modality-codes). |
 | `num_inference_steps` | RFlow → 30, DDPM → 1000 (mandatory; lower values warn and degrade). For the mask DM, always 1000. |
-| `cfg_guidance_scale_modality` | Image-only path: classifier-free guidance on the modality. CT → 0, MR → 10 (shipped defaults — keep). |
-| `cfg_guidance_scale_tumor` | Paired CT path: classifier-free guidance on tumor presence. `0` (default) = off. `1..5` = stronger tumor enforcement. |
+| `cfg_guidance_scale` (in `config_maisi_diff_model_*.json`) | Image-only path: classifier-free guidance on the **modality**. CT → 0, MR → 10 (shipped defaults — keep). |
+| `cfg_guidance_scale` (in `config_infer.json`) | Paired CT path: classifier-free guidance on **tumor** presence. `0` (default) = off. `1..5` = stronger tumor enforcement. Same key name as above; semantics depend on which script reads the config. |
 | `autoencoder_sliding_window_infer_size` | AE-decode ROI per tile (paired pipeline only — hardcoded `[80,80,80]` in `diff_model_infer`). Must be divisible by 16. Larger = fewer tiles, more VRAM. |
 | `autoencoder_sliding_window_infer_overlap` | `[0, 1)`. Higher = smoother seams, more compute. |
 | `autoencoder_tp_num_splits` | `∈ {1, 2, 4, 8, 16}`. Higher = lower per-GPU VRAM, slower. |
@@ -213,7 +213,7 @@ For inference time cost and GPU memory usage, see [Performance](performance.md).
 - **GPU OOM** → reduce `autoencoder_sliding_window_infer_size` (must stay divisible by 16) or raise `autoencoder_tp_num_splits` to the next value in `{2, 4, 8, 16}`.
 - **Seam / stitching artifacts** → raise `autoencoder_sliding_window_infer_overlap` toward `0.6667`.
 - **Speed** → lower the overlap toward `0.25`, then enlarge the sliding-window size if VRAM permits.
-- **Washed-out MR contrast** → check `cfg_guidance_scale_modality` is at the shipped default of 10 (not 0).
+- **Washed-out MR contrast** → check `cfg_guidance_scale` (in the MR variant's `config_maisi_diff_model_*.json`) is at the shipped default of 10 (not 0).
 - **Unusable output despite valid inputs** → FOV is probably out-of-distribution for the variant. Match a row in the FOV tables above.
 
 ## Architecture
