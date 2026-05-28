@@ -51,7 +51,7 @@ python -m scripts.download_model_data --version rflow-ct --root_dir "./"
 #      "anatomy_list":                  ["liver", "spleen", "lung"],   # whatever organs you need
 #      "controllable_anatomy_size":     [],                            # empty list → Path B
 #      "num_output_samples":            1,
-#      # leave the AE knobs, output_size, spacing, cfg_guidance_scale_tumor,
+#      # leave the AE knobs, output_size, spacing, cfg_guidance_scale,
 #      # num_inference_steps at the preset's shipped values.
 
 # 3. Run inference.
@@ -158,13 +158,13 @@ spacing[i] = FOV[i] / output_size[i]
 
 Pick FOV from the anatomy-recommended table (step 1), pick `output_size` from the GPU preset (step 2), compute `spacing`.
 
-### 4. `cfg_guidance_scale_modality` — not used in this pipeline
+### 4. Modality-CFG → not used in this pipeline
 
-This pipeline is CT-only and modality is fixed at `CT=1`, so modality-CFG has nothing to amplify. The `cfg_guidance_scale_modality` knob lives in `scripts.diff_model_infer` ([`infer_image-only`](infer_image-only.md)), where it is required for MR — see that skill.
+This pipeline is CT-only and modality is fixed at `CT=1`, so modality-CFG has nothing to amplify. The modality-CFG version of `cfg_guidance_scale` lives in `config_maisi_diff_model_*.json` and is read by `scripts.diff_model_infer` ([`infer_image-only`](infer_image-only.md)), where it is required for MR — see that skill.
 
-### 5. `cfg_guidance_scale_tumor`
+### 5. `cfg_guidance_scale` (tumor-CFG in this pipeline)
 
-Classifier-free guidance (CFG) scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. CT-only. `0` (default) = off. `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Distinct from the modality-CFG above (same math, different unconditional branch).
+Classifier-free guidance (CFG) scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. CT-only. `0` (default) = off. `1..5` = stronger tumor enforcement, growing artifact risk above 5. Doubles per-step compute when `> 0`. Same key name as the modality-CFG (step 4) — semantics depend on which script reads the config: tumor here, modality in `scripts.diff_model_infer`.
 
 ### 6. `num_inference_steps`
 
@@ -194,7 +194,7 @@ Key `config_infer.json` knobs:
 | `modality` | Modality code (1=CT, 8..32=MR variants). |
 | `num_inference_steps` | RFlow → 30, **DDPM → 1000**. ⚠️ For `ddpm-ct` you must set this to 1000; the notebook auto-applies this override in cell 12. |
 | `mask_generation_num_inference_steps` | **1000** — the mask DM always uses DDPM regardless of which image-DM variant you pick. Setting this lower silently degrades mask quality. |
-| `cfg_guidance_scale_tumor` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. Distinct from the modality-CFG (`cfg_guidance_scale_modality`) used by MR inference — see [`infer_image-only`](infer_image-only.md). |
+| `cfg_guidance_scale` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. The same key name in `config_maisi_diff_model_*.json` is the modality-CFG used by MR image-only inference — see [`infer_image-only`](infer_image-only.md). |
 
 ## Output
 
