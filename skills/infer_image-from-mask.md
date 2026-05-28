@@ -1,262 +1,129 @@
 ---
 name: infer_image-from-mask
-description: Explains how NV-Generate-CTMR generates a CT or MR image from an existing 3D label mask using the ControlNet-conditioned image latent diffusion model. Trigger when the user asks "how do I generate an image from a mask", "how does the ControlNet work", "what does ldm_conditional_sample_one_image do", "explain the image diffusion model in NV-Generate-CTMR", or any low-level question about the image LDM pipeline.
+description: How to synthesize a paired CT image from an existing 3D label mask using NV-Generate-CTMR's ControlNet pipeline. Trigger when the user asks "how do I generate a CT from my mask", "what command runs image-from-mask inference", "what mask format does NV-Generate-CTMR expect", "how do I add the body envelope", or wants help running the README §2.6 command. CT-only (no MR ControlNet exists in this repo).
 ---
 
 # Image-from-mask inference (NV-Generate-CTMR)
 
-This skill explains how NV-Generate-CTMR takes a **3D label mask** (typically produced by the `infer_mask-generation` skill or pulled from the training-mask database) and **synthesizes a paired CT or MR image** from it. The image LDM is conditioned on the mask via a ControlNet branch.
+This skill covers running NV-Generate-CTMR on a **mask you already have** to synthesize a paired CT image. The image LDM is conditioned on the mask via a ControlNet branch. **CT-only** — the released ControlNet checkpoints were trained on CT masks; no MR ControlNet exists.
 
-Code entry point: `scripts.infer_image_from_mask.ldm_conditional_sample_one_image`.
+If you want the model to *also* generate the mask, use the [`infer_mask-image-paired`](infer_mask-image-paired.md) skill instead. If you want image-only generation (no mask, including MR), use the [`infer_image-only`](infer_image-only.md) skill.
 
-## TL;DR
+## Command to run
 
-```text
-                       [mask label NIfTI]
-                                │ binarize_labels (8-bit encoding)
-                                ▼
-                    [ControlNet conditioning (8-ch)]
-[random noise]──┐               │
-        ×       │               ▼
-   noise_factor │       ┌─────────────┐
-                ▼       ▼             │
-              [Image Diffusion UNet]  │  controlnet residuals
-                       │  RFlow / DDPM loop  injected per timestep
-                       ▼
-              [image latent (4-ch)]
-                       │ sliding-window image-AE decode
-                       ▼
-              [synthetic image, range [0,1]]
-                       │ HU range mapping (CT) or > 0 clip (MR)
-                       │ crop_img_body_mask (background → a_min)
-                       ▼
-              [final CT/MR volume]
+```bash
+network="rflow"                       # or "ddpm"
+generate_version="rflow-ct"           # or "ddpm-ct"
+
+python -m scripts.download_model_data --version ${generate_version} --root_dir "./"
+
+python -m scripts.infer_image_from_mask \
+    -t ./configs/config_network_${network}.json \
+    -i ./configs/config_infer.json \
+    -e ./configs/environment_${generate_version}.json \
+    --mask /path/to/your_mask.nii.gz \
+    --random-seed 0
 ```
 
-## Valid input mask format
+Arguments:
 
-> ⚠️ **Scope of this section: the released CT ControlNet checkpoints only.**
->
-> Everything below applies specifically to the pretrained
-> `controlnet_3d_rflow-ct.pt` and `controlnet_3d_ddpm-ct.pt` checkpoints
-> (downloaded by `scripts.download_model_data --version {rflow-ct,ddpm-ct}`).
-> Those checkpoints were trained on CT masks in the **MAISI 132-class label
-> vocabulary**, so a user-provided mask must use the same convention or the
-> generated CT will be unusable.
->
-> If you train your own ControlNet on a different label vocabulary (e.g.
-> binary body silhouette, a different segmentation tool's output, or a
-> non-CT modality), the input format is whatever your training pipeline
-> used — see `scripts/train_controlnet.py` line 190
-> (`controlnet_cond = binarize_labels(labels.as_tensor().to(torch.long))`)
-> — labels are bit-encoded as-is, so inference must match training.
->
-> Released NV-Generate-CTMR also ships `rflow-mr-brain` and `rflow-mr`
-> variants, but those models are **image-only** (no ControlNet, no mask
-> input) — they go through `scripts.diff_model_infer` and the
-> `infer_image-only` skill, not this skill.
+- `-t` — network architecture (`config_network_rflow.json` or `config_network_ddpm.json`).
+- `-i` — inference hyper-parameters (`config_infer.json`, or one of the `config_infer_<XXg>_<dim>.json` presets — see [Configuration](#configuration) below).
+- `-e` — environment paths (`environment_rflow-ct.json` or `environment_ddpm-ct.json`).
+- `--mask` — your mask NIfTI (see [Input: the mask](#input-the-mask) for the required format).
+- `--random-seed` — optional integer for deterministic sampling.
 
-### What "valid" means (for the released CT ControlNet checkpoints)
+### End-to-end example: synthesize a CT from a MAISI-vocabulary mask
 
-The mask is a **1-channel NIfTI** (`.nii` or `.nii.gz`), integer dtype, with voxel values drawn from the MAISI 132-class vocabulary (see [`configs/label_dict.json`](../configs/label_dict.json)):
+Concrete worked example, assuming `~/your_mask.nii.gz` already contains MAISI 132-class labels with `body=200` (see [Input: the mask](#input-the-mask) for how to produce one):
+
+```bash
+# 1. Download weights (one-time, ~5 GB).
+python -m scripts.download_model_data --version rflow-ct --root_dir "./"
+
+# 2. Pick a config_infer preset matching your GPU memory + target output_size.
+#    Example for a 24 GB GPU targeting 512×512×128 output:
+#    use configs/config_infer_24g_512x512x128.json as-is (no edits needed
+#    for a default CT run). Key values it already sets:
+#      "output_size": [512, 512, 128],
+#      "spacing":     [0.75, 0.75, 4.0],
+#      "modality":                            1,    # CT
+#      "cfg_guidance_scale":                  0.0,  # off, the correct default
+#      "num_inference_steps":                 30,
+#      "autoencoder_sliding_window_infer_size":    [80, 80, 32],
+#      "autoencoder_sliding_window_infer_overlap": 0.4,
+#      "autoencoder_tp_num_splits":                2
+
+# 3. Run inference.
+python -m scripts.infer_image_from_mask \
+    -t ./configs/config_network_rflow.json \
+    -i ./configs/config_infer_24g_512x512x128.json \
+    -e ./configs/environment_rflow-ct.json \
+    --mask ~/your_mask.nii.gz \
+    --random-seed 0
+```
+
+**Expected output**: two NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (the synthesized CT, HU range `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (your mask, resampled if needed).
+
+## Input: the mask
+
+### Format
+
+A **1-channel integer NIfTI** (`.nii` or `.nii.gz`) whose voxel values are drawn from the **MAISI 132-class label vocabulary** plus the body envelope:
 
 | Value | Meaning |
 |---|---|
 | `0` | background |
-| `1..132` (with some unused values — see `label_dict.json`) | organ / structure labels (e.g. `1`=liver, `3`=spleen, `4`=pancreas, `5`=right kidney, `14`=left kidney, `28..32`=lung lobes, `33..57`=vertebrae) |
+| `1..132` (with gaps — see [`configs/label_dict.json`](../configs/label_dict.json)) | organ / structure labels (e.g. `1`=liver, `3`=spleen, `4`=pancreas, `5`=right kidney, `14`=left kidney, `28..32`=lung lobes, `33..57`=vertebrae) |
 | `200` | **body envelope** — every body voxel not labeled with a specific organ |
 
-`200` is the critical "outer-body" label. **The CT ControlNet expects it; nv-segment does not produce it. You must add it yourself** during preprocessing.
+`200` is the critical outer-body label. The CT ControlNet expects it; `nv-segment-ct` does not produce it. **You must add it yourself** during preprocessing.
 
 ### Producing a valid mask from a CT image
 
-The released CT ControlNet expects the MAISI 132-class vocabulary. In concrete terms, **the MAISI 132-class vocabulary is the `nv-segment-ct` output label definition plus the body envelope (label 200)** — so producing a valid mask is really "produce the same labels nv-segment-ct would emit, then add `body=200`". Two practical paths:
-
 #### Option A (recommended): `nv-segment-ct` + add body envelope
 
-1. **Start with a CT image.**
-2. **Run [`nv-segment`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR)** (the NV-Segment-CTMR bundle, modality `CT_BODY`). It outputs a 1-channel NIfTI **already in the MAISI vocabulary** — no label remapping needed — but excludes ~15 label values (dummies + tumors + airway — see `ct_body` in [`NV-Segment-CTMR/configs/inference.json`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR/blob/main/NV-Segment-CTMR/configs/inference.json)). The output contains ~117 organ labels and no `body=200`.
-3. **Add the body envelope** (label `200`): call [`scripts.utils.add_body_envelope(seg_mask, ct_image)`](../scripts/utils.py). It finds the largest connected component of air (default `HU < -800`), morphologically closes it, treats labeled voxels as not-air, inverts to get the body silhouette, then runs an erode→largest-CC→dilate cleanup that drops the patient bed/table (which often touches the body in CT scans). Every voxel inside the silhouette that nv-segment didn't already label is set to `body_label` (default `200`). Algorithm follows `find_body_maskv2` from pengfeig's `3d_ldm_monai`.
-4. **Save** as a 1-channel integer NIfTI.
+1. Run [`nv-segment`](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR) (the NV-Segment-CTMR bundle, modality `CT_BODY`) on your CT image. It outputs a 1-channel NIfTI **already in the MAISI vocabulary** — no label remapping needed.
+2. Add the body envelope (label `200`) via [`scripts.utils.add_body_envelope(seg_mask, ct_image)`](../scripts/utils.py).
+3. Save as a 1-channel integer NIfTI.
 
 #### Option B: another segmenter + remap + add body envelope
 
-If your mask comes from TotalSegmentator or any other segmenter whose label IDs differ from MAISI, you must first remap the integer label IDs to the MAISI 132-class space defined in [`configs/label_dict.json`](../configs/label_dict.json).
+1. Run your segmenter (e.g. TotalSegmentator) on the CT image.
+2. **Remap label IDs** to the MAISI 132-class space defined in [`configs/label_dict.json`](../configs/label_dict.json) by matching anatomical structure names. Structures not present in MAISI must be set to `0`. If you skip this step or get the mapping wrong, the generated CT will be unusable.
+3. Add the body envelope (label `200`) as in Option A step 2.
+4. Save as a 1-channel integer NIfTI.
 
-1. **Start with a CT image.**
-2. **Run your segmenter** (e.g. TotalSegmentator) on the CT.
-3. **⚠️ Remap label IDs to the MAISI 132-class space.** This is the critical step that distinguishes Option B from Option A. Build a label-ID map from your segmenter's IDs → MAISI 132-class IDs by matching anatomical structure name to the entries in [`configs/label_dict.json`](../configs/label_dict.json). Structures not present in MAISI's 132 classes must be dropped (set to `0`). Apply the map voxel-wise. **If you skip this step or get the mapping wrong, the generated CT will be unusable** — the ControlNet was trained on a specific label vocabulary and silently produces garbage for unfamiliar label IDs.
-4. **Add the body envelope** (label `200`) as in Option A step 3.
-5. **Save** as a 1-channel integer NIfTI.
+### Common pitfall: the 0..124 AE-channel space is NOT the right space
 
-Either way, the final output is the `--mask` argument the CLI accepts, or the `combine_label_or` argument when calling the library function directly.
+The mask AE inside this repo internally produces a 125-channel softmax that gets `argmax`'d to integer labels in `[0, 124]`. Those values are remapped to the MAISI 132-class vocabulary via [`configs/label_dict_124_to_132.json`](../configs/label_dict_124_to_132.json) before the CT ControlNet sees them. So:
 
-### Common pitfall: the AE-channel space (0..124) is NOT the right space
+- ✅ Correct user-mask input: MAISI 132-class labels with `body=200`.
+- ❌ Incorrect: feeding `0..124` AE-channel-space labels.
 
-The mask AE in the repo decodes to a **125-channel softmax** that gets `argmax`'d to integer labels in `[0, 124]` (the "AE-channel space"). Those `0..124` values are then **remapped to the MAISI 132-class vocabulary** via [`configs/label_dict_124_to_132.json`](../configs/label_dict_124_to_132.json) (`remap_labels`) before the CT ControlNet ever sees them. So:
-
-- ✅ **Correct input to the released CT ControlNet** (and to this CLI): MAISI 132-class labels, including `body=200`.
-- ❌ **Incorrect**: feeding `0..124` AE-channel-space labels directly. The remap is internal to the **mask DM** decoding pipeline only; it does NOT belong in user-mask preprocessing for the released CT ControlNet.
-
-If you have a mask in `0..124` space (e.g. from intermediate steps of a custom mask-DM pipeline), apply `remap_labels(mask, configs/label_dict_124_to_132.json)` first to convert it to the 132-class space before passing it here.
+If you have a mask in `0..124` space (e.g. from intermediate steps of a custom mask-DM pipeline), apply `remap_labels(mask, configs/label_dict_124_to_132.json)` first before passing it here.
 
 ### Validation in the CLI
 
-`scripts/infer_image_from_mask.py::validate_user_mask` assumes the released CT ControlNet convention and will:
+`scripts/infer_image_from_mask.py::validate_user_mask` will:
 
-- Confirm the mask is 1-channel integer NIfTI
-- Warn (not error) if any voxel value is outside the MAISI 132-class vocabulary (`{0..132} ∪ {200}`)
-- Auto-resample shape/spacing to a valid `(dim, spacing)` target (with a warning) if needed
+- Confirm the mask is 1-channel integer NIfTI.
+- Warn (not error) if any voxel value is outside the MAISI 132-class vocabulary (`{0..132} ∪ {200}`).
+- Auto-resample shape/spacing to a valid `(output_size, spacing)` target (with a warning) if needed.
 
-If many voxel values fall outside the vocabulary you almost certainly forgot a remap step — or you're trying to use a custom-trained ControlNet whose vocab differs from the released one.
+If many voxel values fall outside the vocabulary you almost certainly forgot a remap step.
 
-## Inputs to `ldm_conditional_sample_one_image`
+## Configuration
 
-| Argument | Type | Description |
-|---|---|---|
-| `autoencoder` | `AutoencoderKlMaisi` | The image AE (1-channel input/output, 4-ch latent). |
-| `diffusion_unet` | `DiffusionModelUNetMaisi` | The image DM. |
-| `controlnet` | `ControlNetMaisi` | ControlNet that conditions on the mask. |
-| `noise_scheduler` | `RFlowScheduler` or `DDPMScheduler` | Scheduler matching the model variant (`rflow-ct`/`rflow-mr-brain` use RFlow; `ddpm-ct` uses DDPM). |
-| `scale_factor` | float | Image-AE latent normalization factor. |
-| `combine_label_or` | `Tensor` (1,1,H,W,D) | The input mask in MAISI label vocabulary. |
-| `spacing_tensor` | `Tensor` | Per-axis voxel spacing × 100 (encoder-side scaling). |
-| `latent_shape` | tuple | Image latent shape, e.g. `(4, 64, 64, 64)` for 256³ output. |
-| `output_size` | tuple | Target volume shape (e.g. `(512, 512, 512)`); mask is interpolated to this shape if needed. |
-| `noise_factor` | float | Multiplier on the initial noise (default 1.0 in `LDMSampler`). |
-| `top_region_index_tensor`, `bottom_region_index_tensor` | `Tensor` | One-hot body-region indices (only used by `ddpm-ct`; `include_body_region=True`). |
-| `modality_tensor` | `Tensor` long | Integer modality code (see `configs/modality_mapping.json`): CT=1, MRI variants 8..32. |
-| `num_inference_steps` | int | RFlow → 30; **DDPM → 1000 (must, not optional)**. DDPM at < 1000 steps emits a warning and produces low-quality output. |
-| `autoencoder_sliding_window_infer_size` | list[int] | ROI for AE decode; default `[96, 96, 96]`. |
-| `autoencoder_sliding_window_infer_overlap` | float | Default `0.6667`. |
-| `cfg_guidance_scale` | float | Classifier-free guidance scale on the tumor signal. `0` disables CFG. |
+The config you pass to `-i` is `config_infer.json` (or one of the `config_infer_<XXg>_<dim>.json` presets). For the **per-knob walkthrough** — `modality`, `output_size`, `spacing = FOV / output_size`, AE sliding-window knobs (`_size` / `_overlap` / `_tp_num_splits`) keyed to GPU memory, `cfg_guidance_scale`, `num_inference_steps` — see the **"How to configure a run"** section in [`infer_mask-image-paired.md`](infer_mask-image-paired.md). The same presets apply here — this script consumes the same `config_infer.json`.
 
-## Algorithm step by step
+Quick reminder of the CT-specific knob most relevant to this skill:
 
-### 1. Decide CT vs MR intensity range
+- `cfg_guidance_scale` (tumor-CFG in this pipeline) — classifier-free guidance scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. `0` (default) = off, correct whenever the mask has no tumors or you want unsteered output. `1..5` = stronger tumor enforcement (more artifact risk above 5). Doubles per-step compute when `> 0`. The same key name also lives in `config_maisi_diff_model_*.json` as the modality-CFG for MR image-only inference — see [`infer_image-only`](infer_image-only.md).
 
-```python
-if modality_tensor <= 7:        # CT codes
-    a_min, a_max = -1000, 1000
-else:                           # MRI codes
-    a_min, a_max = 0, 1000
-b_min, b_max = 0.0, 1.0         # AE output range
-```
+### Hard constraints on `output_size` + `spacing`
 
-`a_*` are the target HU/intensity range; `b_*` are the AE's normalized output range. Step 7 below maps between them.
-
-### 2. Interpolate the mask to `output_size`
-
-```python
-if combine_label.shape[2:] != output_size:
-    combine_label = F.interpolate(combine_label, size=output_size, mode="nearest")
-```
-
-Major reshaping degrades quality — `LDMSampler.ensure_output_size_and_spacing` aims to feed a mask that's already at `output_size`.
-
-### 3. Build the ControlNet conditioning tensor
-
-```python
-controlnet_cond_vis = binarize_labels(combine_label.as_tensor().long()).half()
-# shape (1, 8, H, W, D)
-```
-
-`binarize_labels` is an 8-bit-encoding of the integer label per voxel (bit `b` of label → channel `b` of the tensor).
-
-### 4. Initialize noise
-
-```python
-latents = initialize_noise_latents(latent_shape, device) * noise_factor
-```
-
-### 5. Per-timestep ControlNet + DM forward (denoising loop)
-
-```python
-for t, next_t in zip(timesteps, next_timesteps):
-    # 5a. ControlNet forward — produces residuals
-    down_block_res, mid_block_res = controlnet(
-        x=latents, timesteps=t, controlnet_cond=controlnet_cond_vis,
-        class_labels=modality_tensor,                                # if include_modality
-    )
-
-    # 5b. Image DM forward — consumes the residuals
-    eps_hat = diffusion_unet(
-        x=latents, timesteps=t, spacing_tensor=spacing_tensor,
-        down_block_additional_residuals=down_block_res,
-        mid_block_additional_residual=mid_block_res,
-        top_region_index_tensor=top_region_index_tensor,             # if include_body_region (ddpm-ct only)
-        bottom_region_index_tensor=bottom_region_index_tensor,       # if include_body_region
-        class_labels=modality_tensor,                                # if include_modality
-    )
-
-    # 5c. Scheduler step
-    if isinstance(noise_scheduler, RFlowScheduler):
-        latents, _ = noise_scheduler.step(eps_hat, t, latents, next_t)
-    else:
-        latents, _ = noise_scheduler.step(eps_hat, t, latents)
-```
-
-Two model-variant differences:
-
-- **rflow-ct / rflow-mr / rflow-mr-brain** use `RFlowScheduler` (30 steps, much faster). The `set_timesteps` call also passes `input_img_size_numel` so step sizes adapt to volume.
-- **ddpm-ct** uses `DDPMScheduler` (1000 steps). It also sets `include_body_region=True` so the UNet receives `top_region_index_tensor` / `bottom_region_index_tensor`.
-
-### 6. Classifier-free guidance (CFG) — optional
-
-When `cfg_guidance_scale > 0`:
-
-```python
-# Build a tumor-free version of the conditioning mask via remove_tumors()
-combine_label_no_tumor = F.interpolate(remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(),
-                                       size=output_size, mode="nearest")
-controlnet_cond_vis_no_tumor = binarize_labels(combine_label_no_tumor.as_tensor().long()).half()
-```
-
-Each forward then batches `(tumor-conditioned, tumor-free)` together and combines:
-
-```python
-eps_t, eps_uncond = diffusion_unet(...).chunk(2)
-eps = eps_uncond + cfg_guidance_scale * (eps_t - eps_uncond)
-```
-
-The unconditional branch keeps the body+organs but **drops tumor labels**, so CFG specifically strengthens the tumor signal. Set `cfg_guidance_scale=0` to disable.
-
-### 7. Sliding-window image-AE decode + HU mapping
-
-```python
-inferer = SlidingWindowInferer(roi_size=[96,96,96], overlap=0.6667, mode="gaussian", ...)
-synthetic_images = dynamic_infer(inferer, recon_model, latents)
-
-# AE output in [b_min, b_max] = [0, 1]
-synthetic_images = (synthetic_images - b_min) / (b_max - b_min)
-# Map to target HU range
-synthetic_images = synthetic_images * (a_max - a_min) + a_min
-# Background → a_min using the mask
-synthetic_images = crop_img_body_mask(synthetic_images, combine_label, a_min=a_min)
-```
-
-`crop_img_body_mask` sets all voxels where the mask is 0 (background) to `a_min` — keeps the body silhouette clean.
-
-## Output
-
-A 2-tuple `(synthetic_images, combine_label)`:
-
-- `synthetic_images`: `(1, 1, H, W, D)` float tensor in HU range (CT) or `[0, +∞)` (MR).
-- `combine_label`: the mask at `output_size`, returned for downstream filtering (`filter_mask_with_organs`).
-
-## Configuration knobs
-
-| Knob | Where | Effect |
-|---|---|---|
-| `num_inference_steps` | `LDMSampler.__init__` | Quality / speed trade-off. RFlow → 30 is the validated setting; DDPM → 1000. |
-| `cfg_guidance_scale` | `LDMSampler.__init__` | `0` = off, typical values `1..5`. Higher = stronger tumor enforcement, but more artifacts. |
-| `autoencoder_sliding_window_infer_size` | `LDMSampler.__init__` | Must be divisible by 16. Larger = fewer tiles but more VRAM. |
-| `autoencoder_sliding_window_infer_overlap` | `LDMSampler.__init__` | `[0, 1)`. Higher = smoother blending, more compute. |
-| `noise_factor` | hardcoded `1.0` in `LDMSampler.__init__` | Scales the initial noise. |
-
-## Output-size + spacing constraints
-
-Validated by `check_input_ct` and `check_input_mr` (in `scripts/sample_mask.py`):
+Validated by `check_input_ct` / `check_input_mr` (in `scripts/sample_mask.py`):
 
 - `output_size[0] == output_size[1]`
 - `output_size[0] ∈ {256, 384, 512}`
@@ -265,14 +132,29 @@ Validated by `check_input_ct` and `check_input_mr` (in `scripts/sample_mask.py`)
 - `spacing[0] ∈ [0.5, 3.0]` mm, `spacing[2] ∈ [0.5, 5.0]` mm
 - FOV_xy ≥ 256 mm for head, ≥ 384 mm for abdomen / body
 
-See the `infer_image-only` skill for recommended `(dim, spacing)` per anatomical target.
+See [`infer_image-only`](infer_image-only.md) for the recommended `(dim, spacing)` per anatomical target.
 
-## Code references
+## Output
 
-| Symbol | File | Notes |
+Two files in the directory given by `output_dir` (from the environment config):
+
+- `sample_<timestamp>_image.nii.gz` — synthetic CT volume.
+- `sample_<timestamp>_label.nii.gz` — the (resampled) input mask returned for downstream filtering.
+
+Image intensity ranges:
+
+| Modality | Output type | Voxel value range |
 |---|---|---|
-| `ldm_conditional_sample_one_image` | `scripts/infer_image_from_mask.py` | core sampling function |
-| `crop_img_body_mask` | `scripts/infer_image_from_mask.py` | background HU regularization |
-| `LDMSampler.sample_one_pair` | `scripts/sample.py` | wraps `ldm_conditional_sample_one_image` with LDMSampler state |
-| `remove_tumors`, `augmentation` | `scripts/augmentation.py` | CFG unconditional mask + training-time mask aug |
-| `binarize_labels`, `dynamic_infer` | `scripts/utils.py` | encoding + sliding-window glue |
+| CT (modality code `1..7`) | int16 NIfTI | HU, clipped to `[-1000, 1000]` |
+| MR (codes `8..32`) — n/a for this pipeline; provided for context | int16 NIfTI | `[0, +∞)` |
+
+Background voxels (where the mask is `0`) are set to `a_min` (CT: `-1000` HU) via `crop_img_body_mask`, preserving the body silhouette.
+
+## Related scripts
+
+| Script | Role |
+|---|---|
+| `scripts/infer_image_from_mask.py` | CLI for this skill. Loads models, validates the user mask, calls `ldm_conditional_sample_one_image`, writes the NIfTIs. |
+| `scripts/sample.py` (`LDMSampler.sample_one_pair`) | Library wrapper used by the paired pipeline. Re-exports the same core sampler. |
+| `scripts/download_model_data.py` | Downloads ControlNet + image AE + image DM weights. Run once before inference. |
+| `scripts/utils.py` (`add_body_envelope`, `binarize_labels`, `remap_labels`) | Mask preprocessing utilities — needed for Options A/B above and for converting 0..124 → 132-class. |
