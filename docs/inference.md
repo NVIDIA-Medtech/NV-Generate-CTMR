@@ -121,7 +121,7 @@ If you need a different `output_size`, adjust `spacing` so `output_size × spaci
 
 Recommended FOV is computed from the median FOV of the training data.
 
-| Body region | Modality | Number of training images | Median FOV x × y × z (mm) |
+| Body region | Modality | Number of training images | Recommended FOV x × y × z (mm) |
 |---|---|---:|---|
 | brain | mri_t1 (9) | 4,659 | 160.0 × 256.0 × 256.0 |
 | brain | mri_t2 (10) | 577 | 240.0 × 240.0 × 162.5 |
@@ -135,13 +135,13 @@ Contrast-enhanced MRI is not supported. For brain MRI, prefer the dedicated `rfl
 
 ## Recommended FOV for MR `rflow-mr-brain` model
 
-Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N` counts unique source images; whole-brain and skull-stripped share the same FOV since they're two preprocessings of the same subject. Total unique images per skull condition (sum of the rows below): **318 825**.
+Recommended FOV per (modality, acquisition plane) across the MR-RATE training set. `N` counts unique source images; whole-brain and skull-stripped share the same FOV since they're two preprocessings of the same subject. Total unique images per skull condition (sum of the rows below): **318 825**.
 
 > ℹ️ The table covers axial, sagittal, and coronal scans only. The training set also includes images acquired in oblique orientations (not summarized here); the model has seen those during training but they are excluded from this reference table because the axial/sagittal/coronal cases are what users typically request at inference.
 >
 > ⚠️ Some (modality, plane) combinations have very few training images — output quality is not guaranteed for: **MRA** all planes (37 / 98 / 11), **SWI sagittal** (2), **SWI coronal** (4).
 
-| Modality | Plane | Median FOV (mm) | N |
+| Modality | Plane | Recommended FOV (mm) | Number of training images |
 |---|---|---|---:|
 | T1 | axial | 240 × 240 × 174 | 47 810 |
 | T1 | sagittal | 176 × 250 × 250 | 69 268 |
@@ -159,7 +159,7 @@ Median FOV per (modality, acquisition plane) across the MR-RATE training set. `N
 | MRA | sagittal | 158 × 250 × 250 | 98 |
 | MRA | coronal | 240 × 179 × 240 | 11 |
 
-Pick the row matching your target acquisition plane, then pick the modality code (see [Modality codes](#modality-codes); `9..20` for whole-brain or `29..33` for skull-stripped). The median FOV is a starting point — feel free to vary `dim` and `spacing` as long as `dim[i] × spacing[i]` lands near it.
+Pick the row matching your target acquisition plane, then pick the modality code (see [Modality codes](#modality-codes); `9..20` for whole-brain or `29..33` for skull-stripped). The Recommended FOV is a starting point — feel free to vary `dim` and `spacing` as long as `dim[i] × spacing[i]` lands near it.
 
 ## Modality codes
 
