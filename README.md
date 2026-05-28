@@ -35,6 +35,7 @@ Key capabilities:
 
 ## News
 
+- **[May 2026]** — Disambiguated the two flavors of classifier-free guidance into `cfg_guidance_scale_modality` (image-only path; required `> 0` for MR) and `cfg_guidance_scale_tumor` (CT mask-conditioned path); legacy `cfg_guidance_scale` is accepted with a `DeprecationWarning` for one release.
 - **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain v0 models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images. The training data of this version v0 is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE).
 - **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI
 repo to this NV-Generate-CTMR repo.
@@ -105,8 +106,16 @@ This repository provides **four model variants** for medical image generation: `
 >
 > - **CT** (`rflow-ct`, `ddpm-ct`): [docs/inference.md#recommended-spacing-for-ct](docs/inference.md#recommended-spacing-for-ct)
 > - **MR** (`rflow-mr`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-model)
+> - **MR Brain** (`rflow-mr-brain`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model)
 >
 > See also the `infer_image-only` / `infer_mask-image-paired` skills under [skills/](skills/) for end-to-end workflow guidance.
+>
+> ⚠️ **`cfg_guidance_scale_modality` defaults** — keep the shipped values:
+>
+> | Variant | `cfg_guidance_scale_modality` |
+> |---|---|
+> | `rflow-ct`, `ddpm-ct` | **0** |
+> | `rflow-mr`, `rflow-mr-brain` | **10** |
 
 ### 2.1 Installation
 
@@ -138,6 +147,8 @@ generate_version="rflow-mr-brain"
 python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
 python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
 ```
+
+For per-(modality, acquisition plane) FOV recommendations on `rflow-mr-brain`, see [detailed inference guide](./docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model).
 
 ### 2.3 CT Paired Image/Mask Generation
 

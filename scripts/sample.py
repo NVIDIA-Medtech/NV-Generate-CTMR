@@ -30,6 +30,7 @@ import logging
 import os
 import random
 import time
+import warnings
 from datetime import datetime
 
 import monai
@@ -101,14 +102,24 @@ class LDMSampler:
         random_seed=None,
         autoencoder_sliding_window_infer_size=[96, 96, 96],
         autoencoder_sliding_window_infer_overlap=0.6667,
-        cfg_guidance_scale=0.0,
+        cfg_guidance_scale_tumor=0.0,
+        cfg_guidance_scale=None,
     ) -> None:
         """
         Initialize the LDMSampler with various parameters and models.
 
         Args:
             Various parameters related to model configuration, input settings, and output specifications.
+            cfg_guidance_scale: deprecated legacy alias for ``cfg_guidance_scale_tumor``.
+                Passing it emits a ``DeprecationWarning`` and is honored for one release.
         """
+        if cfg_guidance_scale is not None:
+            warnings.warn(
+                "`cfg_guidance_scale` is deprecated; pass `cfg_guidance_scale_tumor` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            cfg_guidance_scale_tumor = cfg_guidance_scale
         self.random_seed = random_seed
         if random_seed is not None:
             set_determinism(seed=random_seed)
@@ -138,7 +149,7 @@ class LDMSampler:
         self.output_size = output_size
         self.output_dir = output_dir
         self.noise_factor = 1.0
-        self.cfg_guidance_scale = cfg_guidance_scale
+        self.cfg_guidance_scale_tumor = cfg_guidance_scale_tumor
         self.controllable_anatomy_size = controllable_anatomy_size
         if len(self.controllable_anatomy_size):
             logging.info("controllable_anatomy_size is given, mask generation is triggered!")
@@ -391,7 +402,7 @@ class LDMSampler:
             num_inference_steps=self.num_inference_steps,
             autoencoder_sliding_window_infer_size=self.autoencoder_sliding_window_infer_size,
             autoencoder_sliding_window_infer_overlap=self.autoencoder_sliding_window_infer_overlap,
-            cfg_guidance_scale=self.cfg_guidance_scale,
+            cfg_guidance_scale_tumor=self.cfg_guidance_scale_tumor,
         )
         return synthetic_images, synthetic_labels
 

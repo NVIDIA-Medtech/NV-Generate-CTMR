@@ -44,6 +44,7 @@ import argparse
 import logging
 import os
 import sys
+import warnings
 from datetime import datetime
 from pathlib import Path
 
@@ -80,7 +81,7 @@ def ldm_conditional_sample_one_image_from_mask(
     num_inference_steps=1000,
     autoencoder_sliding_window_infer_size=(96, 96, 96),
     autoencoder_sliding_window_infer_overlap=0.6667,
-    cfg_guidance_scale=0,
+    cfg_guidance_scale_tumor=0,
 ):
     """
     Generate a CT/MR image from a **3D label mask** via the ControlNet-
@@ -91,7 +92,7 @@ def ldm_conditional_sample_one_image_from_mask(
 
       1. Pre-process: ``binarize_labels`` converts the 1-channel integer mask
          to the 8-channel binary ControlNet conditioning tensor.
-      2. CFG (when ``cfg_guidance_scale > 0``): builds a tumor-free
+      2. CFG (when ``cfg_guidance_scale_tumor > 0``): builds a tumor-free
          unconditional counterpart via ``remove_tumors`` + ``binarize_labels``.
       3. Post-process: ``crop_img_body_mask`` regularizes background voxels
          to ``a_min`` (CT: -1000; MR: 0) using the mask.
@@ -125,7 +126,7 @@ def ldm_conditional_sample_one_image_from_mask(
     controlnet_cond_tensor = binarize_labels(combine_label.as_tensor().long()).half()
 
     controlnet_uncond_tensor = None
-    if cfg_guidance_scale > 0:
+    if cfg_guidance_scale_tumor > 0:
         # Mask-specific unconditional branch: same mask with tumors removed.
         combine_label_no_tumor = torch.nn.functional.interpolate(
             remove_tumors(combine_label.squeeze(0)).unsqueeze(0).float(),
@@ -154,7 +155,10 @@ def ldm_conditional_sample_one_image_from_mask(
         num_inference_steps=num_inference_steps,
         autoencoder_sliding_window_infer_size=autoencoder_sliding_window_infer_size,
         autoencoder_sliding_window_infer_overlap=autoencoder_sliding_window_infer_overlap,
-        cfg_guidance_scale=cfg_guidance_scale,
+        # Wrapper-level "tumor CFG" maps to the generic CFG arg on the
+        # modality-agnostic core. The semantic ("strengthen tumor") comes
+        # from how we built controlnet_uncond_tensor above (tumor-free mask).
+        cfg_guidance_scale=cfg_guidance_scale_tumor,
         controlnet_uncond_tensor=controlnet_uncond_tensor,
     )
 
@@ -407,7 +411,7 @@ def main() -> int:
         help=(
             "Config json file that stores inference hyper-parameters (e.g. "
             "./configs/config_infer.json). Source of modality, num_inference_steps, "
-            "autoencoder_sliding_window_infer_size/overlap, cfg_guidance_scale."
+            "autoencoder_sliding_window_infer_size/overlap, cfg_guidance_scale_tumor."
         ),
     )
     parser.add_argument("--random-seed", type=int, default=0)
@@ -434,8 +438,18 @@ def main() -> int:
 
     # cfg now carries every config key from env + inference + network configs:
     # output_dir, modality, num_inference_steps,
-    # autoencoder_sliding_window_infer_size/overlap, cfg_guidance_scale, etc.
+    # autoencoder_sliding_window_infer_size/overlap, cfg_guidance_scale_tumor, etc.
     cfg = load_config(args.environment_file, args.inference_file, args.config_file)
+    # Back-compat: accept the legacy key for one release.
+    if hasattr(cfg, "cfg_guidance_scale") and not hasattr(cfg, "cfg_guidance_scale_tumor"):
+        warnings.warn(
+            "`cfg_guidance_scale` in image-from-mask configs is deprecated; " "rename it to `cfg_guidance_scale_tumor`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        cfg.cfg_guidance_scale_tumor = cfg.cfg_guidance_scale
+    if not hasattr(cfg, "cfg_guidance_scale_tumor"):
+        cfg.cfg_guidance_scale_tumor = 0.0
     autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler = load_image_models(cfg, device)
 
     include_body_region = diffusion_unet.include_top_region_index_input
@@ -471,7 +485,7 @@ def main() -> int:
             file=sys.stderr,
         )
 
-    print(f"[step 4/4] running inference (steps={num_inference_steps}, cfg={cfg.cfg_guidance_scale})...", file=sys.stderr)
+    print(f"[step 4/4] running inference (steps={num_inference_steps}, cfg_tumor={cfg.cfg_guidance_scale_tumor})...", file=sys.stderr)
     synthetic_image, returned_label = ldm_conditional_sample_one_image(
         autoencoder=autoencoder,
         diffusion_unet=diffusion_unet,
@@ -490,7 +504,7 @@ def main() -> int:
         num_inference_steps=num_inference_steps,
         autoencoder_sliding_window_infer_size=cfg.autoencoder_sliding_window_infer_size,
         autoencoder_sliding_window_infer_overlap=cfg.autoencoder_sliding_window_infer_overlap,
-        cfg_guidance_scale=cfg.cfg_guidance_scale,
+        cfg_guidance_scale_tumor=cfg.cfg_guidance_scale_tumor,
     )
 
     # ── Save output ─────────────────────────────────────────────────────────

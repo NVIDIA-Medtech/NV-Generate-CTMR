@@ -31,6 +31,6 @@
         "random_seed": 0,
         "num_inference_steps": 1000,
         "modality": 1,
-        "cfg_guidance_scale": 0
+        "cfg_guidance_scale_modality": 0
     }
 }
