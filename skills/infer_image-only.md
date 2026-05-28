@@ -160,9 +160,9 @@ Sanity-check the resulting FOV with `print([dim[i]*spacing[i] for i in range(3)]
 
 Classifier-free guidance (CFG) scale for the modality conditioning. CFG runs the model twice per step (once with the modality label, once with it zeroed) and amplifies the difference — so this knob steers the output toward the requested **modality** (the `class_labels` / modality tensor). Effect of the value:
 
-- **`0`** — modality conditioning is effectively ignored. For CT this is fine (modality is fixed at `CT=1`, so guidance has nothing to amplify). For **MR variants this is the failure mode** ([issue #29](https://github.com/NVIDIA-Medtech/NV-Generate-CTMR/issues/29)): the output is washed-out and doesn't commit to the requested contrast (T1 / T2 / FLAIR / SWI).
-- **`~10`** — validated value for MR. Output looks like the requested contrast.
-- **Much above 10** — over-saturates contrast, introduces artifacts.
+- **`0`** — modality conditioning is effectively ignored. For CT this is fine (modality is fixed at `CT=1`, so guidance has nothing to amplify). For **MR variants this is the failure mode**, the output will not commit to the requested contrast (T1 / T2 / FLAIR / SWI).
+- **`5~15`** — validated value for MR. Output looks like the requested contrast.
+- **Much above 15** — over-saturates contrast, introduces artifacts.
 - **Any value `> 0` roughly doubles UNet compute and VRAM** (conditional + unconditional run in one doubled batch). MR inference therefore costs ~2× CT at the same `dim`.
 
 Recommended values per variant (these are the shipped defaults — keep them):
