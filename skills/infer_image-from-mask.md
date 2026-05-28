@@ -119,7 +119,7 @@ The config you pass to `-i` is `config_infer.json` (or one of the `config_infer_
 
 Quick reminder of the CT-specific knob most relevant to this skill:
 
-- `cfg_guidance_scale` (tumor-CFG in this pipeline) — classifier-free guidance scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. `0` (default) = off, correct whenever the mask has no tumors or you want unsteered output. `1..5` = stronger tumor enforcement (more artifact risk above 5). Doubles per-step compute when `> 0`. The same key name `cfg_guidance_scale` also appears in `config_maisi_diff_model_*.json` (consumed by `scripts.diff_model_infer`), where it gates the **modality** branch for MR image-only inference — see [`infer_image-only`](infer_image-only.md). Same key name, different unconditional branch, semantics depend on which script reads it.
+- `cfg_guidance_scale` (tumor-CFG in this pipeline) — classifier-free guidance scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. `0` (default) = off, correct whenever the mask has no tumors or you want unsteered output. `1..5` = stronger tumor enforcement (more artifact risk above 5). Doubles per-step compute when `> 0`. The same key name also lives in `config_maisi_diff_model_*.json` as the modality-CFG for MR image-only inference — see [`infer_image-only`](infer_image-only.md).
 
 ### Hard constraints on `output_size` + `spacing`
 
