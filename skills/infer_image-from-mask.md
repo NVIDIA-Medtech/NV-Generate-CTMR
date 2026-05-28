@@ -48,7 +48,7 @@ python -m scripts.download_model_data --version rflow-ct --root_dir "./"
 #      "output_size": [512, 512, 128],
 #      "spacing":     [0.75, 0.75, 4.0],
 #      "modality":                            1,    # CT
-#      "cfg_guidance_scale":                  0.0,  # off, the correct default
+#      "cfg_guidance_scale_tumor":            0.0,  # off, the correct default
 #      "num_inference_steps":                 30,
 #      "autoencoder_sliding_window_infer_size":    [80, 80, 32],
 #      "autoencoder_sliding_window_infer_overlap": 0.4,
@@ -115,11 +115,11 @@ If many voxel values fall outside the vocabulary you almost certainly forgot a r
 
 ## Configuration
 
-The config you pass to `-i` is `config_infer.json` (or one of the `config_infer_<XXg>_<dim>.json` presets). For the **per-knob walkthrough** — `modality`, `output_size`, `spacing = FOV / output_size`, AE sliding-window knobs (`_size` / `_overlap` / `_tp_num_splits`) keyed to GPU memory, `cfg_guidance_scale`, `num_inference_steps` — see the **"How to configure a run"** section in [`infer_mask-image-paired.md`](infer_mask-image-paired.md). The same presets apply here — this script consumes the same `config_infer.json`.
+The config you pass to `-i` is `config_infer.json` (or one of the `config_infer_<XXg>_<dim>.json` presets). For the **per-knob walkthrough** — `modality`, `output_size`, `spacing = FOV / output_size`, AE sliding-window knobs (`_size` / `_overlap` / `_tp_num_splits`) keyed to GPU memory, `cfg_guidance_scale_tumor`, `num_inference_steps` — see the **"How to configure a run"** section in [`infer_mask-image-paired.md`](infer_mask-image-paired.md). The same presets apply here — this script consumes the same `config_infer.json`.
 
 Quick reminder of the CT-specific knob most relevant to this skill:
 
-- `cfg_guidance_scale` (tumor-CFG in this pipeline) — classifier-free guidance scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. `0` (default) = off, correct whenever the mask has no tumors or you want unsteered output. `1..5` = stronger tumor enforcement (more artifact risk above 5). Doubles per-step compute when `> 0`. The same key name also lives in `config_maisi_diff_model_*.json` as the modality-CFG for MR image-only inference — see [`infer_image-only`](infer_image-only.md).
+- `cfg_guidance_scale_tumor` — classifier-free guidance scale on tumor presence. CFG runs the model twice per step (mask as-is vs mask with `remove_tumors()`) and amplifies the difference, strengthening tumor signal in the synthesized image. `0` (default) = off, correct whenever the mask has no tumors or you want unsteered output. `1..5` = stronger tumor enforcement (more artifact risk above 5). Doubles per-step compute when `> 0`. Distinct from `cfg_guidance_scale_modality` in `config_maisi_diff_model_*.json` (MR image-only path) — see [`infer_image-only`](infer_image-only.md). Legacy un-suffixed `cfg_guidance_scale` is still accepted for one release with a `DeprecationWarning`.
 
 ### Hard constraints on `output_size` + `spacing`
 

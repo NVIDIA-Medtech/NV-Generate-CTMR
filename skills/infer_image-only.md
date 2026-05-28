@@ -68,7 +68,7 @@ python -m scripts.download_model_data --version rflow-mr-brain --root_dir "./" -
 #      "dim":     [256, 256, 128],           # axial: slice-stack axis on z (smaller dim)
 #      "spacing": [0.94, 0.94, 1.36],        # → FOV 240×240×174 mm, matches T1-axial median
 #      "modality": 9,                        # T1 whole-brain (29 for T1 skull-stripped)
-#      "cfg_guidance_scale": 10,             # required for MR; this is the shipped default
+#      "cfg_guidance_scale_modality": 10,    # required for MR; this is the shipped default
 #      "num_inference_steps": 30,
 #      "random_seed": 0
 
@@ -85,7 +85,7 @@ For another (modality, plane) combination, look up the median FOV in the [per-pl
 
 ## How to configure a run
 
-All knobs live in `configs/config_maisi_diff_model_<variant>.json` under the `diffusion_unet_inference` block. The numbered steps below mirror the parallel **"How to configure a run"** in [`infer_mask-image-paired.md`](infer_mask-image-paired.md) so the two skills are easy to compare. Steps that don't apply here (AE sliding-window knobs, tumor-CFG) are flagged N/A.
+All knobs live in `configs/config_maisi_diff_model_<variant>.json` under the `diffusion_unet_inference` block. The numbered steps below mirror the parallel **"How to configure a run"** in [`infer_mask-image-paired.md`](infer_mask-image-paired.md) so the two skills are easy to compare. Steps that don't apply here (AE sliding-window knobs, `cfg_guidance_scale_tumor`) are flagged N/A.
 
 ### 1. `modality` → driven by your anatomy
 
@@ -156,7 +156,7 @@ For MR (`rflow-mr`, `rflow-mr-brain`):
 
 Sanity-check the resulting FOV with `print([dim[i]*spacing[i] for i in range(3)])` before running. See `docs/inference.md` for the full per-modality FOV table.
 
-### 4. `cfg_guidance_scale` (modality-CFG in this pipeline)
+### 4. `cfg_guidance_scale_modality`
 
 Classifier-free guidance (CFG) scale for the modality conditioning. CFG runs the model twice per step (once with the modality label, once with it zeroed) and amplifies the difference — so this knob steers the output toward the requested **modality** (the `class_labels` / modality tensor). Effect of the value:
 
@@ -167,16 +167,16 @@ Classifier-free guidance (CFG) scale for the modality conditioning. CFG runs the
 
 Recommended values per variant (these are the shipped defaults — keep them):
 
-| Variant | `cfg_guidance_scale` |
+| Variant | `cfg_guidance_scale_modality` |
 |---|---|
 | `rflow-ct` | **0** |
 | `ddpm-ct` | **0** |
 | `rflow-mr-brain` | **10** |
 | `rflow-mr` | **10** |
 
-Note: the same key name `cfg_guidance_scale` also appears in `config_infer.json` (consumed by `scripts.inference` / `scripts.infer_image_from_mask`), where it gates the **tumor** branch instead — see [`infer_mask-image-paired`](infer_mask-image-paired.md). The semantics depend on which script reads the config, not on the key name.
+Distinct from `cfg_guidance_scale_tumor` in `config_infer.json` (consumed by `scripts.inference` / `scripts.infer_image_from_mask`), which gates the **tumor** branch — see [`infer_mask-image-paired`](infer_mask-image-paired.md). The legacy un-suffixed `cfg_guidance_scale` key is still accepted for one release with a `DeprecationWarning`.
 
-### 5. Tumor-CFG → N/A in this path
+### 5. `cfg_guidance_scale_tumor` → N/A in this path
 
 ### 6. `num_inference_steps`
 
