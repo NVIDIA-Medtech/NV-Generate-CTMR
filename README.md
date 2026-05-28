@@ -35,6 +35,7 @@ Key capabilities:
 
 ## News
 
+- **[May 2026]** — Added [operator-focused inference skills](skills/) — ask an AI coding agent (Claude Code, Cursor, Codex, etc.) to use the matching skill and it will run the inference workflow end-to-end.
 - **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain v0 models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images. The training data of this version v0 is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE).
 - **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI
 repo to this NV-Generate-CTMR repo.
@@ -106,7 +107,7 @@ This repository provides **four model variants** for medical image generation: `
 > - **CT** (`rflow-ct`, `ddpm-ct`): [docs/inference.md#recommended-spacing-for-ct](docs/inference.md#recommended-spacing-for-ct)
 > - **MR** (`rflow-mr`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-model)
 >
-> See also the `infer_image-only` / `infer_mask-image-paired` skills under [skills/](skills/) for end-to-end workflow guidance.
+> 💡 **Using an AI coding agent (Claude Code, Cursor, Codex, etc.)?** Each subsection below links to a per-workflow skill in [`skills/`](skills/). Ask the agent to read this README then use the corresponding skill file — it will run the matching workflow end-to-end, including model download, config edits, and the inference command. The same files also work as standalone reference if you'd rather drive the workflow yourself.
 
 ### 2.1 Installation
 
@@ -115,6 +116,8 @@ pip install -r requirements.txt
 ```
 
 ### 2.2 MR Brain Image Generation
+
+**Skill:** [`infer_image-only`](skills/infer_image-only.md) — feed this file to an AI coding agent to run the workflow below end-to-end.
 
 Please refer to [inference_diff_unet_tutorial.ipynb](inference_diff_unet_tutorial.ipynb) for the inference tutorial that generates CT or MR image without mask.
 
@@ -141,6 +144,8 @@ python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -
 
 ### 2.3 CT Paired Image/Mask Generation
 
+**Skill:** [`infer_mask-image-paired`](skills/infer_mask-image-paired.md) — feed this file to an AI coding agent to run the workflow below end-to-end.
+
 ```bash
 export MONAI_DATA_DIRECTORY="./temp_work_dir"
 network="rflow"
@@ -152,6 +157,8 @@ See also: [inference_tutorial.ipynb](inference_tutorial.ipynb)
 
 ### 2.4 CT Image Generation
 
+**Skill:** [`infer_image-only`](skills/infer_image-only.md) — feed this file to an AI coding agent to run the workflow below end-to-end.
+
 ```bash
 network="rflow"
 generate_version="rflow-ct" # can change to "ddpm-ct"
@@ -160,6 +167,8 @@ python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -
 ```
 
 ### 2.5 MR Image Generation
+
+**Skill:** [`infer_image-only`](skills/infer_image-only.md) — feed this file to an AI coding agent to run the workflow below end-to-end.
 
 Change `"modality"` in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Supported contrasts: T1/T2 brain, FLAIR skull-stripped brain, T2 prostate, T1 breast, T1/T2 abdomen. But if you are going to synthesize brain images, we recommend using `rflow-mr-brain` model instead. Please see [2.2 MR Brain Image Generation](#22-mr-brain-image-generation). Different body region has different recommended FOV, please see [detailed inference guide](./docs/inference.md#recommended-fov-for-mr-rflow-mr-model).
 
@@ -171,6 +180,8 @@ python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -
 ```
 
 ### 2.6 CT Image Generation from Your Own Mask
+
+**Skill:** [`infer_image-from-mask`](skills/infer_image-from-mask.md) — feed this file to an AI coding agent to run the workflow below end-to-end (including mask preprocessing).
 
 If you already have a 3D label mask in the **MAISI 132-class vocabulary** with the body envelope (label `200`) added, you can feed it directly to the CT ControlNet to synthesize a paired CT image — no mask diffusion step needed:
 
