@@ -108,6 +108,12 @@ This repository provides **four model variants** for medical image generation: `
 > - **MR** (`rflow-mr`): [docs/inference.md#recommended-fov-for-mr-rflow-mr-model](docs/inference.md#recommended-fov-for-mr-rflow-mr-model)
 >
 > 💡 **Using an AI coding agent (Claude Code, Cursor, Codex, etc.)?** Each subsection below links to a per-workflow skill in [`skills/`](skills/). Ask the agent to read this README then use the corresponding skill file — it will run the matching workflow end-to-end, including model download, config edits, and the inference command. The same files also work as standalone reference if you'd rather drive the workflow yourself.
+>
+> **Example prompt — copy into your agent:**
+>
+> ```text
+> Read the README in this repo and use the matching skill to generate a T1 whole-brain MR image.
+> ```
 
 ### 2.1 Installation
 
