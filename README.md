@@ -57,7 +57,7 @@ synthesis.
   - [2.4 CT Image Generation](#24-ct-image-generation)
   - [2.5 MR Image Generation](#25-mr-image-generation)
   - [2.6 CT Image Generation from Your Own Mask](#26-ct-image-generation-from-your-own-mask)
-  - [2.7 Example Application: MR-to-CT Image Synthesis](#27-example-application-adapting-nv-generate-ctmr-for-mr-to-ct-image-synthesis)
+  - [2.7 Example Applications (Community)](#27-example-applications-community)
 - [3. Documentation: details of data preparation, training, and inference tutorials](#3-documentation-details-of-data-preparation-training-and-inference-tutorials)
 - [4. Performance: accuracy, speed, and GPU memory usage](#4-performance-accuracy-speed-and-gpu-memory-usage)
 - [5. License](#5-license)
@@ -212,9 +212,12 @@ python -m scripts.infer_image_from_mask \
 
 For batch generation from many masks listed in a JSON, see [`scripts.infer_image_from_mask_batch`](scripts/infer_image_from_mask_batch.py).
 
-### 2.7 Example Application: Adapting NV-Generate-CTMR for MR-to-CT Image Synthesis
+### 2.7 Example Applications (Community)
 
-A reference implementation for MR-to-CT synthesis based on NV-Generate-CTMR (rflow-ct) is available here: <https://github.com/brudfors/maisi-mr-to-ct>.
+> ⚠️ Independently developed by their respective authors; **not endorsed, maintained, or audited** by NVIDIA or the NV-Generate-CTMR maintainers — use at your own risk and review each project's license + clinical disclaimers. See [`docs/applications.md`](docs/applications.md) for the full disclaimer.
+
+- **MR-to-CT image synthesis** — reference implementation based on `rflow-ct`: <https://github.com/brudfors/maisi-mr-to-ct>.
+- **Educational toolkit for radiotherapy research** — Jupyter notebooks plus DICOM RT-STRUCT export so synthetic CT + mask pairs are loadable in clinical tools (3D Slicer, RayStation, Eclipse): <https://github.com/MustafaKadhim/MAISI-v2-Educational-for-Radiotherapy-Research>.
 
 If you've adapted NV-Generate-CTMR for other imaging tasks or applications and would like to share your work, please feel free to open an issue or contact the maintainers — we'd love to link to your repo.
 
@@ -228,7 +231,7 @@ If you've adapted NV-Generate-CTMR for other imaging tasks or applications and w
 | [Data Preparation](docs/data.md) | Dataset formats and preparation steps |
 | [Evaluation](docs/evaluation.md) | FID evaluation tool and benchmark results |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
-| [Applications](docs/applications.md) | Community adaptations (MR-to-CT synthesis) |
+| [Applications](docs/applications.md) | Community adaptations (MR-to-CT synthesis, radiotherapy educational toolkit) |
 | [Inference Tutorial](inference_tutorial.ipynb) | Quick start CT paired generation (notebook) |
 | [Diffusion Inference](inference_diff_unet_tutorial.ipynb) | CT/MR image-only generation (notebook) |
 | [Training Tutorials](train_vae_tutorial.ipynb) | VAE, diffusion, and ControlNet training |
