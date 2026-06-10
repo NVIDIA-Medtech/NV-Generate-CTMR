@@ -1,6 +1,6 @@
 ---
 name: controlnet_finetune_data-prep
-description: How to turn your own original images + original label masks into the preprocessed files (VAE embeddings, VISTA-3D pseudo labels, combined labels) needed to finetune the CT ControlNet on a NEW class. Covers remapping an unseen user label onto any unclaimed integer index (0–255; the "dummy" placeholders are just one option) in label_dict.json, building the JSON data list, and the fold/weighted_loss settings. Trigger when the user says "I only have images and masks", "how do I prepare data to finetune the ControlNet", "how do I add my own class/tumor/lesion", "what index do I give my new label", "how do I make the *_emb / pseudo_label / combined_label files", or wants to reproduce the C4KC-KiTS example on their own data. CT-only.
+description: How to turn your own original images + original label masks into the preprocessed files (VAE embeddings, NV-Segment pseudo labels, combined labels) needed to finetune the CT ControlNet on a NEW class. Covers remapping an unseen user label onto any unclaimed integer index (0–255; the "dummy" placeholders are just one option) in label_dict.json, building the JSON data list, and the fold/weighted_loss settings. Trigger when the user says "I only have images and masks", "how do I prepare data to finetune the ControlNet", "how do I add my own class/tumor/lesion", "what index do I give my new label", "how do I make the *_emb / pseudo_label / combined_label files", or wants to reproduce the C4KC-KiTS example on their own data. CT-only.
 ---
 
 # Preparing your own data for ControlNet finetuning
@@ -20,7 +20,7 @@ It explains how to produce the **three derived files** the ControlNet training l
             |-image.nii.gz                # original image          ← you have this
 KiTS-000* --|-mask.nii.gz                 # original mask           ← you have this
             |-image_emb.nii.gz            # VAE-encoded embedding         (Step 1)
-            |-mask_pseudo_label.nii.gz    # VISTA-3D whole-body labels    (Step 2)
+            |-mask_pseudo_label.nii.gz    # NV-Segment labels + body (200) (Step 2)
             |-mask_combined_label.nii.gz  # pseudo labels + your remapped mask  (Step 3)
 ```
 
@@ -52,15 +52,15 @@ python -m scripts.diff_model_create_training_data \
 
 > The data list for **this step** must carry a `modality` field per entry (e.g. `"ct"`) — it drives intensity normalization. See [modality_mapping.json](../configs/modality_mapping.json) for valid values. Encoding up front (instead of inside the training loop) is what keeps GPU memory low during finetuning.
 
-## Step 2 — Pseudo labels (`mask_pseudo_label*.nii.gz`)
+## Step 2 — Whole-body labels + body envelope (`mask_pseudo_label*.nii.gz`)
 
-Run [VISTA-3D](https://github.com/Project-MONAI/VISTA) on each **original image** to produce a whole-body segmentation already expressed in the MAISI 132-class vocabulary. This gives the ControlNet anatomical context your ROI-only mask lacks.
+Produce a MAISI-vocabulary whole-body segmentation **with the body envelope (`200`) already added** by following **Option A** of [`infer_image-from-mask.md` → "Producing a valid mask from a CT image"](infer_image-from-mask.md#producing-a-valid-mask-from-a-ct-image): run NV-Segment (`CT_BODY`) on the original image, then `scripts.utils.add_body_envelope(seg, ct_image)`. Save the result next to each case as `mask_pseudo_label*.nii.gz`.
 
-**VISTA-3D is a separate tool — not part of this repo.** Install/run it independently and save its output next to each case as `mask_pseudo_label*.nii.gz`.
+NV-Segment is a separate tool (not part of this repo) and emits **organ labels only** — Option A's `add_body_envelope` step is what supplies the `200` envelope the CT ControlNet requires. Don't skip it.
 
 ## Step 3 — Remap your mask, then combine (`mask_combined_label*.nii.gz`)
 
-This is the key step. The combined mask = the VISTA pseudo label, with **your mask written on top** in MAISI indices. Two sub-steps:
+This is the key step. The combined mask = the Step-2 pseudo label (organs + body envelope `200`) with **your mask written on top** in MAISI indices. Two sub-steps:
 
 ### 3a. Remap your label values to MAISI indices
 
@@ -84,21 +84,21 @@ For every class in your original mask, decide its MAISI index:
 
 > Whatever index you pick — a `dummy` slot or a fresh integer like `150` — **add a named entry for it in `label_dict.json`** and set it as `weighted_loss_label` (see below). The only hard constraints are: integer, `0–255`, not already claimed, not `0`, not `200`.
 
-### 3b. Combine pseudo label + remapped mask
+### 3b. Combine: write your remapped mask on top
 
-Overlay your remapped mask onto the VISTA pseudo label and keep the **body envelope (`200`)** present. The repo provides the remap building block; the overlay is a small step you assemble:
+Overlay your remapped mask onto the Step-2 pseudo label (organs + body envelope `200`). The repo provides the remap building block; the overlay is a small step you assemble:
 
 ```python
 import torch
 from scripts.augmentation import remap_labels   # remap_labels(tensor, {old_value: new_index})
 
-# your_mask: integer label tensor from mask.nii.gz
-# pseudo:    integer label tensor from mask_pseudo_label.nii.gz (already MAISI vocab, includes body=200)
+# your_mask:  integer label tensor from mask.nii.gz
+# pseudo:     Step-2 pseudo label — MAISI organ labels + body envelope (200)
 
 # 3a: liver(1) and right-kidney(2) exist in MAISI; my new lesion(3) is unseen -> dummy6 (129)
 remapped = remap_labels(your_mask, {1: 1, 2: 5, 3: 129})
 
-# 3b: write your foreground classes on top of the pseudo label, leave its background/body intact
+# 3b: write your foreground classes on top, leave the organ/body context intact
 combined = pseudo.clone()
 combined[remapped > 0] = remapped[remapped > 0]
 # save `combined` as mask_combined_label*.nii.gz (same affine/spacing as the pseudo label)
@@ -163,7 +163,7 @@ python -m scripts.train_controlnet \
 ## Gotchas checklist
 
 - [ ] Embeddings made with **`autoencoder_v1.pt`** (not v2) for the CT ControlNet.
-- [ ] Each combined label still contains the **body envelope (`200`)** on non-organ body voxels.
+- [ ] **Body envelope (`200`) added** via `scripts.utils.add_body_envelope(seg, ct)` — NV-Segment never produces it, and the ControlNet needs it on every non-organ body voxel.
 - [ ] New classes remapped to **any unclaimed integer in `0–255`** (free ranges `133–199` / `201–255`, or a `dummy` slot like `129`); existing organs remapped to their real MAISI indices. Never reuse a claimed index, `0`, or `200`.
 - [ ] `weighted_loss_label` matches the index you assigned; `label_dict.json` updated if you go past the 8 dummies.
 - [ ] Items spread across **multiple folds** so the held-out (validation) fold isn't the whole dataset.

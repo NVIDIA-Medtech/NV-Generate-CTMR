@@ -225,7 +225,7 @@ Each case folder holds five files. **You only ever author the two `original` fil
             |-*arterial*.nii.gz               # original image          (you provide)
             |-*arterial_emb*.nii.gz           # VAE-encoded image embedding   (derived)
 KiTS-000* --|-mask*.nii.gz                    # original mask           (you provide)
-            |-mask_pseudo_label*.nii.gz       # VISTA-3D pseudo labels        (derived)
+            |-mask_pseudo_label*.nii.gz       # NV-Segment labels + body (200)  (derived)
             |-mask_combined_label*.nii.gz     # pseudo labels + your mask     (derived)
 ```
 
@@ -234,15 +234,15 @@ An example combined mask of original and pseudo labels is shown below:
 
 #### Generating the preprocessed files from your own image and mask
 
-> 💡 **Step-by-step guide:** [`skills/controlnet_finetune_data-prep.md`](../skills/controlnet_finetune_data-prep.md) walks through this end to end — embeddings, VISTA-3D pseudo labels, remapping a new class onto a free label index, building the JSON, and launching finetuning.
+> 💡 **Step-by-step guide:** [`skills/controlnet_finetune_data-prep.md`](../skills/controlnet_finetune_data-prep.md) walks through this end to end — embeddings, NV-Segment pseudo labels, remapping a new class onto a free label index, building the JSON, and launching finetuning.
 
 Starting from an `original image` and an `original mask`, the three derived files are produced as follows:
 
 1. **Image embedding (`*_emb.nii.gz`).** VAE-encode the original image with `scripts/diff_model_create_training_data.py`. For each image it resamples to the nearest multiple of 128 per axis, runs the autoencoder encoder (`encode_stage_2_inputs`, sliding-window, under AMP), and saves the latent as `<image>_emb.nii.gz`. Set `trained_autoencoder_path` to `./models/autoencoder_v1.pt` and point `data_base_dir` / `json_data_list` / `embedding_base_dir` at your data via an `environment_*` config. Encoding once up front (instead of inside the training loop) is what keeps GPU memory low during ControlNet training. *Note: this script reads a `modality` field per JSON entry (e.g. `"ct"`).*
 
-2. **Pseudo labels (`mask_pseudo_label*.nii.gz`).** Run [VISTA-3D](https://github.com/Project-MONAI/VISTA) on the original image to get a whole-body segmentation in the MAISI 132-class vocabulary. This adds anatomical context the ROI-only mask lacks. VISTA-3D is a **separate tool** — it is not part of this repository.
+2. **Pseudo labels (`mask_pseudo_label*.nii.gz`).** Produce a MAISI-vocabulary whole-body segmentation **with the body envelope (`200`) added** by following Option A in the [image-from-mask skill](../skills/infer_image-from-mask.md#producing-a-valid-mask-from-a-ct-image): run [NV-Segment](https://github.com/NVIDIA-Medtech/NV-Segment-CTMR) (a **separate tool**, not part of this repo) on the original image, then `scripts.utils.add_body_envelope(seg, ct_image)`. NV-Segment emits organ labels only and **never** label `200`, so the `add_body_envelope` step is required — it fills every non-organ body voxel with `200` from the CT HU values. This adds the anatomical context the ROI-only mask lacks.
 
-3. **Combined labels (`mask_combined_label*.nii.gz`).** Overlay your original mask onto the VISTA pseudo label: remap your ROI to its target index (Kidney Tumor → `129` in this example) and write it on top of the pseudo label, keeping the body envelope (label `200`) present. This combined mask is what the ControlNet is conditioned on. The repo provides the label-remapping helper (`remap_labels` in `scripts/utils.py`); the merge itself is a small label-overlay step you assemble for your data.
+3. **Combined labels (`mask_combined_label*.nii.gz`).** Overlay your original mask onto the Step-2 pseudo label: remap your ROI to its target index (Kidney Tumor → `129` in this example) and write it on top. This combined mask is what the ControlNet is conditioned on. The repo provides the `remap_labels` helper (`scripts/utils.py`); the merge itself is a small label-overlay step you assemble for your data.
 
 When teaching a class other than Kidney Tumor, remap it to **any unclaimed integer in `0–255`** — anything not already used by a MAISI class and not `0`/`200`; the free ranges `133–199` and `201–255` collide with nothing, and the eight `dummy` slots in [`label_dict.json`](../configs/label_dict.json) (e.g. `129`) are pre-named for convenience. Set that index as `weighted_loss_label` in the training config and add a named entry for it to `label_dict.json`. See [docs/training.md](../docs/training.md#3d-controlnet-training) for the full guidance and launch commands.
 
