@@ -234,7 +234,7 @@ An example combined mask of original and pseudo labels is shown below:
 
 #### Generating the preprocessed files from your own image and mask
 
-> 💡 **Step-by-step guide:** [`skills/finetune_data-prep.md`](../skills/finetune_data-prep.md) walks through this end to end — embeddings, VISTA-3D pseudo labels, remapping a new class onto a free label index, building the JSON, and launching finetuning.
+> 💡 **Step-by-step guide:** [`skills/controlnet_finetune_data-prep.md`](../skills/controlnet_finetune_data-prep.md) walks through this end to end — embeddings, VISTA-3D pseudo labels, remapping a new class onto a free label index, building the JSON, and launching finetuning.
 
 Starting from an `original image` and an `original mask`, the three derived files are produced as follows:
 
