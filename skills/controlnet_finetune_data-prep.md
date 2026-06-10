@@ -120,8 +120,8 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
             "label": "KiTS-000/mask_combined_label.nii.gz",  # from Step 3
             "dim": [512, 512, 512],                        # resampled volume size — informational
             "spacing": [1.0, 1.0, 1.0],                    # voxel spacing
-            "top_region_index": [0, 1, 0, 0],              # body-region one-hot (CT)
-            "bottom_region_index": [0, 0, 0, 1],           # body-region one-hot (CT)
+            "top_region_index": [0, 1, 0, 0],              # ddpm-ct ONLY (omit for rflow-ct)
+            "bottom_region_index": [0, 0, 0, 1],           # ddpm-ct ONLY (omit for rflow-ct)
             "modality": "ct",                              # required by Step 1's embedding script
             "fold": 0
         }
@@ -129,6 +129,8 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
     ]
 }
 ```
+
+> **`top_region_index` / `bottom_region_index` are only needed for `ddpm-ct`.** That variant's network (`config_network_ddpm.json`) sets `include_body_region: true`, so the loader feeds these body-region one-hots. `rflow-ct` (`config_network_rflow.json`) sets `include_body_region: false` and **ignores them** — you can leave them out entirely. The loader otherwise requires only `image`, `label`, and `spacing`; `dim` is informational.
 
 > **Fold split (read carefully — easy to get backwards):** an item is held out for **validation** when its `"fold"` **equals** `fold` in `config_maisi_controlnet_train*.json` (default `0`), and used for **training** otherwise. So if *every* item is `fold: 0` with the default config, your **training set is empty**. Spread items across folds (`0`, `1`, `2`, …) so the held-out fold gives a non-empty validation set and the rest train.
 

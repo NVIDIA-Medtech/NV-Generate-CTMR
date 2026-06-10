@@ -258,8 +258,8 @@ The training workflow needs one JSON file pairing each image embedding with its 
             "label": "*/mask_combined_label*.nii.gz", # combined label, path relative to data_base_dir
             "dim": [512, 512, 512],                   # original (resampled) volume dimensions — informational
             "spacing": [1.0, 1.0, 1.0],               # voxel spacing
-            "top_region_index": [0, 1, 0, 0],         # top body-region one-hot (CT models with body region)
-            "bottom_region_index": [0, 0, 0, 1],      # bottom body-region one-hot (CT models with body region)
+            "top_region_index": [0, 1, 0, 0],         # ddpm-ct ONLY — omit for rflow-ct
+            "bottom_region_index": [0, 0, 0, 1],      # ddpm-ct ONLY — omit for rflow-ct
             "modality": "ct",                         # used when generating embeddings (step 1)
             "fold": 0  # cross-validation fold. An item is held out for VALIDATION when its
                        # "fold" equals "fold" in config_maisi_controlnet_train*.json (default 0),
@@ -271,7 +271,7 @@ The training workflow needs one JSON file pairing each image embedding with its 
 }
 ```
 
-The loader requires `image`, `label`, and `spacing`; `top_region_index` / `bottom_region_index` are required only for CT models that take a body region; `dim` is informational. Assign items to multiple folds (e.g. `0`, `1`, `2`, …) so the held-out fold gives you a non-empty validation set.
+The loader requires `image`, `label`, and `spacing`; `dim` is informational. `top_region_index` / `bottom_region_index` are needed **only for `ddpm-ct`** (its `config_network_ddpm.json` sets `include_body_region: true`); **`rflow-ct` sets `include_body_region: false` and ignores them**, so you can omit them. Assign items to multiple folds (e.g. `0`, `1`, `2`, …) so the held-out fold gives you a non-empty validation set.
 
 ## 5 Questions and bugs
 
