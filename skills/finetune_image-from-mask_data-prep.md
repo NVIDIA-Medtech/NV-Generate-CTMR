@@ -1,5 +1,5 @@
 ---
-name: controlnet_finetune_data-prep
+name: finetune_image-from-mask_data-prep
 description: How to turn your own original images + original label masks into the preprocessed files (VAE embeddings, NV-Segment pseudo labels, combined labels) needed to finetune the CT ControlNet — whether adapting to a new site/dataset with existing MAISI classes or teaching a new class. Covers remapping an unseen user label onto any unclaimed integer index (0–255; the "dummy" placeholders are just one option) in label_dict.json, building the JSON data list, and the fold/weighted_loss settings. Trigger when the user says "I only have images and masks", "how do I prepare data to finetune the ControlNet", "how do I add my own class/tumor/lesion", "what index do I give my new label", "how do I make the *_emb / pseudo_label / combined_label files", or wants to reproduce the C4KC-KiTS example on their own data. CT-only.
 ---
 
