@@ -1,6 +1,6 @@
 ---
 name: controlnet_finetune_data-prep
-description: How to turn your own original images + original label masks into the preprocessed files (VAE embeddings, NV-Segment pseudo labels, combined labels) needed to finetune the CT ControlNet on a NEW class. Covers remapping an unseen user label onto any unclaimed integer index (0–255; the "dummy" placeholders are just one option) in label_dict.json, building the JSON data list, and the fold/weighted_loss settings. Trigger when the user says "I only have images and masks", "how do I prepare data to finetune the ControlNet", "how do I add my own class/tumor/lesion", "what index do I give my new label", "how do I make the *_emb / pseudo_label / combined_label files", or wants to reproduce the C4KC-KiTS example on their own data. CT-only.
+description: How to turn your own original images + original label masks into the preprocessed files (VAE embeddings, NV-Segment pseudo labels, combined labels) needed to finetune the CT ControlNet — whether adapting to a new site/dataset with existing MAISI classes or teaching a new class. Covers remapping an unseen user label onto any unclaimed integer index (0–255; the "dummy" placeholders are just one option) in label_dict.json, building the JSON data list, and the fold/weighted_loss settings. Trigger when the user says "I only have images and masks", "how do I prepare data to finetune the ControlNet", "how do I add my own class/tumor/lesion", "what index do I give my new label", "how do I make the *_emb / pseudo_label / combined_label files", or wants to reproduce the C4KC-KiTS example on their own data. CT-only.
 ---
 
 # Preparing your own data for ControlNet finetuning
@@ -8,11 +8,13 @@ description: How to turn your own original images + original label masks into th
 This skill is for the case where **you only have two things per case**:
 
 - an **original image** (`*.nii.gz`), and
-- an **original label mask** (`*.nii.gz`) that contains one or more classes — including at least one **new class** the released model has never seen (a tumor, lesion, device, etc.).
+- an **original label mask** (`*.nii.gz`) with one or more classes.
 
-It explains how to produce the **three derived files** the ControlNet training loop actually consumes, and — the part that trips people up — **how to remap your new label onto a `dummy` placeholder index** so the MAISI label vocabulary stays consistent.
+You might finetune to **adapt to a new site/scanner/domain using only existing MAISI classes**, *or* to **teach a new class** the released model has never seen (a tumor, lesion, device, etc.). Both follow the same pipeline below — the only extra work in the new-class case is picking a label index for it (Step 3a). If every class in your mask already exists in the MAISI vocabulary, you just remap to the existing indices and skip the "unclaimed index" choice.
 
-> **CT-only.** The released ControlNet checkpoints were trained on CT masks; there is no MR ControlNet in this repo. The reference walkthrough is [data/README.md §4.3](../data/README.md#43-example-finetuning-on-a-new-dataset) (the C4KC-KiTS Kidney-Tumor example, which maps its new class to index `129`).
+It explains how to produce the **three derived files** the ControlNet training loop actually consumes, and — the part that trips people up — **how to remap your mask into the MAISI label vocabulary** (including assigning an index to any new class).
+
+> **CT-only.** The released ControlNet checkpoints were trained on CT masks; there is no MR ControlNet in this repo. The reference walkthrough is [data/README.md §4.3](../data/README.md#43-example-finetuning-on-a-new-dataset) (the C4KC-KiTS Kidney-Tumor example, which happens to add a new class mapped to index `129`).
 
 ## What you have → what you need
 
@@ -134,9 +136,9 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
 
 > **Fold split (read carefully — easy to get backwards):** an item is held out for **validation** when its `"fold"` **equals** `fold` in `config_maisi_controlnet_train*.json` (default `0`), and used for **training** otherwise. So if *every* item is `fold: 0` with the default config, your **training set is empty**. Spread items across folds (`0`, `1`, `2`, …) so the held-out fold gives a non-empty validation set and the rest train.
 
-## Tell the training config about your new class
+## (New class only) Tell the training config about it
 
-In `configs/config_maisi_controlnet_train*.json`, set `weighted_loss_label` to the index/indices you chose in Step 3a so the loss emphasizes your new structure:
+Skip this section if you're finetuning on existing MAISI classes only. If you added a new class in Step 3a, in `configs/config_maisi_controlnet_train*.json` set `weighted_loss_label` to the index/indices you chose so the loss emphasizes your new structure:
 
 ```json
 "weighted_loss_label": [129],
