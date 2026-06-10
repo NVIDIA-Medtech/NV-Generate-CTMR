@@ -84,7 +84,7 @@ For every class in your original mask, decide its MAISI index:
 | `dummy8` | 131 | |
 | `dummy1`–`dummy5` | 2, 16, 18, 20, 21 | lower indices, interspersed among real organs |
 
-> Whatever index you pick — a `dummy` slot or a fresh integer like `150` — **add a named entry for it in `label_dict.json`** and set it as `weighted_loss_label` (see below). The only hard constraints are: integer, `0–255`, not already claimed, not `0`, not `200`.
+> Whatever index you pick — a `dummy` slot or a fresh integer like `150` — **add a named entry for it in `label_dict.json`**. (Optionally also list it in `weighted_loss_label` to emphasize it during training — see below.) The only hard constraints are: integer, `0–255`, not already claimed, not `0`, not `200`.
 
 ### 3b. Combine: write your remapped mask on top
 
@@ -136,16 +136,16 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
 
 > **Fold split (read carefully — easy to get backwards):** an item is held out for **validation** when its `"fold"` **equals** `fold` in `config_maisi_controlnet_train*.json` (default `0`), and used for **training** otherwise. So if *every* item is `fold: 0` with the default config, your **training set is empty**. Spread items across folds (`0`, `1`, `2`, …) so the held-out fold gives a non-empty validation set and the rest train.
 
-## (New class only) Tell the training config about it
+## Training-config touch-ups
 
-Skip this section if you're finetuning on existing MAISI classes only. If you added a new class in Step 3a, in `configs/config_maisi_controlnet_train*.json` set `weighted_loss_label` to the index/indices you chose so the loss emphasizes your new structure:
+**Emphasize a region of interest (optional).** `weighted_loss_label` lists the label indices whose voxels get an up-weighted L1 loss (by `weighted_loss`, only active when `weighted_loss > 1.0`) — use it to make the model focus on a small/hard ROI such as a tumor. It works for **any** label, new or existing; it is *not* tied to new classes. In `configs/config_maisi_controlnet_train*.json`:
 
 ```json
-"weighted_loss_label": [129],
-"weighted_loss": 100
+"weighted_loss_label": [129],   // any label index(es) you want emphasized, e.g. a tumor
+"weighted_loss": 100            // weight multiplier; set to 1 to disable weighting entirely
 ```
 
-In `configs/label_dict.json`, rename the placeholder you used so the vocabulary is self-documenting (optional but recommended):
+**Name a new class (new-class case only).** If you assigned a new class to a `dummy` index in Step 3a, rename that entry in `configs/label_dict.json` so the vocabulary is self-documenting:
 
 ```diff
 -    "dummy6": 129,
@@ -169,6 +169,6 @@ python -m scripts.train_controlnet \
 - [ ] Embeddings made with **`autoencoder_v1.pt`** (not v2) for the CT ControlNet.
 - [ ] **Body envelope (`200`) added** via `scripts.utils.add_body_envelope(seg, ct)` — NV-Segment never produces it, and the ControlNet needs it on every non-organ body voxel.
 - [ ] New classes remapped to **any unclaimed integer in `0–255`** (free ranges `133–199` / `201–255`, or a `dummy` slot like `129`); existing organs remapped to their real MAISI indices. Never reuse a claimed index, `0`, or `200`.
-- [ ] `weighted_loss_label` matches the index you assigned; `label_dict.json` updated if you go past the 8 dummies.
+- [ ] `label_dict.json` has a named entry for any new index. (Optional: `weighted_loss_label` set if you want to emphasize an ROI such as a tumor.)
 - [ ] Items spread across **multiple folds** so the held-out (validation) fold isn't the whole dataset.
 - [ ] `modality` field present (needed by the Step-1 embedding script).
