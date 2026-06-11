@@ -75,7 +75,7 @@ For every class in your original mask, decide its MAISI index:
 
 **Free indices that collide with nothing** (no existing label uses them): **`133–199`** and **`201–255`** — 123 values, wide open. Pick from here if you want zero risk of clobbering an existing class.
 
-**Pre-named `dummy` placeholders** in `label_dict.json` (handy because they already have an entry you can rename — see [§ below](#tell-the-training-config-about-your-new-class)):
+**Pre-named `dummy` placeholders** in `label_dict.json` (handy because they already have an entry you can rename — see [§ below](#training-config-touch-ups)):
 
 | Placeholder | Index | |
 |---|---|---|
@@ -133,6 +133,8 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
 ```
 
 > **`top_region_index` / `bottom_region_index` are only needed for `ddpm-ct`.** That variant's network (`config_network_ddpm.json`) sets `include_body_region: true`, so the loader feeds these body-region one-hots. `rflow-ct` (`config_network_rflow.json`) sets `include_body_region: false` and **ignores them** — you can leave them out entirely. The loader otherwise requires only `image`, `label`, and `spacing`; `dim` is informational.
+
+<!-- -->
 
 > **Fold split (read carefully — easy to get backwards):** an item is held out for **validation** when its `"fold"` **equals** `fold` in `config_maisi_controlnet_train*.json` (default `0`), and used for **training** otherwise. So if *every* item is `fold: 0` with the default config, your **training set is empty**. Spread items across folds (`0`, `1`, `2`, …) so the held-out fold gives a non-empty validation set and the rest train.
 
