@@ -112,7 +112,7 @@ combined[remapped > 0] = remapped[remapped > 0]
 
 ## Step 4 — Put the combined label on the encoded-image grid
 
-In short: **the combined label's spatial size must be 4× the latent per axis** (the training loop does not auto-resample, so a mismatch errors out). Resample it there with **nearest-neighbor** (never linear/bspline — they invent fractional class IDs):
+**The combined label's spatial size must be 4× the latent per axis** (the training loop does not auto-resample, so a mismatch errors out). Resample it there with **nearest-neighbor** (never linear/bspline — they invent fractional class IDs):
 
 ```python
 import torch.nn.functional as F
