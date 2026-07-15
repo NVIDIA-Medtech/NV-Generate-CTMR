@@ -1,6 +1,6 @@
 ---
 name: train_controlnet_image-from-mask
-description: How to train a 3D image-from-mask ControlNet with scripts.train_controlnet — for any modality (CT or MR) and any label vocabulary. Focuses on the training-data format the loop consumes (paired VAE latent embedding + combined integer label mask, the JSON data list schema, required vs conditional fields, the label→8-bit binary condition, folds, modality, multi-dataset lists) and the spatial relationship between the latent embedding and the label (the label must be at the encoded-image grid = 4× the latent per axis; the ControlNet downsamples it internally). Covers configs, single/multi-GPU launch, key knobs (n_epochs, lr, fold, weighted_loss), and outputs. Trigger when the user asks "how do I train the ControlNet", "what is the training data format / JSON schema", "what shape must the label mask be vs the embedding", "do I resample the label to match the latent and how", "how do I train a ControlNet for a new modality or vocabulary", or "which config/command trains train_controlnet".
+description: How to train a 3D image-from-mask ControlNet with scripts.train_controlnet — for any modality (CT or MR) and any label vocabulary. Focuses on the training-data format the loop consumes (paired VAE latent embedding + combined integer label mask, the JSON data list schema, required vs conditional fields, the label→8-bit binary condition, folds, modality, multi-dataset lists) and the spatial relationship between the latent embedding and the label (the label must be on the same grid as the image that was VAE-encoded = 4× the latent per axis; the ControlNet downsamples it internally). Covers configs, single/multi-GPU launch, key knobs (n_epochs, lr, fold, weighted_loss), and outputs. Trigger when the user asks "how do I train the ControlNet", "what is the training data format / JSON schema", "what shape must the label mask be vs the embedding", "do I resample the label to match the latent and how", "how do I train a ControlNet for a new modality or vocabulary", or "which config/command trains train_controlnet".
 ---
 
 # Training an image-from-mask ControlNet
@@ -13,14 +13,14 @@ This skill covers training a 3D ControlNet with `scripts.train_controlnet`, for 
 
 ## How training is wired
 
-`scripts/train_controlnet.py` always needs a **frozen pretrained diffusion U-Net** (`trained_diffusion_path`) and its autoencoder — those are *not* the ControlNet. The training:
+`scripts/train_controlnet.py` needs a **frozen pretrained diffusion U-Net** (`trained_diffusion_path`) — *not* the ControlNet. The training:
 
 1. Loads the frozen DM, reads its `scale_factor`, sets every U-Net param `requires_grad = False`.
 2. Builds the ControlNet and **initializes it by copying the DM's encoder/mid weights** (`copy_model_state`).
 3. Optionally loads a ControlNet checkpoint from **`existing_ckpt_filepath`** to continue/finetune. Leave it `null` to start from the DM-copied init; set it to a checkpoint path to warm-start — your choice.
 4. Trains **only** the ControlNet (AdamW, L1 loss, `PolynomialLR` power 2.0), saving after every epoch.
 
-You always supply the pretrained **AE + DM** for your modality (`autoencoder_v1` + `diff_unet_3d_rflow-ct` for CT; `autoencoder_v2` + `diff_unet_3d_rflow-mr` for MR).
+The DM you supply must match your modality (`diff_unet_3d_rflow-ct` for CT; `diff_unet_3d_rflow-mr` for MR). The **autoencoder is not loaded by this script** — it is used earlier, in data-prep, to produce the `*_emb.nii.gz` embeddings; by training time the `image` is already a latent. (`trained_autoencoder_path` may appear in the env config but the trainer ignores it.)
 
 ---
 
@@ -65,7 +65,7 @@ Field notes (from the loader transforms):
 
 - **`image` / `label`** — required. `label` is oriented to **RAS** and cast to **`long`** (integer); `image` is used as-is.
 - **`spacing`** — required; converted to a float tensor and scaled ×100 as a conditioning input.
-- **`modality`** — mapped to an integer via `modality_mapping_path` ([`configs/modality_mapping.json`](../configs/modality_mapping.json), e.g. `"ct"→1`, `"mri_t2"→…`). Required whenever the network has modality conditioning (`num_class_embeds` set — true for the shipped rflow/ddpm nets).
+- **`modality`** — mapped to an integer via `modality_mapping_path` ([`configs/modality_mapping.json`](../configs/modality_mapping.json), e.g. `"ct"→1`, `"mri_t2"→10`). Required whenever the diffusion U-Net has modality conditioning — i.e. `diffusion_unet_def.num_class_embeds` is non-null, which gates `include_modality` (it's `128` in the shipped rflow/ddpm nets, so required there).
 - **`fold`** *(easy to get backwards)* — an item is held out for **validation** when its `"fold"` **equals** `fold` in the training config (default `0`), and used for **training** otherwise. If every item is `fold: 0` with the default config, the **training set is empty**. Spread items across folds (`0`, `1`, `2`, …).
 - **`top_region_index` / `bottom_region_index`** — 4-D body-region one-hots, needed **only** for `ddpm-ct` (`config_network_ddpm.json` sets `include_body_region: true`). `rflow` nets set it `false` and ignore them.
 
@@ -80,11 +80,14 @@ The **label must be exactly 4× the latent per spatial axis** (e.g. latent `[4, 
 To get this, resample the label onto the **same grid as the image** using **nearest-neighbor** (linear/bspline average integer IDs into wrong classes):
 
 ```python
-# Resample the label to the encoded-image spatial size; nearest preserves class IDs.
+# image_size = the pre-encoding image shape (i.e. 4× the latent), NOT the latent size.
+# nearest preserves class IDs.
 Resized(keys="label", spatial_size=image_size, mode="nearest")
 # or, torch:
 F.interpolate(label.float(), size=image_size, mode="nearest").long()
 ```
+
+> The loader orients the **label** to RAS but uses the **image** embedding as-is (no orientation). Make sure the embedding was created in the same orientation as the label, or the two will silently misalign.
 
 ---
 
@@ -101,7 +104,7 @@ F.interpolate(label.float(), size=image_size, mode="nearest").long()
 
 ```json
 {
-    "trained_autoencoder_path": "./models/autoencoder_v1.pt",       // v1 for CT, v2 for MR
+    "trained_autoencoder_path": "./models/autoencoder_v1.pt",       // present but NOT read by train_controlnet.py
     "trained_diffusion_path":  "./models/diff_unet_3d_rflow-ct.pt", // frozen DM (REQUIRED, non-null)
     "existing_ckpt_filepath":  null,                                // null, or a ControlNet ckpt to warm-start
     "exp_name": "my_controlnet",                                    // names the output checkpoints
@@ -171,11 +174,13 @@ torchrun --nproc_per_node=${NUM_GPUS_PER_NODE} --nnodes=1 \
 
 ## Version selection
 
-| `generate_version` | Network (`-t`) | AE / DM to supply | `include_body_region` |
-|---|---|---|---|
-| `rflow-ct` *(recommended CT)* | `config_network_rflow.json` | `autoencoder_v1` + `diff_unet_3d_rflow-ct` | `false` — omit region indices |
-| `ddpm-ct` | `config_network_ddpm.json` | `autoencoder_v1` + `diff_unet_3d_ddpm-ct` | `true` — JSON needs `top/bottom_region_index` |
-| `rflow-mr` | `config_network_rflow.json` | `autoencoder_v2` + `diff_unet_3d_rflow-mr` | `false` |
+"AE (data-prep)" is the autoencoder used earlier to build the embeddings; "DM (`-e`)" is the frozen diffusion U-Net this script loads.
+
+| `generate_version` | Network (`-t`) | AE (data-prep) | DM (`-e`) | `include_body_region` |
+|---|---|---|---|---|
+| `rflow-ct` *(recommended CT)* | `config_network_rflow.json` | `autoencoder_v1` | `diff_unet_3d_rflow-ct` | `false` — omit region indices |
+| `ddpm-ct` | `config_network_ddpm.json` | `autoencoder_v1` | `diff_unet_3d_ddpm-ct` | `true` — JSON needs `top/bottom_region_index` |
+| `rflow-mr` | `config_network_rflow.json` | `autoencoder_v2` | `diff_unet_3d_rflow-mr` | `false` |
 
 ## GPU memory (whole-image training, per docs)
 
@@ -201,7 +206,7 @@ TensorBoard scalars go to `tfevent_path/exp_name`. To generate with the result, 
 
 - [ ] Per case: `image` = 4-channel latent embedding, `label` = 1-channel integer mask at **4× the latent per axis** (same FOV/affine as the encoded image).
 - [ ] Label resampled with **nearest-neighbor** only — never linear/bspline.
-- [ ] `trained_diffusion_path` (frozen DM) set and **required**; AE/DM match the modality. (`existing_ckpt_filepath`: `null`, or a ControlNet ckpt to warm-start.)
+- [ ] `trained_diffusion_path` (frozen DM) set and **required**, matching the modality; the AE is a data-prep dependency, not read by this script. (`existing_ckpt_filepath`: `null`, or a ControlNet ckpt to warm-start.)
 - [ ] `-c` / `-e` are the **`*_controlnet_train_*`** configs, not `*_diff_model_*`.
 - [ ] Items spread across **multiple folds** so the held-out (validation) fold isn't the whole dataset.
 - [ ] `modality` present in every entry + `modality_mapping_path` set (net uses modality conditioning).
