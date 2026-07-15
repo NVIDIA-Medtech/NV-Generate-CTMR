@@ -112,11 +112,13 @@ combined[remapped > 0] = remapped[remapped > 0]
 
 ## Step 4 — Put the combined label on the encoded-image grid
 
-The combined label must sit on the **same grid Step 1 resampled the image to** (nearest multiple of 128 per axis) — i.e. spatial size = **4× the latent per axis**. The training loop does **not** auto-resample, so a mismatch errors out. If the original size isn't already a multiple of 128 (e.g. `512×512×167` → image `512×512×128`, latent `128×128×32`), resample the label there with **nearest-neighbor** (never linear/bspline — they invent fractional class IDs):
+The combined label must sit on the **same grid Step 1 resampled the image to** (nearest multiple of 128 per axis) — i.e. spatial size = **4× the latent per axis**. The training loop does **not** auto-resample, so a mismatch errors out.
+
+Example: original `512×512×167` → Step 1 resamples the image to **`512×512×128`** (`167`→`128`, the nearest multiple of 128) → latent `128×128×32`. So resample the label to **`512×512×128`** as well, with **nearest-neighbor** (never linear/bspline — they invent fractional class IDs):
 
 ```python
 import torch.nn.functional as F
-# image_size = the Step-1 resampled image shape (= 4× the latent), NOT the latent size
+# image_size = the Step-1 resampled image shape (here [512, 512, 128]) = 4× the latent, NOT the latent size
 combined = F.interpolate(combined.float()[None, None], size=image_size, mode="nearest")[0, 0].long()
 ```
 
