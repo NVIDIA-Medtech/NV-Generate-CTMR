@@ -79,9 +79,9 @@ The **label must be exactly 4× the latent per spatial axis** (e.g. latent `[4, 
 
 ### Orientation — label and embedding must agree
 
-The loader reorients the **label** to canonical **RAS** (`Orientationd(keys=["label"], axcodes="RAS")`) but loads the **image** embedding **as-is**. If the two were saved in different orientations, the label gets rotated/flipped to RAS while the embedding is not — so voxel `(i,j,k)` of the label no longer corresponds to voxel `(i,j,k)` of the latent, and the ControlNet trains on a spatially scrambled mask. **No error is raised**; the model just learns from misaligned pairs.
+The loader reorients the **label** to canonical **RAS** (`Orientationd(keys=["label"], axcodes="RAS")`) but loads the **image** embedding **as-is**. This is deliberate, not a gap: the embedding script (`diff_model_create_training_data.py`) orients each image to RAS *before* encoding, so standard embeddings are **already RAS**. The label→RAS step just brings the label into that same frame — adding `"image"` to the transform would be a no-op.
 
-They already agree if data-prep produced both from one source image (the label is then already RAS and the reorientation is a no-op). The risk is only with hand-assembled or externally-sourced files — verify the embedding and label share an orientation before training.
+The only way to misalign is to feed an embedding **not** made by that script (in a different orientation): the label gets flipped to RAS, the latent does not, and the ControlNet trains on a spatially scrambled mask with **no error raised**. Fix it at the source — regenerate the embedding with the standard script — rather than reorienting a latent at load time (its axes flip losslessly, but the VAE isn't flip-equivariant and a hand-set affine may not describe it faithfully).
 
 ---
 
