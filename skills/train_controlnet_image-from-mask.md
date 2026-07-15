@@ -33,7 +33,7 @@ The loop consumes **one thing per training case: a `(image, label)` pair**, list
 | JSON key | File | On-disk shape | What it is |
 |---|---|---|---|
 | `image` | `*_emb.nii.gz` | `[X/4, Y/4, Z/4, 4]` | The **VAE latent embedding** of the real image — a **4-channel** float volume saved channel-*last* (a 4D NIfTI), produced by the AE encoder in data-prep Step 1. |
-| `label` | `*_combined_label.nii.gz` | `[X, Y, Z]` | The **combined integer label mask** — a plain **3D** volume (no channel axis): MAISI-vocabulary organ labels + body envelope `200` + your ROI/class, on the **encoded-image grid**. |
+| `label` | `*_combined_label.nii.gz` | `[X, Y, Z]` | The **combined integer label mask** — a plain **3D** volume (no channel axis): MAISI-vocabulary organ labels + body envelope `200` + your ROI/class, on the **same grid as the image that was VAE-encoded** (so its spatial size is 4× the latent). |
 
 The loader (`LoadImaged(..., ensure_channel_first=True)`) moves/adds the channel axis to the **front** in memory, so downstream the tensors are channel-first: image → `[4, X/4, Y/4, Z/4]`, label → `[1, X, Y, Z]` (`C=1`, a single integer channel). Shapes in the rest of this section use that channel-first `[C, X, Y, Z]` form.
 
@@ -117,6 +117,8 @@ F.interpolate(label.float(), size=image_size, mode="nearest").long()
 
 ### Training config (`-c`) — the `controlnet_train` knobs
 
+The shipped `config_maisi_controlnet_train_rflow-ct.json` (values as delivered — this is the real default, **not** a disabled template):
+
 ```json
 "controlnet_train": {
     "batch_size": 1,          // images trained whole (not patched); keep at 1
@@ -124,13 +126,16 @@ F.interpolate(label.float(), size=image_size, mode="nearest").long()
     "fold": 0,                // items whose "fold" == this validate; the rest train
     "lr": 1e-5,               // AdamW LR, polynomial-decayed to 0 over all steps
     "n_epochs": 100,          // total training epochs
-    "weighted_loss_label": [None],  // label index(es) to up-weight in L1; [None] = off
-    "weighted_loss": 1              // multiplier on those voxels; 1 = all voxels equal (off)
+    "weighted_loss_label": [23],  // ROI/class index(es) up-weighted in L1 (23 = lung tumor)
+    "weighted_loss": 100,         // multiplier on those voxels; set to 1 to weight all voxels equally
+    "use_region_contrasive_loss": true,   // rflow-ct default (see caveat below)
+    "region_contrasive_loss_delta": 2,
+    "region_contrasive_loss_weight": 0.01
 }
 ```
 
-- **`weighted_loss` / `weighted_loss_label`** — optional; up-weight the L1 loss on a small/hard ROI (e.g. a tumor label). Set the label to your ROI index and `weighted_loss > 1` (e.g. `100`); leave `weighted_loss: 1` (and `[None]`) to weight all voxels equally.
-- Optional **region-contrastive loss** (`use_region_contrasive_loss` + `region_contrasive_loss_delta` + `region_contrasive_loss_weight`) exists but its default `remove_roi()` assumes a MAISI **tumor** ROI (`remove_tumors`). For a general vocabulary, leave it off unless you edit `remove_roi()` in `train_controlnet.py`.
+- **`weighted_loss` / `weighted_loss_label`** — up-weight the L1 loss on a small/hard ROI (e.g. a tumor). Set `weighted_loss_label` to **your** ROI/class index (the CT config ships `[23]`; the MR/ddpm configs ship `[129]`). To disable emphasis entirely, use `"weighted_loss": 1` with `"weighted_loss_label": [null]`.
+- **Region-contrastive loss** — on by default in `rflow-ct` (the `ddpm-ct` / `rflow-mr` configs omit these three keys, i.e. off). Its `remove_roi()` assumes a MAISI **tumor** ROI (`remove_tumors`); for any other vocabulary, edit `remove_roi()` in `train_controlnet.py` or set `use_region_contrasive_loss: false`.
 
 ## Launch
 
