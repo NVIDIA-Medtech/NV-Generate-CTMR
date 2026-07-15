@@ -166,9 +166,9 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
 +    "kidney tumor": 129,
 ```
 
-## Launch finetuning
+## Next: train the ControlNet
 
-Once the three files and JSON exist and the configs point at them, run the ControlNet training command from [docs/training.md → 3D ControlNet Training](../docs/training.md#3d-controlnet-training). In short:
+Once the files and JSON exist and the configs point at them, continue with the [`train_controlnet_image-from-mask`](train_controlnet_image-from-mask.md) skill — it covers the training configs, knobs (folds, `weighted_loss`, region-contrastive loss), single/multi-GPU launch, and outputs. (See also [docs/training.md → 3D ControlNet Training](../docs/training.md#3d-controlnet-training).) The short version:
 
 ```bash
 network="rflow"; generate_version="rflow-ct"
