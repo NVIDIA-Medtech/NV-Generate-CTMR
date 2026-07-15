@@ -75,17 +75,7 @@ The `label` is a 1-channel **integer** mask. During training it is converted to 
 
 ### Spatial relationship — label vs. embedding (important)
 
-The **label must be exactly 4× the latent per spatial axis** (e.g. latent `[4, 128, 128, 32]` → label `[1, 512, 512, 128]`) and share the image's FOV/affine. The ControlNet downsamples the label by 4× internally to add it to the latent; there's no auto-resampling, so a mismatched axis errors out.
-
-To get this, resample the label onto the **same grid as the image** using **nearest-neighbor** (linear/bspline average integer IDs into wrong classes):
-
-```python
-# image_size = the pre-encoding image shape (i.e. 4× the latent), NOT the latent size.
-# nearest preserves class IDs.
-Resized(keys="label", spatial_size=image_size, mode="nearest")
-# or, torch:
-F.interpolate(label.float(), size=image_size, mode="nearest").long()
-```
+The **label must be exactly 4× the latent per spatial axis** (e.g. latent `[4, 128, 128, 32]` → label `[1, 512, 512, 128]`) and share the image's FOV/affine — the ControlNet downsamples the label 4× internally to add it to the latent, and there's no auto-resampling, so a mismatch errors out. Data prep puts the label on that grid (nearest-neighbor); see [data-prep Step 4](finetune_image-from-mask_data-prep.md#step-4--put-the-combined-label-on-the-encoded-image-grid).
 
 > The loader orients the **label** to RAS but uses the **image** embedding as-is (no orientation). Make sure the embedding was created in the same orientation as the label, or the two will silently misalign.
 
