@@ -63,7 +63,7 @@ The autoencoder downsamples by **4× per spatial axis**, so a `[512, 512, 128]` 
 
 Field notes (from the loader transforms):
 
-- **`image` / `label`** — required. `label` is oriented to **RAS** and cast to **`long`** (integer); `image` is used as-is.
+- **`image` / `label`** — required. Both are oriented to **RAS**; `label` is additionally cast to **`long`** (integer).
 - **`spacing`** — required; converted to a float tensor and scaled ×100 as a conditioning input.
 - **`modality`** — mapped to an integer via `modality_mapping_path` ([`configs/modality_mapping.json`](../configs/modality_mapping.json), e.g. `"ct"→1`, `"mri_t2"→10`). Required whenever the diffusion U-Net has modality conditioning — i.e. `diffusion_unet_def.num_class_embeds` is non-null, which gates `include_modality` (it's `128` in the shipped rflow/ddpm nets, so required there).
 - **`fold`** *(easy to get backwards)* — an item is held out for **validation** when its `"fold"` **equals** `fold` in the training config (default `0`), and used for **training** otherwise. If every item is `fold: 0` with the default config, the **training set is empty**. Spread items across folds (`0`, `1`, `2`, …).
@@ -77,11 +77,7 @@ The `label` is a 1-channel **integer** mask. During training it is converted to 
 
 The **label must be exactly 4× the latent per spatial axis** (e.g. latent `[4, 128, 128, 32]` → label `[1, 512, 512, 128]`) and share the image's FOV/affine — the ControlNet downsamples the label 4× internally to add it to the latent, and there's no auto-resampling, so a mismatch errors out. Data prep puts the label on that grid; see [data-prep Step 4](finetune_image-from-mask_data-prep.md#step-4--put-the-combined-label-on-the-encoded-image-grid).
 
-### Orientation — label and embedding must agree
-
-The loader reorients the **label** to canonical **RAS** (`Orientationd(keys=["label"], axcodes="RAS")`) but loads the **image** embedding **as-is**. Standard embeddings are already RAS — `diff_model_create_training_data.py` orients each image to RAS before encoding — so the label→RAS step brings the label into that same frame, and the current label-only transform is enough.
-
-Adding `"image"` to that transform is a harmless hardening: a no-op for standard (already-RAS) embeddings, and it would realign a non-standard, non-RAS embedding too — `Orientationd` only permutes/flips axes losslessly, so it can't corrupt latent values, as long as the embedding's affine faithfully encodes its orientation. The only unrecoverable case is an embedding whose affine doesn't match its voxels, which no affine-based tool can fix. Without that guard, a non-RAS embedding misaligns with the RAS label and the ControlNet trains on a spatially scrambled mask with **no error raised**.
+The loader orients both `image` and `label` to canonical RAS, so their axes always agree.
 
 ---
 
