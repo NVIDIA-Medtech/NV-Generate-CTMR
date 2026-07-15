@@ -79,9 +79,9 @@ The **label must be exactly 4× the latent per spatial axis** (e.g. latent `[4, 
 
 ### Orientation — label and embedding must agree
 
-The loader reorients the **label** to canonical **RAS** (`Orientationd(keys=["label"], axcodes="RAS")`) but loads the **image** embedding **as-is**. This is deliberate, not a gap: the embedding script (`diff_model_create_training_data.py`) orients each image to RAS *before* encoding, so standard embeddings are **already RAS**. The label→RAS step just brings the label into that same frame — adding `"image"` to the transform would be a no-op.
+The loader reorients the **label** to canonical **RAS** (`Orientationd(keys=["label"], axcodes="RAS")`) but loads the **image** embedding **as-is**. Standard embeddings are already RAS — `diff_model_create_training_data.py` orients each image to RAS before encoding — so the label→RAS step brings the label into that same frame, and the current label-only transform is enough.
 
-The only way to misalign is to feed an embedding **not** made by that script (in a different orientation): the label gets flipped to RAS, the latent does not, and the ControlNet trains on a spatially scrambled mask with **no error raised**. Fix it at the source — regenerate the embedding with the standard script — rather than reorienting a latent at load time (its axes flip losslessly, but the VAE isn't flip-equivariant and a hand-set affine may not describe it faithfully).
+Adding `"image"` to that transform is a harmless hardening: a no-op for standard (already-RAS) embeddings, and it would realign a non-standard, non-RAS embedding too — `Orientationd` only permutes/flips axes losslessly, so it can't corrupt latent values, as long as the embedding's affine faithfully encodes its orientation. The only unrecoverable case is an embedding whose affine doesn't match its voxels, which no affine-based tool can fix. Without that guard, a non-RAS embedding misaligns with the RAS label and the ControlNet trains on a spatially scrambled mask with **no error raised**.
 
 ---
 
