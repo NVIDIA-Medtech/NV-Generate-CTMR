@@ -23,10 +23,10 @@ It explains how to produce the **three derived files** the ControlNet training l
 KiTS-000* --|-mask.nii.gz                 # original mask           ← you have this
             |-image_emb.nii.gz            # VAE-encoded embedding         (Step 1)
             |-mask_pseudo_label.nii.gz    # NV-Segment labels + body (200) (Step 2)
-            |-mask_combined_label.nii.gz  # pseudo labels + your remapped mask  (Step 3)
+            |-mask_combined_label.nii.gz  # pseudo labels + your remapped mask  (Steps 3–4)
 ```
 
-The training loop reads only `*_emb.nii.gz` (as `image`) and `*_combined_label.nii.gz` (as `label`). Steps 1–3 below produce them.
+The training loop reads only `*_emb.nii.gz` (as `image`) and `*_combined_label.nii.gz` (as `label`). Steps 1–4 below produce them.
 
 ---
 
@@ -103,10 +103,22 @@ remapped = remap_labels(your_mask, {1: 1, 2: 5, 3: 129})
 # 3b: write your foreground classes on top, leave the organ/body context intact
 combined = pseudo.clone()
 combined[remapped > 0] = remapped[remapped > 0]
-# save `combined` as mask_combined_label*.nii.gz (same affine/spacing as the pseudo label)
+# save `combined` as mask_combined_label*.nii.gz
 ```
 
 (`scripts/utils.py::remap_labels` does the same thing but reads a JSON of `[orig, target]` pairs — handy if you prefer a config file. Use whichever fits your pipeline.)
+
+---
+
+## Step 4 — Put the combined label on the encoded-image grid
+
+**The combined label's spatial size must be 4× the latent per axis** (the training loop does not auto-resample, so a mismatch errors out). Resample it there with **nearest-neighbor** (never linear/bspline — they invent fractional class IDs):
+
+```python
+import torch.nn.functional as F
+# image_size = 4× the latent, e.g. [512, 512, 128] for a 128×128×32 latent (NOT the latent size)
+combined = F.interpolate(combined.float()[None, None], size=image_size, mode="nearest")[0, 0].long()
+```
 
 ---
 
@@ -120,7 +132,7 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
         {
             "image": "KiTS-000/image_emb.nii.gz",        # from Step 1
             "label": "KiTS-000/mask_combined_label.nii.gz",  # from Step 3
-            "dim": [512, 512, 512],                        # resampled volume size — informational
+            "dim": [512, 512, 512],                        # resampled volume size — informational (but the label's actual voxel grid must be 4× the latent; see Step 4)
             "spacing": [1.0, 1.0, 1.0],                    # voxel spacing
             "top_region_index": [0, 1, 0, 0],              # ddpm-ct ONLY (omit for rflow-ct)
             "bottom_region_index": [0, 0, 0, 1],           # ddpm-ct ONLY (omit for rflow-ct)
@@ -132,7 +144,7 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
 }
 ```
 
-> **`top_region_index` / `bottom_region_index` are only needed for `ddpm-ct`.** That variant's network (`config_network_ddpm.json`) sets `include_body_region: true`, so the loader feeds these body-region one-hots. `rflow-ct` (`config_network_rflow.json`) sets `include_body_region: false` and **ignores them** — you can leave them out entirely. The loader otherwise requires only `image`, `label`, and `spacing`; `dim` is informational.
+> **`top_region_index` / `bottom_region_index` are only needed for `ddpm-ct`.** That variant's network (`config_network_ddpm.json`) sets `include_body_region: true`, so the loader feeds these body-region one-hots. `rflow-ct` (`config_network_rflow.json`) sets `include_body_region: false` and **ignores them** — you can leave them out entirely. The loader otherwise requires only `image`, `label`, and `spacing`; `dim` is informational (though the label file's actual voxel grid must be 4× the latent — see [Step 4](#step-4--put-the-combined-label-on-the-encoded-image-grid)).
 
 <!-- -->
 
@@ -154,9 +166,9 @@ One JSON pairs each embedding with its combined label. Paths are **relative to `
 +    "kidney tumor": 129,
 ```
 
-## Launch finetuning
+## Next: train the ControlNet
 
-Once the three files and JSON exist and the configs point at them, run the ControlNet training command from [docs/training.md → 3D ControlNet Training](../docs/training.md#3d-controlnet-training). In short:
+Once the files and JSON exist and the configs point at them, continue with the [`train_controlnet_image-from-mask`](train_controlnet_image-from-mask.md) skill — it covers the training configs, knobs (folds, `weighted_loss`, region-contrastive loss), single/multi-GPU launch, and outputs. (See also [docs/training.md → 3D ControlNet Training](../docs/training.md#3d-controlnet-training).) The short version:
 
 ```bash
 network="rflow"; generate_version="rflow-ct"
@@ -170,6 +182,7 @@ python -m scripts.train_controlnet \
 
 - [ ] Embeddings made with **`autoencoder_v1.pt`** (not v2) for the CT ControlNet.
 - [ ] **Body envelope (`200`) added** via `scripts.utils.add_body_envelope(seg, ct)` — NV-Segment never produces it, and the ControlNet needs it on every non-organ body voxel.
+- [ ] **Combined label on the encoded-image grid** — resampled (nearest-neighbor) to the Step-1 resampled size = 4× the latent per axis, or training errors out on a shape mismatch.
 - [ ] New classes remapped to **any unclaimed integer in `0–255`** (free ranges `133–199` / `201–255`, or a `dummy` slot like `129`); existing organs remapped to their real MAISI indices. Never reuse a claimed index, `0`, or `200`.
 - [ ] `label_dict.json` has a named entry for any new index. (Optional: `weighted_loss_label` set if you want to emphasize an ROI such as a tumor.)
 - [ ] Items spread across **multiple folds** so the held-out (validation) fold isn't the whole dataset.

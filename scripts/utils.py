@@ -301,7 +301,7 @@ def prepare_maisi_controlnet_json_dataloader(
 
     common_transform = [
         LoadImaged(keys=["image", "label"], image_only=True, ensure_channel_first=True),
-        Orientationd(keys=["label"], axcodes="RAS"),
+        Orientationd(keys=["image", "label"], axcodes="RAS"),
         EnsureTyped(keys=["label"], dtype=torch.long, track_meta=True),
         Lambdad(keys="top_region_index", func=lambda x: torch.FloatTensor(x), allow_missing_keys=True),
         Lambdad(keys="bottom_region_index", func=lambda x: torch.FloatTensor(x), allow_missing_keys=True),
