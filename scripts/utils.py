@@ -546,17 +546,20 @@ def add_body_envelope(
     #    (``air_hu = CT < hu_threshold``); since the seg labels the lungs, no legitimate air region is anywhere
     #    near table-sized (empirically a table is 16-28% of body vs <0.3% clean), so if the largest air-in-body
     #    component is >= ``table_frac_thresh`` of the body, it's the table — drop it from the body.
-    air_hu = ct_np < hu_threshold                    # air / low-density mask (same HU cut as the air step)
-    air_body = (out == body_label) & air_hu          # body voxels that are actually air
+    air_hu = ct_np < hu_threshold  # air / low-density mask (same HU cut as the air step)
+    air_body = (out == body_label) & air_hu  # body voxels that are actually air
     if air_body.any():
-        table = np.asarray(                          # np.asarray for consistency with steps 1 & 4
-            get_largest_connected_component_mask(air_body.astype(np.float32), connectivity=None, num_components=1),
-            dtype=np.float32,
-        ) > 0.5
+        table = (
+            np.asarray(  # np.asarray for consistency with steps 1 & 4
+                get_largest_connected_component_mask(air_body.astype(np.float32), connectivity=None, num_components=1),
+                dtype=np.float32,
+            )
+            > 0.5
+        )
         n_body = int((out == body_label).sum())
         n_table = int(table.sum())
         if n_body and n_table >= table_frac_thresh * n_body:
-            out[table] = 0                            # remove the detected table from the body
+            out[table] = 0  # remove the detected table from the body
             print(f"[add_body_envelope] table detected ({100.0 * n_table / n_body:.1f}% of body) -> removed", flush=True)
     return out.astype(orig_dtype)
 
