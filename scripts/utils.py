@@ -543,11 +543,11 @@ def add_body_envelope(
     # 8. Table detection. The find-air-invert steps above can still leak the air-density CT table into the body —
     #    the air trapped between patient and table is a SEPARATE component from the exterior air, so it reads as
     #    "not air" -> body. Detect it as the largest connected component of body voxels that are actually AIR
-    #    (``body_hu = CT < hu_threshold``); since the seg labels the lungs, no legitimate air region is anywhere
+    #    (``air_hu = CT < hu_threshold``); since the seg labels the lungs, no legitimate air region is anywhere
     #    near table-sized (empirically a table is 16-28% of body vs <0.3% clean), so if the largest air-in-body
     #    component is >= ``table_frac_thresh`` of the body, it's the table — drop it from the body.
-    body_hu = ct_np < hu_threshold                    # air / low-density mask (same HU cut as the air step)
-    air_body = (out == body_label) & body_hu          # body voxels that are actually air
+    air_hu = ct_np < hu_threshold                    # air / low-density mask (same HU cut as the air step)
+    air_body = (out == body_label) & air_hu          # body voxels that are actually air
     if air_body.any():
         table = get_largest_connected_component_mask(
             air_body.astype(np.float32), connectivity=None, num_components=1
