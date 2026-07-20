@@ -489,10 +489,9 @@ def add_body_envelope(
             ~0.02-0.10 separates them). Multiple table-sized components are all
             removed (a table often splits into rails/pads).
         seg_has_lung: whether ``seg_mask`` labels the lungs. True (default) runs
-            step 8 (table removal); the lungs being labeled is what lets step 8
-            treat large air-in-body regions as table. Set False when the seg has
-            no lungs — step 8 is then skipped, since lung air would otherwise be
-            indistinguishable from the table and wrongly removed.
+            step 8 (table removal). Set False when the seg has no lungs — step 8
+            is then skipped, since lung air would otherwise be indistinguishable
+            from the table and wrongly removed.
         device: torch device used for the morphology ops.
 
     Returns:
