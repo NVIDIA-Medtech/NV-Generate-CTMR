@@ -444,6 +444,14 @@ def add_body_envelope(
     but never the body envelope, so users must add it before running
     ``ldm_conditional_sample_one_image_from_mask``. This helper does that.
 
+    .. important::
+        ``seg_mask`` MUST already have the **lungs segmented** (nv-segment-ct /
+        VISTA ``everything_labels`` does this). Step 8 treats any large
+        air-density region inside the body as the CT table and removes it; the
+        lungs are the only legitimate large air pocket, so they must be labeled
+        (step 6 forces labeled voxels to be body) — otherwise unsegmented lung
+        air reads as a table-sized air-in-body component and is wrongly removed.
+
     Algorithm follows ``find_body_maskv2`` from pengfeig's ``3d_ldm_monai``
     (find-air-then-invert with a two-stage bed/table cleanup), which is
     more robust than naively largest-CC'ing the body voxels directly —
