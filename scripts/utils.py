@@ -445,15 +445,6 @@ def add_body_envelope(
     but never the body envelope, so users must add it before running
     ``ldm_conditional_sample_one_image_from_mask``. This helper does that.
 
-    .. important::
-        Step 8 (table removal) treats any large air-density region inside the
-        body as the CT table. The lungs are the only legitimate large air pocket,
-        so they must be labeled for this to be safe. Set ``seg_has_lung=True``
-        (default) when ``seg_mask`` includes the lungs (nv-segment-ct / VISTA
-        ``everything_labels`` does) — step 8 runs. Set ``seg_has_lung=False``
-        when the segmentation has NO lungs — step 8 is skipped, so lung air is
-        not mistaken for the table and removed (a leaked table may remain).
-
     Steps (find-air-then-invert with a two-stage bed/table cleanup):
 
       1. **Air mask**: largest connected component of voxels with
