@@ -113,8 +113,7 @@ def ldm_conditional_sample_one_image_from_mask(
     combine_label = combine_label_or.to(device)
     if output_size[0] != combine_label.shape[2] or output_size[1] != combine_label.shape[3] or output_size[2] != combine_label.shape[4]:
         logging.info(
-            "output_size is not a desired value. Need to interpolate the mask to "
-            "match with output_size. The result image will be very low quality."
+            "output_size is not a desired value. Need to interpolate the mask to match with output_size. The result image will be very low quality."
         )
         combine_label = torch.nn.functional.interpolate(combine_label, size=output_size, mode="nearest")
 
