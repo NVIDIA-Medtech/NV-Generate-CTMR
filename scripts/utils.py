@@ -463,9 +463,12 @@ def add_body_envelope(
       7. **Fill**: every voxel inside the silhouette that the segmentation
          didn't already label is set to ``body_label``.
       8. **Table detection** (safety net): if the air-density CT table leaked
-         into the body, it shows up as the largest connected component of
-         body voxels that are actually air (``CT < hu_threshold``); drop it
-         when that component is ``>= table_frac_thresh`` of the body.
+         into the body, it shows up as connected components of body voxels
+         that are actually air (``CT < hu_threshold``); drop EVERY such
+         component that is ``>= table_frac_thresh`` of the body. A table can
+         split into multiple pieces (side rails / pads / broken by the patient
+         silhouette), so all table-sized components are removed, not just the
+         largest.
 
     Args:
         seg_mask: ``(H, W, D)`` integer label volume (numpy ndarray or torch
@@ -482,12 +485,12 @@ def add_body_envelope(
             erode→LCC→dilate (step 4). Default 5 (slightly larger than
             ``closing_kernel`` so the body fully separates from the bed
             before the LCC selects it).
-        table_frac_thresh: step-8 table detector fires when the largest
-            air-in-body connected component (body voxels with
-            ``CT < hu_threshold``) is >= this fraction of the body, in which
-            case it is treated as the CT table and removed. Default 0.05 (a
-            table is empirically 16-28% of the body vs <0.3% clean, so any
-            value in ~0.02-0.10 separates them).
+        table_frac_thresh: step-8 removes EVERY air-in-body connected component
+            (body voxels with ``CT < hu_threshold``) that is >= this fraction
+            of the body, treating each as CT table. Default 0.05 (a table piece
+            is empirically 8-28% of the body vs <0.3% clean, so any value in
+            ~0.02-0.10 separates them). Multiple table-sized components are all
+            removed (a table often splits into rails/pads).
         device: torch device used for the morphology ops.
 
     Returns:
@@ -542,25 +545,25 @@ def add_body_envelope(
 
     # 8. Table detection. The find-air-invert steps above can still leak the air-density CT table into the body —
     #    the air trapped between patient and table is a SEPARATE component from the exterior air, so it reads as
-    #    "not air" -> body. Detect it as the largest connected component of body voxels that are actually AIR
-    #    (``air_hu = CT < hu_threshold``); since the seg labels the lungs, no legitimate air region is anywhere
-    #    near table-sized (empirically a table is 16-28% of body vs <0.3% clean), so if the largest air-in-body
-    #    component is >= ``table_frac_thresh`` of the body, it's the table — drop it from the body.
+    #    "not air" -> body. Detect it as connected components of body voxels that are actually AIR
+    #    (``air_hu = CT < hu_threshold``); since the seg labels the lungs, no legitimate air region is table-sized,
+    #    so EVERY air-in-body component >= ``table_frac_thresh`` of the body is table. There can be MORE THAN ONE
+    #    (a split table, separate side rails, or a table broken by the patient silhouette), so remove ALL of them.
+    from scipy import ndimage
+
     air_hu = ct_np < hu_threshold  # air / low-density mask (same HU cut as the air step)
     air_body = (out == body_label) & air_hu  # body voxels that are actually air
-    if air_body.any():
-        table = (
-            np.asarray(  # np.asarray for consistency with steps 1 & 4
-                get_largest_connected_component_mask(air_body.astype(np.float32), connectivity=None, num_components=1),
-                dtype=np.float32,
-            )
-            > 0.5
-        )
-        n_body = int((out == body_label).sum())
-        n_table = int(table.sum())
-        if n_body and n_table >= table_frac_thresh * n_body:
-            out[table] = 0  # remove the detected table from the body
-            print(f"[add_body_envelope] table detected ({100.0 * n_table / n_body:.1f}% of body) -> removed", flush=True)
+    n_body = int((out == body_label).sum())
+    if air_body.any() and n_body:
+        lbl, ncc = ndimage.label(air_body)  # all air-in-body components
+        if ncc:
+            sizes = np.bincount(lbl.ravel())
+            sizes[0] = 0  # drop background
+            table_ids = np.nonzero(sizes >= table_frac_thresh * n_body)[0]  # every table-sized component
+            if table_ids.size:
+                out[np.isin(lbl, table_ids)] = 0  # remove them all from the body
+                fracs = [round(float(100.0 * sizes[i] / n_body), 1) for i in table_ids]
+                print(f"[add_body_envelope] table detected ({table_ids.size} component(s): {fracs}% of body) -> removed", flush=True)
     return out.astype(orig_dtype)
 
 
