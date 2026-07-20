@@ -433,6 +433,7 @@ def add_body_envelope(
     closing_kernel: int = 3,
     bed_cleanup_kernel: int = 5,
     table_frac_thresh: float = 0.05,
+    seg_has_lung: bool = True,
     device: str = "cuda:0",
 ):
     """
@@ -445,18 +446,15 @@ def add_body_envelope(
     ``ldm_conditional_sample_one_image_from_mask``. This helper does that.
 
     .. important::
-        ``seg_mask`` MUST already have the **lungs segmented** (nv-segment-ct /
-        VISTA ``everything_labels`` does this). Step 8 treats any large
-        air-density region inside the body as the CT table and removes it; the
-        lungs are the only legitimate large air pocket, so they must be labeled
-        (step 6 forces labeled voxels to be body) — otherwise unsegmented lung
-        air reads as a table-sized air-in-body component and is wrongly removed.
+        Step 8 (table removal) treats any large air-density region inside the
+        body as the CT table. The lungs are the only legitimate large air pocket,
+        so they must be labeled for this to be safe. Set ``seg_has_lung=True``
+        (default) when ``seg_mask`` includes the lungs (nv-segment-ct / VISTA
+        ``everything_labels`` does) — step 8 runs. Set ``seg_has_lung=False``
+        when the segmentation has NO lungs — step 8 is skipped, so lung air is
+        not mistaken for the table and removed (a leaked table may remain).
 
-    Algorithm follows ``find_body_maskv2`` from pengfeig's ``3d_ldm_monai``
-    (find-air-then-invert with a two-stage bed/table cleanup), which is
-    more robust than naively largest-CC'ing the body voxels directly —
-    the patient bed often touches the body, so a simple largest-CC keeps
-    it. Steps:
+    Steps (find-air-then-invert with a two-stage bed/table cleanup):
 
       1. **Air mask**: largest connected component of voxels with
          ``CT < hu_threshold`` (default -800 HU). Closed via dilate→erode
@@ -499,6 +497,11 @@ def add_body_envelope(
             is empirically 8-28% of the body vs <0.3% clean, so any value in
             ~0.02-0.10 separates them). Multiple table-sized components are all
             removed (a table often splits into rails/pads).
+        seg_has_lung: whether ``seg_mask`` labels the lungs. True (default) runs
+            step 8 (table removal); the lungs being labeled is what lets step 8
+            treat large air-in-body regions as table. Set False when the seg has
+            no lungs — step 8 is then skipped, since lung air would otherwise be
+            indistinguishable from the table and wrongly removed.
         device: torch device used for the morphology ops.
 
     Returns:
@@ -562,7 +565,7 @@ def add_body_envelope(
     air_hu = ct_np < hu_threshold  # air / low-density mask (same HU cut as the air step)
     air_body = (out == body_label) & air_hu  # body voxels that are actually air
     n_body = int((out == body_label).sum())
-    if air_body.any() and n_body:
+    if seg_has_lung and air_body.any() and n_body:  # skip when lungs absent (lung air ~ table)
         lbl, ncc = ndimage.label(air_body)  # all air-in-body components
         if ncc:
             sizes = np.bincount(lbl.ravel())
