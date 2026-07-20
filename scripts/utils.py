@@ -28,7 +28,7 @@ from monai.data import CacheDataset, DataLoader, partition_dataset
 from monai.transforms import Compose, EnsureTyped, Lambdad, LoadImaged, Orientationd
 from monai.transforms.utils_morphological_ops import dilate, erode
 from monai.utils import TransformBackends, convert_data_type, convert_to_dst_type, get_equivalent_dtype
-from scipy import stats
+from scipy import ndimage, stats
 from torch import Tensor
 
 
@@ -551,21 +551,20 @@ def add_body_envelope(
     #    (``air_hu = CT < hu_threshold``); since the seg labels the lungs, no legitimate air region is table-sized,
     #    so EVERY air-in-body component >= ``table_frac_thresh`` of the body is table. There can be MORE THAN ONE
     #    (a split table, separate side rails, or a table broken by the patient silhouette), so remove ALL of them.
-    from scipy import ndimage
-
-    air_hu = ct_np < hu_threshold  # air / low-density mask (same HU cut as the air step)
-    air_body = (out == body_label) & air_hu  # body voxels that are actually air
-    n_body = int((out == body_label).sum())
-    if seg_has_lung and air_body.any() and n_body:  # skip when lungs absent (lung air ~ table)
-        lbl, ncc = ndimage.label(air_body)  # all air-in-body components
-        if ncc:
-            sizes = np.bincount(lbl.ravel())
-            sizes[0] = 0  # drop background
-            table_ids = np.nonzero(sizes >= table_frac_thresh * n_body)[0]  # every table-sized component
-            if table_ids.size:
-                out[np.isin(lbl, table_ids)] = 0  # remove them all from the body
-                fracs = [round(float(100.0 * sizes[i] / n_body), 1) for i in table_ids]
-                print(f"[add_body_envelope] table detected ({table_ids.size} component(s): {fracs}% of body) -> removed", flush=True)
+    if seg_has_lung:  # only safe when lungs are labeled (lung air would otherwise look like the table)
+        air_hu = ct_np < hu_threshold  # air / low-density mask (same HU cut as the air step)
+        air_body = (out == body_label) & air_hu  # body voxels that are actually air
+        n_body = int((out == body_label).sum())
+        if air_body.any() and n_body:
+            lbl, ncc = ndimage.label(air_body)  # all air-in-body components
+            if ncc:
+                sizes = np.bincount(lbl.ravel())
+                sizes[0] = 0  # drop background
+                table_ids = np.nonzero(sizes >= table_frac_thresh * n_body)[0]  # every table-sized component
+                if table_ids.size:
+                    out[np.isin(lbl, table_ids)] = 0  # remove them all from the body
+                    fracs = [round(float(100.0 * sizes[i] / n_body), 1) for i in table_ids]
+                    print(f"[add_body_envelope] table detected ({table_ids.size} component(s): {fracs}% of body) -> removed", flush=True)
     return out.astype(orig_dtype)
 
 
