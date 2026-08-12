@@ -135,10 +135,8 @@ Contrast-enhanced MRI is not supported. For brain MRI, prefer the dedicated `rfl
 
 ## Recommended FOV for MR `rflow-mr-brain` model
 
-Recommended FOV per (modality, acquisition plane) across the MR-RATE training set. Whole-brain and skull-stripped share the same FOV since they are two preprocessings of the same subject. v1 totals (axial/sagittal/coronal, whole-brain): **656,565 unique scans** across **73,020 unique subjects**.
+Recommended FOV per (modality, acquisition plane) across the MR-RATE training set. Whole-brain and skull-stripped share the same FOV since they are two preprocessings of the same subject. v1 totals (whole-brain, all orientations including oblique): **665,371 unique scans** across **73,516 unique subjects**. The table below covers axial, sagittal, and coronal only — oblique scans are included in training but excluded from this reference table.
 
-> ℹ️ The table covers axial, sagittal, and coronal scans only. The training set also includes images acquired in oblique orientations (not summarized here); the model has seen those during training but they are excluded from this reference table because the axial/sagittal/coronal cases are what users typically request at inference.
->
 > ⚠️ Some (modality, plane) combinations have very few training scans — output quality is not guaranteed for: **MRA** all planes, **SWI sagittal**, **SWI coronal**.
 
 | Modality | Plane | Recommended FOV (mm) | Unique scans (v0) | Unique scans (v1) |
