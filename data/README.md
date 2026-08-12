@@ -12,6 +12,7 @@ Disclaimer: We do not host these datasets. Please read each dataset's requiremen
   - [3.1 diff_unet_3d_ddpm-ct.pt](#31-diff_unet_3d_ddpm-ctpt)
   - [3.2 diff_unet_3d_rflow-ct.pt](#32-diff_unet_3d_rflow-ctpt)
   - [3.3 diff_unet_3d_rflow-mr.pt](#33-diff_unet_3d_rflow-mrpt)
+  - [3.4 diff_unet_3d_rflow-mr-brain_v1.pt](#34-diff_unet_3d_rflow-mr-brain_v1pt)
 - [4 ControlNet model training data](#4-controlnet-model-training-data)
   - [4.1 controlnet_3d_ddpm-ct.pt](#41-controlnet_3d_ddpm-ctpt)
   - [4.2 controlnet_3d_rflow-ct.pt](#42-controlnet_3d_rflow-ctpt)
@@ -25,7 +26,7 @@ The table below shows which checkpoints are downloaded for each model version (v
 
 | Version | Checkpoints |
 |---------|-------------|
-| `rflow-mr-brain` | `autoencoder_v1.pt`, `diff_unet_3d_rflow-mr-brain_v0.pt` |
+| `rflow-mr-brain` | `autoencoder_v1.pt`, `diff_unet_3d_rflow-mr-brain_v1.pt` |
 | `ddpm-ct` | `autoencoder_v1.pt`, `mask_generation_autoencoder.pt`, `mask_generation_diffusion_unet.pt`, `diff_unet_3d_ddpm-ct.pt`, `controlnet_3d_ddpm-ct.pt` |
 | `rflow-ct` | `autoencoder_v1.pt`, `mask_generation_autoencoder.pt`, `mask_generation_diffusion_unet.pt`, `diff_unet_3d_rflow-ct.pt`, `controlnet_3d_rflow-ct.pt` |
 | `rflow-mr` | `autoencoder_v2.pt`, `diff_unet_3d_rflow-mr.pt` |
@@ -161,6 +162,16 @@ The training dataset for this diffusion model comprises 16,291 distinct MR volum
 16 | Sunnybrook Cardiac MR | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 1071 | 12
 17 | QIN-PROSTATE-Repeatability| 16 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 120 | 23
 | | Total | 11255 | 1707 | 152 | 196 | 196 | 577 | 569 | 30 | 1609 | 24046 | 16291
+
+### 3.4 diff_unet_3d_rflow-mr-brain_v1.pt
+
+The training dataset for this model is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE) (batches 0–27), covering whole-brain and skull-stripped brain MR volumes across five modalities: T1w, T2w, FLAIR, SWI, and MRA. Unique scans are counted per source volume; volumes that span a larger field of view produce additional embeddings at higher resolution used during training but are not double-counted.
+
+|Index| Dataset name | T1w | T2w | FLAIR | SWI | MRA | Unique subjects |
+|:----|:-------------|:----|:----|:------|:----|:----|:----------------|
+| 1 | MR-RATE whole-brain | 54,511 | 669 | 57,641 | 48,205 | 157 | 73,516 |
+| 2 | MR-RATE skull-stripped | 54,511 | 669 | 57,641 | 48,205 | 157 | 73,516 |
+| | Total (unique subjects, whole-brain = skull-stripped) | | | | | | **73,516** |
 
 ## 4 ControlNet model training data
 

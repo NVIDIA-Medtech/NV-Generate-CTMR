@@ -50,7 +50,7 @@ And uses `candidate_masks_flexible_size_and_spacing_3000.json` (smaller mask ind
 Only the image-DM stack (no mask DM, no ControlNet):
 
 - `autoencoder_v1.pt` — from `nvidia/NV-Generate-CT` (yes, MR-Brain reuses the CT image AE)
-- `diff_unet_3d_rflow-mr-brain_v0.pt` — from `nvidia/NV-Generate-MR-Brain`
+- `diff_unet_3d_rflow-mr-brain_v1.pt` — from `nvidia/NV-Generate-MR-Brain`
 
 ### `rflow-mr` (Other MRI, Rectified Flow)
 

@@ -13,6 +13,7 @@ This page is a **short guide** to training data for NV-Generate-CTMR. **Authorit
 | Diffusion — DDPM CT | [§2.1](../data/README.md#21-diff_unet_3d_ddpm-ctpt) |
 | Diffusion — rectified-flow CT (+ HNSCC) | [§2.2](../data/README.md#22-diff_unet_3d_rflow-ctpt) |
 | Diffusion — rectified-flow MR | [§2.3](../data/README.md#23-diff_unet_3d_rflow-mrpt) |
+| Diffusion — rectified-flow MR brain (v1) | [§3.4](../data/README.md#34-diff_unet_3d_rflow-mr-brain_v1pt) |
 | ControlNet — DDPM CT (20 datasets) | [§3.1](../data/README.md#31-controlnet_3d_ddpm-ctpt) |
 | ControlNet — rflow CT (+ HNSCC) | [§3.2](../data/README.md#32-controlnet_3d_rflow-ctpt) |
 | ControlNet — finetune example (C4KC-KiTS) | [§3.3](../data/README.md#33-example-finetuning-on-a-new-dataset) |
@@ -30,6 +31,7 @@ This page is a **short guide** to training data for NV-Generate-CTMR. **Authorit
 - **diff_unet_3d_ddpm-ct.pt** — **10,277** CT volumes across **24** datasets. [Per-dataset counts → §2.1](../data/README.md#21-diff_unet_3d_ddpm-ctpt)
 - **diff_unet_3d_rflow-ct.pt** — Same CT mix plus **HNSCC** (**1,225** volumes). [Table → §2.2](../data/README.md#22-diff_unet_3d_rflow-ctpt)
 - **diff_unet_3d_rflow-mr.pt** — **16,291** distinct utilized MR images from **17** datasets (after excluding volumes with fewer than **48** slices). The README breaks out modality columns (T1w, T2w, FLAIR, etc.) and “original” vs training counts. [Full table → §2.3](../data/README.md#23-diff_unet_3d_rflow-mrpt)
+- **diff_unet_3d_rflow-mr-brain_v1.pt** — [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE) (batches 0–27): **73,516** unique subjects, **665,371** unique scans (all orientations including oblique, whole-brain), covering T1w, T2w, FLAIR, SWI, and MRA in both whole-brain and skull-stripped variants. [Full table → §3.4](../data/README.md#34-diff_unet_3d_rflow-mr-brain_v1pt)
 
 ### ControlNet (CT, paired image / mask)
 

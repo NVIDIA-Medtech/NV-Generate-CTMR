@@ -35,6 +35,7 @@ Key capabilities:
 
 ## News
 
+- **[August 2026]** — Updated NV-Generate-MR-Brain model weights from v0 to v1. Code usage is unchanged.
 - **[May 2026]** — Added [operator-focused inference skills](skills/) — ask an AI coding agent (Claude Code, Cursor, Codex, etc.) to use the matching skill and it will run the inference workflow end-to-end.
 - **🎆 March 2026 🎇** — Released NV-Generate-MR-Brain v0 models `rflow-mr-brain` for fast high-resolution 3D MR brain image generation, which covers both whole brain and skull-stripped brain generation for T1w, T2w, FLAIR, SWI images. The training data of this version v0 is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE).
 - **[October 2025]** — Released rectified flow models `rflow-mr` for fast high-resolution 3D MR image generation. Upgraded previous MAISI

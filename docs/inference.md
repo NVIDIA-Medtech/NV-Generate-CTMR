@@ -135,29 +135,27 @@ Contrast-enhanced MRI is not supported. For brain MRI, prefer the dedicated `rfl
 
 ## Recommended FOV for MR `rflow-mr-brain` model
 
-Recommended FOV per (modality, acquisition plane) across the MR-RATE training set. `N` counts unique source images; whole-brain and skull-stripped share the same FOV since they're two preprocessings of the same subject. Total unique images per skull condition (sum of the rows below): **318 825**.
+Recommended FOV per (modality, acquisition plane) across the MR-RATE training set. Whole-brain and skull-stripped share the same FOV since they are two preprocessings of the same subject. v1 totals (whole-brain, all orientations including oblique): **665,371 unique scans** across **73,516 unique subjects**. The table below covers axial, sagittal, and coronal only — oblique scans are included in training but excluded from this reference table.
 
-> ℹ️ The table covers axial, sagittal, and coronal scans only. The training set also includes images acquired in oblique orientations (not summarized here); the model has seen those during training but they are excluded from this reference table because the axial/sagittal/coronal cases are what users typically request at inference.
->
-> ⚠️ Some (modality, plane) combinations have very few training images — output quality is not guaranteed for: **MRA** all planes (37 / 98 / 11), **SWI sagittal** (2), **SWI coronal** (4).
+> ⚠️ Some (modality, plane) combinations have very few training scans — output quality is not guaranteed for: **MRA** all planes, **SWI sagittal**, **SWI coronal**.
 
-| Modality | Plane | Recommended FOV (mm) | Number of training images |
-|---|---|---|---:|
-| T1 | axial | 240 × 240 × 174 | 47 810 |
-| T1 | sagittal | 176 × 250 × 250 | 69 268 |
-| T1 | coronal | 240 × 200 × 240 | 38 756 |
-| T2 | axial | 240 × 240 × 158 | 195 |
-| T2 | sagittal | 162 × 240 × 240 | 551 |
-| T2 | coronal | 200 × 180 × 200 | 125 |
-| FLAIR | axial | 250 × 250 × 175 | 27 990 |
-| FLAIR | sagittal | 176 × 250 × 250 | 58 421 |
-| FLAIR | coronal | 250 × 200 × 250 | 27 698 |
-| SWI | axial | 230 × 230 × 145 | 47 859 |
-| SWI | sagittal | 140 × 230 × 230 | 2 |
-| SWI | coronal | 230 × 155 × 230 | 4 |
-| MRA | axial | 220 × 220 × 158 | 37 |
-| MRA | sagittal | 158 × 250 × 250 | 98 |
-| MRA | coronal | 240 × 179 × 240 | 11 |
+| Modality | Plane | Recommended FOV (mm) | Unique scans (v0) | Unique scans (v1) |
+|---|---|---|---:|---:|
+| T1 | axial | 240 × 240 × 174 | 47,810 | 98,769 |
+| T1 | sagittal | 176 × 250 × 250 | 69,268 | 142,290 |
+| T1 | coronal | 240 × 200 × 240 | 38,756 | 80,970 |
+| T2 | axial | 240 × 240 × 158 | 195 | 379 |
+| T2 | sagittal | 162 × 240 × 240 | 551 | 1,091 |
+| T2 | coronal | 200 × 180 × 200 | 125 | 250 |
+| FLAIR | axial | 250 × 250 × 175 | 27,990 | 59,105 |
+| FLAIR | sagittal | 176 × 250 × 250 | 58,421 | 118,946 |
+| FLAIR | coronal | 250 × 200 × 250 | 27,698 | 58,654 |
+| SWI | axial | 230 × 230 × 145 | 47,859 | 95,805 |
+| SWI | sagittal | 140 × 230 × 230 | 2 | 4 |
+| SWI | coronal | 230 × 155 × 230 | 4 | 9 |
+| MRA | axial | 220 × 220 × 158 | 37 | 77 |
+| MRA | sagittal | 158 × 250 × 250 | 98 | 195 |
+| MRA | coronal | 240 × 179 × 240 | 11 | 21 |
 
 Pick the row matching your target acquisition plane, then pick the modality code (see [Modality codes](#modality-codes); `9..20` for whole-brain or `29..33` for skull-stripped). The Recommended FOV is a starting point — feel free to vary `dim` and `spacing` as long as `dim[i] × spacing[i]` lands near it.
 

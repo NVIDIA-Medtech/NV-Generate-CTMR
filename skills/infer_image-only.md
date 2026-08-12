@@ -57,7 +57,7 @@ For `ddpm-ct`: use `network="ddpm"` and the corresponding `config_network_ddpm.j
 
 ### End-to-end example: T1-weighted whole-brain axial MRI
 
-Most-supported combination in the MR-RATE training set (47 810 axial T1 images — see the [per-plane FOV table for `rflow-mr-brain`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model) below). Median training FOV is 240 × 240 × 174 mm; `dim` and `spacing` below reproduce that.
+Most-supported combination in the MR-RATE training set (98,769 axial T1 images in v1 — see the [per-plane FOV table for `rflow-mr-brain`](../docs/inference.md#recommended-fov-for-mr-rflow-mr-brain-model) below). Median training FOV is 240 × 240 × 174 mm; `dim` and `spacing` below reproduce that.
 
 ```bash
 # 1. Download weights (one-time, ~3 GB).
