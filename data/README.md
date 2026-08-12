@@ -165,7 +165,7 @@ The training dataset for this diffusion model comprises 16,291 distinct MR volum
 
 ### 3.4 diff_unet_3d_rflow-mr-brain_v1.pt
 
-The training dataset for this model is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE) (batches 0–27), covering whole-brain and skull-stripped brain MR volumes across five modalities: T1w, T2w, FLAIR, SWI, and MRA. Each unique volume is counted once per its 128×128×128 embedding; volumes that span a larger field of view also produce larger-resolution embeddings used during training, but are not double-counted here.
+The training dataset for this model is [MR-RATE](https://huggingface.co/datasets/Forithmus/MR-RATE) (batches 0–27), covering whole-brain and skull-stripped brain MR volumes across five modalities: T1w, T2w, FLAIR, SWI, and MRA. Unique scans are counted per source volume; volumes that span a larger field of view produce additional embeddings at higher resolution used during training but are not double-counted.
 
 |Index| Dataset name | T1w | T2w | FLAIR | SWI | MRA | Unique subjects |
 |:----|:-------------|:----|:----|:------|:----|:----|:----------------|
