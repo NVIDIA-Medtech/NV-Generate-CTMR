@@ -181,13 +181,15 @@ def download_model_data(generate_version, root_dir, model_only=False):
                 },
             ]
 
+    track_download = True
     for file in files:
         file["path"] = file["path"] if "datasets/" not in file["path"] else os.path.join(root_dir, file["path"])
         if "repo_id" in file.keys():
-            path = fetch_to_hf_path_cmd([file], root_dir=root_dir, revision="main")
+            path = fetch_to_hf_path_cmd([file], root_dir=root_dir, revision="main",track_download=track_download)
             print("saved to:", path)
         else:
             download_url(url=file["url"], filepath=file["path"])
+        track_download = False
     return
 
 
