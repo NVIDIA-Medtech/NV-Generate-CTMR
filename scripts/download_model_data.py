@@ -4,7 +4,6 @@ import shutil
 from pathlib import Path
 
 from huggingface_hub import hf_hub_download
-from monai.apps import download_url
 
 
 def ensure_hf_download_tracked(
