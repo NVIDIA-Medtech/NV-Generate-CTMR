@@ -4,7 +4,6 @@ import shutil
 from pathlib import Path
 
 from huggingface_hub import hf_hub_download
-from monai.apps import download_url
 
 
 def ensure_hf_download_tracked(
@@ -181,13 +180,11 @@ def download_model_data(generate_version, root_dir, model_only=False):
                 },
             ]
 
-    for file in files:
-        file["path"] = file["path"] if "datasets/" not in file["path"] else os.path.join(root_dir, file["path"])
-        if "repo_id" in file.keys():
-            path = fetch_to_hf_path_cmd([file], root_dir=root_dir, revision="main")
-            print("saved to:", path)
-        else:
-            download_url(url=file["url"], filepath=file["path"])
+    for i in range(len(files)):
+        files[i]["path"] = files[i]["path"] if "datasets/" not in files[i]["path"] else os.path.join(root_dir, files[i]["path"])
+
+    path = fetch_to_hf_path_cmd(files, root_dir=root_dir, revision="main", track_download=True)
+    print("saved to:", path)
     return
 
 
