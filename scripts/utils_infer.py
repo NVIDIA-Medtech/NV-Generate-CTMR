@@ -388,7 +388,7 @@ def load_image_models(args, device: torch.device, low_vram=False):
     return autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler
 
 
-def load_mask_models(args, device: torch.device):
+def load_mask_models(args, device: torch.device, low_vram=False):
     """
     Load **mask-side** networks (mask AE + mask DM) + the mask noise scheduler.
 
@@ -404,6 +404,7 @@ def load_mask_models(args, device: torch.device):
             ``mask_generation_diffusion_def``,
             ``mask_generation_noise_scheduler``.
         device: target device.
+        low_vram: load model weights on CPU until their inference stage.
 
     Returns:
         ``(mask_autoencoder, mask_diffusion_unet, mask_scale_factor, mask_noise_scheduler)``.
@@ -411,14 +412,17 @@ def load_mask_models(args, device: torch.device):
     """
     from .utils import define_instance
 
-    mask_autoencoder = define_instance(args, "mask_generation_autoencoder_def").to(device)
-    ckpt_mae = torch.load(args.trained_mask_generation_autoencoder_path, weights_only=True)
+    model_device = torch.device("cpu") if low_vram else device
+    mask_autoencoder = define_instance(args, "mask_generation_autoencoder_def").to(model_device)
+    ckpt_mae = torch.load(args.trained_mask_generation_autoencoder_path, map_location=model_device, weights_only=True)
     mask_autoencoder.load_state_dict(ckpt_mae)
+    del ckpt_mae
 
-    mask_diffusion_unet = define_instance(args, "mask_generation_diffusion_def").to(device)
-    ckpt_mdm = torch.load(args.trained_mask_generation_diffusion_path, weights_only=True)
+    mask_diffusion_unet = define_instance(args, "mask_generation_diffusion_def").to(model_device)
+    ckpt_mdm = torch.load(args.trained_mask_generation_diffusion_path, map_location=model_device, weights_only=True)
     mask_diffusion_unet.load_state_dict(ckpt_mdm["unet_state_dict"])
-    mask_scale_factor = ckpt_mdm["scale_factor"]
+    mask_scale_factor = ckpt_mdm["scale_factor"].to(model_device)
+    del ckpt_mdm
 
     mask_noise_scheduler = define_instance(args, "mask_generation_noise_scheduler")
 
@@ -427,7 +431,7 @@ def load_mask_models(args, device: torch.device):
     return mask_autoencoder, mask_diffusion_unet, mask_scale_factor, mask_noise_scheduler
 
 
-def load_paired_inference_models(args, device: torch.device) -> dict:
+def load_paired_inference_models(args, device: torch.device, low_vram=False) -> dict:
     """
     Load **all** networks needed for the paired image+mask inference path
     (``LDMSampler.sample_multiple_images``). Convenience wrapper that calls
@@ -437,8 +441,8 @@ def load_paired_inference_models(args, device: torch.device) -> dict:
     expects, so callers can do ``LDMSampler(**load_paired_inference_models(args, device), ...other args...)``
     (though usually you'll pull individual entries out explicitly).
     """
-    autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler = load_image_models(args, device)
-    mask_autoencoder, mask_diffusion_unet, mask_scale_factor, mask_noise_scheduler = load_mask_models(args, device)
+    autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler = load_image_models(args, device, low_vram)
+    mask_autoencoder, mask_diffusion_unet, mask_scale_factor, mask_noise_scheduler = load_mask_models(args, device, low_vram)
     return {
         "autoencoder": autoencoder,
         "diffusion_unet": diffusion_unet,
@@ -449,6 +453,7 @@ def load_paired_inference_models(args, device: torch.device) -> dict:
         "mask_generation_diffusion_unet": mask_diffusion_unet,
         "mask_generation_scale_factor": mask_scale_factor,
         "mask_generation_noise_scheduler": mask_noise_scheduler,
+        "low_vram": low_vram,
     }
 
 
