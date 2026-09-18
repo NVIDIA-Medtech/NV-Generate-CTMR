@@ -81,6 +81,7 @@ def ldm_conditional_sample_one_image_from_mask(
     autoencoder_sliding_window_infer_size=(96, 96, 96),
     autoencoder_sliding_window_infer_overlap=0.6667,
     cfg_guidance_scale=0,
+    low_vram=False,
 ):
     """
     Generate a CT/MR image from a **3D label mask** via the ControlNet-
@@ -154,6 +155,7 @@ def ldm_conditional_sample_one_image_from_mask(
         autoencoder_sliding_window_infer_size=autoencoder_sliding_window_infer_size,
         autoencoder_sliding_window_infer_overlap=autoencoder_sliding_window_infer_overlap,
         cfg_guidance_scale=cfg_guidance_scale,
+        low_vram=low_vram,
         controlnet_uncond_tensor=controlnet_uncond_tensor,
     )
 
@@ -410,6 +412,7 @@ def main() -> int:
         ),
     )
     parser.add_argument("--random-seed", type=int, default=0)
+    parser.add_argument("--low-vram", action="store_true", help="Move inactive models to CPU between inference stages.")
 
     args = parser.parse_args()
     set_determinism(seed=args.random_seed)
@@ -435,7 +438,7 @@ def main() -> int:
     # output_dir, modality, num_inference_steps,
     # autoencoder_sliding_window_infer_size/overlap, cfg_guidance_scale, etc.
     cfg = load_config(args.environment_file, args.inference_file, args.config_file)
-    autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler = load_image_models(cfg, device)
+    autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler = load_image_models(cfg, device, args.low_vram)
 
     include_body_region = diffusion_unet.include_top_region_index_input
     include_modality = diffusion_unet.num_class_embeds is not None
@@ -490,6 +493,7 @@ def main() -> int:
         autoencoder_sliding_window_infer_size=cfg.autoencoder_sliding_window_infer_size,
         autoencoder_sliding_window_infer_overlap=cfg.autoencoder_sliding_window_infer_overlap,
         cfg_guidance_scale=cfg.cfg_guidance_scale,
+        low_vram=args.low_vram,
     )
 
     # ── Save output ─────────────────────────────────────────────────────────

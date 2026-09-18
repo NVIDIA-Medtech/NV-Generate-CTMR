@@ -223,3 +223,21 @@ The pipeline trains an autoencoder in pixel space to encode images into latent f
 ![Inference scheme](../figures/maisi_infer.png)
 
 Network definitions: [config_network_rflow.json](../configs/config_network_rflow.json), [config_network_ddpm.json](../configs/config_network_ddpm.json). Key references: [Latent Diffusion (CVPR 2022)](https://openaccess.thecvf.com/content/CVPR2022/papers/Rombach_High-Resolution_Image_Synthesis_With_Latent_Diffusion_Models_CVPR_2022_paper.pdf), [ControlNet (ICCV 2023)](https://openaccess.thecvf.com/content/ICCV2023/papers/Zhang_Adding_Conditional_Control_to_Text-to-Image_Diffusion_Models_ICCV_2023_paper.pdf), [Rectified Flow (ICLR 2023)](https://arxiv.org/pdf/2209.03003).
+
+## Low-VRAM inference
+
+Add `--low-vram` to any inference command to load models on CPU and move only
+the models needed for the current stage to CUDA. This keeps the default
+behavior unchanged and reduces model residency at the cost of CPU/GPU transfer
+time:
+
+```bash
+python -m scripts.inference \
+    -t ./configs/config_network_rflow.json \
+    -i ./configs/config_infer.json \
+    -e ./configs/environment_rflow-ct.json \
+    --version rflow-ct --low-vram
+```
+
+The same option is available on `scripts.infer_image_from_mask`,
+`scripts.infer_image_from_mask_batch`, and `scripts.diff_model_infer`.

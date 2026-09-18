@@ -28,7 +28,7 @@ from .utils_infer import load_image_models
 
 
 @torch.inference_mode()
-def infer_image_from_mask_batch(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
+def infer_image_from_mask_batch(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int, low_vram=False) -> None:
     """
     Batch image-from-mask inference driven by a JSON manifest.
 
@@ -69,7 +69,7 @@ def infer_image_from_mask_batch(env_config_path: str, model_config_path: str, mo
     args = load_config(env_config_path, model_config_path, model_def_path)
 
     # Step 2: load image-side networks (AE + DM + ControlNet) via the shared helper
-    autoencoder, unet, controlnet, scale_factor, noise_scheduler = load_image_models(args, device)
+    autoencoder, unet, controlnet, scale_factor, noise_scheduler = load_image_models(args, device, low_vram)
     include_body_region = unet.include_top_region_index_input
     include_modality = unet.num_class_embeds is not None
     logger.info("Loaded image AE + DM + ControlNet via utils_infer.load_image_models.")
@@ -139,6 +139,7 @@ def infer_image_from_mask_batch(env_config_path: str, model_config_path: str, mo
             num_inference_steps=args.controlnet_infer["num_inference_steps"],
             autoencoder_sliding_window_infer_size=args.controlnet_infer["autoencoder_sliding_window_infer_size"],
             autoencoder_sliding_window_infer_overlap=args.controlnet_infer["autoencoder_sliding_window_infer_overlap"],
+            low_vram=low_vram,
         )
         # save image/label pairs
         labels = decollate_batch(batch)[0]["label"]
@@ -189,6 +190,7 @@ if __name__ == "__main__":
         help="Config json file that stores inference hyper-parameters (e.g. ./configs/config_maisi_diff_model_rflow-ct.json).",
     )
     parser.add_argument("-g", "--num-gpus", type=int, default=1, help="Number of GPUs to use")
+    parser.add_argument("--low-vram", action="store_true", help="Move inactive models to CPU between inference stages.")
 
     args = parser.parse_args()
-    infer_image_from_mask_batch(args.environment_file, args.inference_file, args.config_file, args.num_gpus)
+    infer_image_from_mask_batch(args.environment_file, args.inference_file, args.config_file, args.num_gpus, args.low_vram)

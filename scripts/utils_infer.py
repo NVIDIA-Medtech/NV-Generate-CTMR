@@ -56,6 +56,14 @@ from tqdm import tqdm
 from .utils import dynamic_infer, get_body_region_index_from_mask
 
 
+def move_models(models, device):
+    """Move models to a device and release cached CUDA blocks when needed."""
+    for model in models:
+        model.to(device)
+    if torch.device(device).type == "cpu" and torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
 class ReconModel(torch.nn.Module):
     """
     A PyTorch module for reconstructing images from latent representations.
@@ -127,6 +135,7 @@ def run_controlnet_conditioned_image_dm(
     autoencoder_sliding_window_infer_overlap=0.6667,
     cfg_guidance_scale=0.0,
     controlnet_uncond_tensor=None,
+    low_vram=False,
 ):
     """
     Run the ControlNet-conditioned image-DM denoising loop + AE decode.
@@ -192,7 +201,8 @@ def run_controlnet_conditioned_image_dm(
     include_body_region = diffusion_unet.include_top_region_index_input
     include_modality = diffusion_unet.num_class_embeds is not None
 
-    recon_model = ReconModel(autoencoder=autoencoder, scale_factor=scale_factor).to(device)
+    if low_vram:
+        move_models((diffusion_unet, controlnet), device)
 
     with torch.no_grad(), torch.amp.autocast("cuda"):
         logging.info("---- Start generating latent features... ----")
@@ -288,11 +298,18 @@ def run_controlnet_conditioned_image_dm(
 
         del unet_inputs, controlnet_inputs, model_output, down_block_res_samples, mid_block_res_sample
         gc.collect()
-        torch.cuda.empty_cache()
+        if low_vram:
+            move_models((diffusion_unet, controlnet), torch.device("cpu"))
+            move_models((autoencoder,), device)
+        else:
+            torch.cuda.empty_cache()
 
         # Sliding-window AE decode
         logging.info("---- Start decoding latent features into images... ----")
         start_time = time.time()
+        if isinstance(scale_factor, torch.Tensor):
+            scale_factor = scale_factor.to(device)
+        recon_model = ReconModel(autoencoder=autoencoder, scale_factor=scale_factor).to(device)
         inferer = SlidingWindowInferer(
             roi_size=list(autoencoder_sliding_window_infer_size),
             sw_batch_size=1,
@@ -316,12 +333,15 @@ def run_controlnet_conditioned_image_dm(
         # HU range mapping (modality-agnostic post-process)
         synthetic_images = (synthetic_images - b_min) / (b_max - b_min)
         synthetic_images = synthetic_images * (a_max - a_min) + a_min
-        torch.cuda.empty_cache()
+        if low_vram:
+            move_models((autoencoder,), torch.device("cpu"))
+        else:
+            torch.cuda.empty_cache()
 
     return synthetic_images
 
 
-def load_image_models(args, device: torch.device):
+def load_image_models(args, device: torch.device, low_vram=False):
     """
     Load **image-side** networks (image AE + image DM + ControlNet) + the
     image noise scheduler from disk.
@@ -340,21 +360,25 @@ def load_image_models(args, device: torch.device):
     """
     from .utils import define_instance
 
-    autoencoder = define_instance(args, "autoencoder_def").to(device)
-    ckpt = torch.load(args.trained_autoencoder_path, weights_only=False)
+    model_device = torch.device("cpu") if low_vram else device
+    autoencoder = define_instance(args, "autoencoder_def").to(model_device)
+    ckpt = torch.load(args.trained_autoencoder_path, map_location=model_device, weights_only=False)
     if "unet_state_dict" in ckpt:
         ckpt = ckpt["unet_state_dict"]
     autoencoder.load_state_dict(ckpt)
+    del ckpt
 
-    diffusion_unet = define_instance(args, "diffusion_unet_def").to(device)
-    ckpt_dm = torch.load(args.trained_diffusion_path, weights_only=False)
+    diffusion_unet = define_instance(args, "diffusion_unet_def").to(model_device)
+    ckpt_dm = torch.load(args.trained_diffusion_path, map_location=model_device, weights_only=False)
     diffusion_unet.load_state_dict(ckpt_dm["unet_state_dict"], strict=False)
-    scale_factor = ckpt_dm["scale_factor"].to(device)
+    scale_factor = ckpt_dm["scale_factor"].to(model_device)
+    del ckpt_dm
 
-    controlnet = define_instance(args, "controlnet_def").to(device)
-    ckpt_cn = torch.load(args.trained_controlnet_path, weights_only=False)
+    controlnet = define_instance(args, "controlnet_def").to(model_device)
+    ckpt_cn = torch.load(args.trained_controlnet_path, map_location=model_device, weights_only=False)
     monai.networks.utils.copy_model_state(controlnet, diffusion_unet.state_dict())
     controlnet.load_state_dict(ckpt_cn["controlnet_state_dict"], strict=False)
+    del ckpt_cn
 
     noise_scheduler = define_instance(args, "noise_scheduler")
 

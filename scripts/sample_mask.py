@@ -41,7 +41,7 @@ from .utils import (
 # utils_infer. Re-export them from this module's namespace for backward
 # compatibility with callers that imported them from scripts.sample_mask
 # (or via the scripts.sample shim).
-from .utils_infer import ReconModel, initialize_noise_latents  # noqa: F401
+from .utils_infer import ReconModel, initialize_noise_latents, move_models  # noqa: F401
 
 
 def ldm_conditional_sample_one_mask(
@@ -56,6 +56,7 @@ def ldm_conditional_sample_one_mask(
     num_inference_steps=1000,
     autoencoder_sliding_window_infer_size=[96, 96, 96],
     autoencoder_sliding_window_infer_overlap=0.6667,
+    low_vram=False,
 ):
     """
     Generate a single synthetic mask using a latent diffusion model.
@@ -76,7 +77,8 @@ def ldm_conditional_sample_one_mask(
     Returns:
         torch.Tensor: The generated synthetic mask.
     """
-    recon_model = ReconModel(autoencoder=autoencoder, scale_factor=scale_factor).to(device)
+    if low_vram:
+        move_models((diffusion_unet,), device)
 
     with torch.no_grad(), torch.amp.autocast("cuda"):
         # Generate random noise
@@ -114,6 +116,12 @@ def ldm_conditional_sample_one_mask(
             sw_device=device,
             device=torch.device("cpu"),
         )
+        if low_vram:
+            move_models((diffusion_unet,), torch.device("cpu"))
+            move_models((autoencoder,), device)
+        if isinstance(scale_factor, torch.Tensor):
+            scale_factor = scale_factor.to(device)
+        recon_model = ReconModel(autoencoder=autoencoder, scale_factor=scale_factor).to(device)
         synthetic_mask = dynamic_infer(inferer, recon_model, latents)
         synthetic_mask = torch.softmax(synthetic_mask, dim=1)
         synthetic_mask = torch.argmax(synthetic_mask, dim=1, keepdim=True)
@@ -132,6 +140,9 @@ def ldm_conditional_sample_one_mask(
         logging.info(f"target_tumor_label for postprocess:{target_tumor_label}")
         data = general_mask_generation_post_process(data, target_tumor_label=target_tumor_label, device=device)
         synthetic_mask = torch.from_numpy(data).unsqueeze(0).unsqueeze(0).to(device)
+
+        if low_vram:
+            move_models((autoencoder,), torch.device("cpu"))
 
     return synthetic_mask
 

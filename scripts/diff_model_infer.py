@@ -29,6 +29,7 @@ from tqdm import tqdm
 from .diff_model_setting import initialize_distributed, load_config, setup_logging
 from .sample import ReconModel, check_input_ct
 from .utils import define_instance, dynamic_infer
+from .utils_infer import move_models
 
 
 def set_random_seed(seed: int) -> int:
@@ -46,7 +47,7 @@ def set_random_seed(seed: int) -> int:
     return random_seed
 
 
-def load_models(args: argparse.Namespace, device: torch.device, logger: logging.Logger) -> tuple:
+def load_models(args: argparse.Namespace, device: torch.device, logger: logging.Logger, low_vram=False) -> tuple:
     """
     Load the autoencoder and UNet models.
 
@@ -58,19 +59,22 @@ def load_models(args: argparse.Namespace, device: torch.device, logger: logging.
     Returns:
         tuple: Loaded autoencoder, UNet model, and scale factor.
     """
-    autoencoder = define_instance(args, "autoencoder_def").to(device)
-    checkpoint_autoencoder = torch.load(args.trained_autoencoder_path)
+    model_device = torch.device("cpu") if low_vram else device
+    autoencoder = define_instance(args, "autoencoder_def").to(model_device)
+    checkpoint_autoencoder = torch.load(args.trained_autoencoder_path, map_location=model_device)
     if "unet_state_dict" in checkpoint_autoencoder.keys():
         checkpoint_autoencoder = checkpoint_autoencoder["unet_state_dict"]
     autoencoder.load_state_dict(checkpoint_autoencoder)
+    del checkpoint_autoencoder
     logger.info(f"checkpoints {args.trained_autoencoder_path} loaded.")
 
-    unet = define_instance(args, "diffusion_unet_def").to(device)
-    checkpoint = torch.load(f"{args.model_dir}/{args.model_filename}", map_location=device, weights_only=False)
+    unet = define_instance(args, "diffusion_unet_def").to(model_device)
+    checkpoint = torch.load(f"{args.model_dir}/{args.model_filename}", map_location=model_device, weights_only=False)
     unet.load_state_dict(checkpoint["unet_state_dict"], strict=False)
     logger.info(f"checkpoints {args.model_dir}/{args.model_filename} loaded.")
 
-    scale_factor = checkpoint["scale_factor"]
+    scale_factor = checkpoint["scale_factor"].to(model_device)
+    del checkpoint
     logger.info(f"scale_factor -> {scale_factor}.")
 
     return autoencoder, unet, scale_factor
@@ -112,6 +116,7 @@ def run_inference(
     output_size: tuple,
     divisor: int,
     logger: logging.Logger,
+    low_vram=False,
 ) -> np.ndarray:
     """
     Run the inference to generate synthetic images.
@@ -158,7 +163,8 @@ def run_inference(
     else:
         noise_scheduler.set_timesteps(num_inference_steps=args.diffusion_unet_inference["num_inference_steps"])
 
-    recon_model = ReconModel(autoencoder=autoencoder, scale_factor=scale_factor).to(device)
+    if low_vram:
+        move_models((unet,), device)
     autoencoder.eval()
     unet.eval()
 
@@ -220,6 +226,12 @@ def run_inference(
             sw_device=device,
             device=device,
         )
+        if low_vram:
+            move_models((unet,), torch.device("cpu"))
+            move_models((autoencoder,), device)
+        if isinstance(scale_factor, torch.Tensor):
+            scale_factor = scale_factor.to(device)
+        recon_model = ReconModel(autoencoder=autoencoder, scale_factor=scale_factor).to(device)
         synthetic_images = dynamic_infer(inferer, recon_model, image)
         data = synthetic_images.squeeze().cpu().detach().numpy()
         modality = int(modality_tensor.cpu().item())
@@ -262,7 +274,7 @@ def save_image(
 
 
 @torch.inference_mode()
-def diff_model_infer(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int) -> None:
+def diff_model_infer(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int, low_vram=False) -> None:
     """
     Main function to run the diffusion model inference.
 
@@ -296,7 +308,7 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         check_input_ct(None, None, None, output_size, out_spacing, None)
     args.cfg_guidance_scale = args.diffusion_unet_inference["cfg_guidance_scale"]
 
-    autoencoder, unet, scale_factor = load_models(args, device, logger)
+    autoencoder, unet, scale_factor = load_models(args, device, logger, low_vram)
     num_downsample_level = max(
         1,
         (
@@ -322,6 +334,7 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         output_size,
         divisor,
         logger,
+        low_vram,
     )
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -348,6 +361,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--model_config", type=str, required=True)
     parser.add_argument("-t", "--model_def", type=str, required=True)
     parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
+    parser.add_argument("--low-vram", action="store_true", help="Move inactive models to CPU between inference stages.")
 
     args = parser.parse_args()
-    diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus)
+    diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus, args.low_vram)
