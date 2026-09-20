@@ -353,10 +353,12 @@ def load_image_models(args, device: torch.device, low_vram=False):
             plus the network defs (``autoencoder_def``, ``diffusion_unet_def``,
             ``controlnet_def``, ``noise_scheduler``).
         device: target device.
+        low_vram: load model weights on CPU until their inference stage.
 
     Returns:
         ``(autoencoder, diffusion_unet, controlnet, scale_factor, noise_scheduler)``.
-        All networks are moved to ``device`` and set to ``.eval()`` mode.
+        Models and ``scale_factor`` are placed on CPU when ``low_vram=True``;
+        otherwise they are placed on ``device``. Models are set to ``.eval()``.
     """
     from .utils import define_instance
 
@@ -408,7 +410,8 @@ def load_mask_models(args, device: torch.device, low_vram=False):
 
     Returns:
         ``(mask_autoencoder, mask_diffusion_unet, mask_scale_factor, mask_noise_scheduler)``.
-        Networks are moved to ``device`` and set to ``.eval()``.
+        Models and ``mask_scale_factor`` are placed on CPU when ``low_vram=True``;
+        otherwise they are placed on ``device``. Models are set to ``.eval()``.
     """
     from .utils import define_instance
 
