@@ -11,7 +11,7 @@ Path A runs the **mask diffusion UNet** to synthesise a brand-new mask condition
 
 ```json
 // config_infer.json — Path A trigger
-"controllable_anatomy_size": [["bone lesion", 0.5]]
+"controllable_anatomy_size": ["bone lesion", 0.5]
 ```
 
 If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to Path B (real-mask DB lookup). See [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
@@ -58,15 +58,15 @@ A fixed 10-slot float vector; each slot is a normalised size in `[0, 1]` or `-1`
 | 9 | bone lesion |
 
 Rules:
-- At most **10 entries**, at most **1 tumor slot** non-`-1` at a time.
-- Unspecified organs default to `-1` (the model picks a size from the training distribution).
-- The pipeline snaps the full vector to the nearest real training-set entry first, then overwrites the specified slots with the user's exact values — this keeps the conditioning near the training distribution.
+- Exactly **one `[organ_name, size]` pair** is accepted.
+- Unspecified organ slots default to `-1` (the model picks a size from the training distribution).
+- The pipeline snaps the full vector to the nearest real training-set entry first, then overwrites the specified slot with the user's exact value — this keeps the conditioning near the training distribution.
 
 ## Key config knobs
 
 | Key | Default | Notes |
 |-----|---------|-------|
-| `controllable_anatomy_size` | `[["bone lesion", 0.5]]` | List of `[organ_name, size]` pairs. Non-empty triggers Path A. |
+| `controllable_anatomy_size` | `["bone lesion", 0.5]` | A single `[organ_name, size]` pair. Non-empty triggers Path A. |
 | `mask_generation_num_inference_steps` | 1000 | **Always keep at 1000.** The mask DM is DDPM — lowering this silently degrades mask quality (unlike the image DM which supports DDIM/rFlow). |
 | `output_size` | `[512, 512, 512]` | Target shape; the mask DM was trained at 256³ so major upsampling degrades label boundaries. Stay close to 256³ when feasible. |
 | `spacing` | `[1.5, 1.5, 1.5]` | Voxel spacing in mm. Training spacing is 1.5 mm isotropic. |
