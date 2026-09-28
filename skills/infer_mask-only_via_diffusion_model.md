@@ -11,7 +11,7 @@ Path A runs the **mask diffusion UNet** to synthesise a brand-new mask condition
 
 ```json
 // config_infer.json — Path A trigger
-"controllable_anatomy_size": [["liver", 0.7], ["pancreatic tumor", 0.3]]
+"controllable_anatomy_size": [["bone lesion", 0.5]]
 ```
 
 If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to Path B (real-mask DB lookup). See [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
