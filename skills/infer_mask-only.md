@@ -89,6 +89,8 @@ The pretrained mask DM was trained at **256×256×256 × 1.5 mm isotropic** (Pat
 
 ## Related skills
 
+- [`infer_mask-only_via_diffusion_model`](infer_mask-only_via_diffusion_model.md) — Path A deep-dive: anatomy_size vector, DDPM settings, snapping logic.
+- [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md) — Path B deep-dive: DB filtering, closest-match fallback, augmentation pipeline.
 - [`infer_mask-image-paired`](infer_mask-image-paired.md) — the CLI that drives this stage end-to-end.
 - [`infer_image-from-mask`](infer_image-from-mask.md) — what happens to the mask after this stage.
 - [`infer_image-only`](infer_image-only.md) — image-only generation (no mask DM involved).
