@@ -104,9 +104,9 @@ def download_model_data(generate_version, root_dir, model_only=False):
                 "filename": "models/mask_generation_autoencoder.pt",
             },
             {
-                "path": "models/mask_generation_diffusion_unet.pt",
+                "path": "models/mask_generation_diffusion_unet_v2.pt",
                 "repo_id": "nvidia/NV-Generate-CT",
-                "filename": "models/mask_generation_diffusion_unet.pt",
+                "filename": "models/mask_generation_diffusion_unet_v2.pt",
             },
         ]
         if not model_only:

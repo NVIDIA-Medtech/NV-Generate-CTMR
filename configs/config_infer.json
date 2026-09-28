@@ -3,8 +3,10 @@
     "body_region": ["chest"],
     "anatomy_list": ["lung tumor"],
     "controllable_anatomy_size": [],
+    "controllable_demographics": null,
     "num_inference_steps": 30,
-    "mask_generation_num_inference_steps": 1000,
+    "mask_generation_num_inference_steps": 100,
+    "mask_generation_cfg_guidance_scale": 2.0,
     "output_size": [
         256,
         256,

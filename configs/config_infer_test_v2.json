@@ -1,14 +1,12 @@
 {
     "num_output_samples": 1,
-    "body_region": [
-        "chest"
-    ],
-    "anatomy_list": [
-        "lung tumor"
-    ],
-    "controllable_anatomy_size": [],
-    "num_inference_steps": 1000,
+    "body_region": ["chest"],
+    "anatomy_list": ["bone lesion"],
+    "controllable_anatomy_size": [["bone lesion", 0.5]],
+    "controllable_demographics": null,
+    "num_inference_steps": 30,
     "mask_generation_num_inference_steps": 100,
+    "mask_generation_cfg_guidance_scale": 2.0,
     "output_size": [
         256,
         256,
@@ -21,20 +19,13 @@
         1.5,
         2.0
     ],
-    "autoencoder_sliding_window_infer_size": [
-        64,
-        64,
-        64
-    ],
-    "autoencoder_sliding_window_infer_overlap": 0.25,
-    "autoencoder_tp_num_splits": 4,
+    "autoencoder_sliding_window_infer_size": [48,48,48],
+    "autoencoder_sliding_window_infer_overlap": 0.6666,
     "controlnet": "$@controlnet_def",
     "diffusion_unet": "$@diffusion_unet_def",
     "autoencoder": "$@autoencoder_def",
     "mask_generation_autoencoder": "$@mask_generation_autoencoder_def",
     "mask_generation_diffusion": "$@mask_generation_diffusion_def",
     "modality": 1,
-    "cfg_guidance_scale": 0.0,
-    "mask_generation_cfg_guidance_scale": 2.0,
-    "controllable_demographics": null
+    "cfg_guidance_scale": 0.0
 }

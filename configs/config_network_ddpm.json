@@ -125,18 +125,24 @@
         "dim_split": 1
     },
     "mask_generation_diffusion_def": {
-        "_target_": "monai.networks.nets.diffusion_model_unet.DiffusionModelUNet",
+        "_target_": "scripts.adagn_unet.DiffusionModelUNetMaisiAdaGN",
         "spatial_dims": "@spatial_dims",
         "in_channels": "@latent_channels",
         "out_channels": "@latent_channels",
-        "channels":[64, 128, 256, 512],
-        "attention_levels":[false, false, true, true],
-        "num_head_channels":[0, 0, 32, 32],
+        "num_channels": [64, 128, 256, 512],
+        "attention_levels": [false, false, true, true],
+        "num_head_channels": [0, 0, 32, 32],
         "num_res_blocks": 2,
         "use_flash_attention": true,
         "with_conditioning": true,
         "upcast_attention": true,
-        "cross_attention_dim": 10
+        "include_fc": true,
+        "cross_attention_dim": 19,
+        "include_spacing_input": true,
+        "include_top_region_index_input": false,
+        "include_bottom_region_index_input": false,
+        "adagn_condition_dim": 19,
+        "adagn_context_embed_dim": 256
     },
     "mask_generation_scale_factor": 1.0055984258651733,
     "noise_scheduler": {
@@ -148,11 +154,11 @@
         "clip_sample": false
     },
     "mask_generation_noise_scheduler": {
-        "_target_": "monai.networks.schedulers.ddpm.DDPMScheduler",
+        "_target_": "monai.networks.schedulers.rectified_flow.RFlowScheduler",
         "num_train_timesteps": 1000,
-        "beta_start": 0.0015,
-        "beta_end": 0.0195,
-        "schedule": "scaled_linear_beta",
-        "clip_sample": false
+        "use_discrete_timesteps": false,
+        "use_timestep_transform": true,
+        "sample_method": "uniform",
+        "scale": 1.0
     }
 }

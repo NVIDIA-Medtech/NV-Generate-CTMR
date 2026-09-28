@@ -103,6 +103,8 @@ class LDMSampler:
         autoencoder_sliding_window_infer_overlap=0.6667,
         cfg_guidance_scale=0.0,
         low_vram=False,
+        controllable_demographics=None,
+        mask_generation_cfg_guidance_scale=2.0,
     ) -> None:
         """
         Initialize the LDMSampler with various parameters and models.
@@ -141,7 +143,9 @@ class LDMSampler:
         self.noise_factor = 1.0
         self.cfg_guidance_scale = cfg_guidance_scale
         self.low_vram = low_vram
+        self.mask_generation_cfg_guidance_scale = mask_generation_cfg_guidance_scale
         self.controllable_anatomy_size = controllable_anatomy_size
+        self.controllable_demographics = controllable_demographics or []
         if len(self.controllable_anatomy_size):
             logging.info("controllable_anatomy_size is given, mask generation is triggered!")
             # overwrite the anatomy_list by given organs in self.controllable_anatomy_size
@@ -224,8 +228,11 @@ class LDMSampler:
             # we will use mask generation instead of finding candidate masks
             # create a dummy selected_mask_files for placeholder
             selected_mask_files = list(range(num_img))
-            # prerpare organ size conditions
-            anatomy_size_condition = self.prepare_anatomy_size_condition(self.controllable_anatomy_size)
+            # prepare organ size conditions (19-d: anatomy + demographics)
+            anatomy_size_condition = self.prepare_anatomy_size_condition(
+                self.controllable_anatomy_size,
+                self.controllable_demographics,
+            )
         else:
             need_resample = False
             # find candidate mask and save to candidate_mask_files
@@ -401,55 +408,49 @@ class LDMSampler:
     def prepare_anatomy_size_condition(
         self,
         controllable_anatomy_size,
+        controllable_demographics=None,
     ):
         """
-        Prepare anatomy size conditions for mask generation.
+        Build the 19-d v2 conditioning vector [anatomy(14) | demographics(5)].
+
+        anatomy slots 0-8: organ sizes (liver, spleen, stomach, pancreas, colon,
+            left kidney, right kidney, lung, gallbladder); -1 = unspecified.
+        anatomy slots 9-13: tumor sizes (lung tumor, pancreatic tumor, hepatic tumor,
+            colon cancer primaries, bone lesion); -1 = unspecified.
+        demographics slots 14-18: age, sex, weight, bmi, height (normalized to [0,1]);
+            -1 = unspecified / missing.
 
         Args:
-            controllable_anatomy_size (list): List of tuples specifying controllable anatomy sizes.
+            controllable_anatomy_size: list with at most one [organ_name, size] pair.
+            controllable_demographics: list of [name, value] demographics in original
+                units, or None.
 
         Returns:
-            list: Prepared anatomy size conditions.
+            list: 19-d conditioning vector.
         """
-        anatomy_size_idx = {
-            "gallbladder": 0,
-            "liver": 1,
-            "stomach": 2,
-            "pancreas": 3,
-            "colon": 4,
-            "lung tumor": 5,
-            "pancreatic tumor": 6,
-            "hepatic tumor": 7,
-            "colon cancer primaries": 8,
-            "bone lesion": 9,
-        }
-        provide_anatomy_size = [None for _ in range(10)]
+        from .sample_mask import ANATOMY_SIZE_IDX, N_ANATOMY, N_COND, _DEMOG_MAX
+
+        # --- anatomy part (slots 0-13) ---
+        anatomy_vec = [-1.0] * N_ANATOMY
         logging.info(f"controllable_anatomy_size: {controllable_anatomy_size}")
         for element in controllable_anatomy_size:
             anatomy_name, anatomy_size = element
-            provide_anatomy_size[anatomy_size_idx[anatomy_name]] = anatomy_size
+            anatomy_vec[ANATOMY_SIZE_IDX[anatomy_name]] = float(anatomy_size)
 
-        with open(self.all_anatomy_size_conditions_json) as f:
-            all_anatomy_size_conditions = json.load(f)
+        # --- demographics part (slots 14-18: age, sex, weight, bmi, height) ---
+        demog_vec = [-1.0] * 5
+        demog_slot = {"age": 0, "sex": 1, "weight": 2, "bmi": 3, "height": 4}
+        for pair in (controllable_demographics or []):
+            name, value = pair[0], pair[1]
+            slot = demog_slot[name]
+            if name == "sex":
+                demog_vec[slot] = 1.0 if str(value).upper() == "M" else 0.0
+            else:
+                demog_vec[slot] = float(min(1.0, max(0.0, value / _DEMOG_MAX[name])))
 
-        # loop through the database and find closest combinations
-        candidate_list = []
-        for anatomy_size in all_anatomy_size_conditions:
-            size = anatomy_size["organ_size"]
-            diff = 0
-            for db_size, provide_size in zip(size, provide_anatomy_size):
-                if provide_size is None:
-                    continue
-                diff += abs(provide_size - db_size)
-            candidate_list.append((size, diff))
-        candidate_condition = sorted(candidate_list, key=lambda x: x[1])[0][0]
-
-        # overwrite the anatomy size provided by users
-        for element in controllable_anatomy_size:
-            anatomy_name, anatomy_size = element
-            candidate_condition[anatomy_size_idx[anatomy_name]] = anatomy_size
-
-        return candidate_condition
+        conditioning = anatomy_vec + demog_vec
+        logging.info(f"mask conditioning 19-d: {[round(v, 3) for v in conditioning]}")
+        return conditioning
 
     def prepare_one_mask_and_meta_info(self, anatomy_size_condition):
         """
@@ -461,7 +462,7 @@ class LDMSampler:
         Returns:
             tuple: A tuple containing the prepared mask and associated tensors.
         """
-        combine_label_or = self.sample_one_mask(anatomy_size=anatomy_size_condition)
+        combine_label_or = self.sample_one_mask(conditioning=anatomy_size_condition)
         # TODO: current mask generation model only can generate 256^3 volumes with 1.5 mm spacing.
         affine = torch.zeros((4, 4))
         affine[0, 0] = 1.5
@@ -479,27 +480,28 @@ class LDMSampler:
 
         return combine_label_or, top_region_index_tensor, bottom_region_index_tensor, spacing_tensor
 
-    def sample_one_mask(self, anatomy_size):
+    def sample_one_mask(self, conditioning):
         """
         Generate a single synthetic mask.
 
         Args:
-            anatomy_size (list): Anatomy size specifications.
+            conditioning (list): 19-d conditioning vector [anatomy(14) | demographics(5)].
 
         Returns:
             torch.Tensor: The generated synthetic mask.
         """
-        # generate one synthetic mask
         synthetic_mask = ldm_conditional_sample_one_mask(
             self.mask_generation_autoencoder,
             self.mask_generation_diffusion_unet,
             self.mask_generation_noise_scheduler,
             self.mask_generation_scale_factor,
-            anatomy_size,
+            conditioning,
             self.device,
             self.mask_generation_latent_shape,
             label_dict_remap_json=self.label_dict_remap_json,
             num_inference_steps=self.mask_generation_num_inference_steps,
+            cfg_guidance_scale=self.mask_generation_cfg_guidance_scale,
+            spacing=self.spacing,
             autoencoder_sliding_window_infer_size=self.autoencoder_sliding_window_infer_size,
             autoencoder_sliding_window_infer_overlap=self.autoencoder_sliding_window_infer_overlap,
             low_vram=self.low_vram,
