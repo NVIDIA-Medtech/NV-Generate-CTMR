@@ -66,7 +66,7 @@ Rules:
 
 | Key | Default | Notes |
 |-----|---------|-------|
-| `controllable_anatomy_size` | `[]` | List of `[organ_name, size]` pairs. Non-empty triggers Path A. |
+| `controllable_anatomy_size` | `[["bone lesion", 0.5]]` | List of `[organ_name, size]` pairs. Non-empty triggers Path A. |
 | `mask_generation_num_inference_steps` | 1000 | **Always keep at 1000.** The mask DM is DDPM — lowering this silently degrades mask quality (unlike the image DM which supports DDIM/rFlow). |
 | `output_size` | `[512, 512, 512]` | Target shape; the mask DM was trained at 256³ so major upsampling degrades label boundaries. Stay close to 256³ when feasible. |
 | `spacing` | `[1.5, 1.5, 1.5]` | Voxel spacing in mm. Training spacing is 1.5 mm isotropic. |
