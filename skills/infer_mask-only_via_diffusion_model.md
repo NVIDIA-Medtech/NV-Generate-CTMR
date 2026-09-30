@@ -22,12 +22,18 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ```
 
 ```json
-// config_infer.json — demographics only, no anatomy size constraint
+// demographics only — any subset of fields is valid
 "controllable_anatomy_size": [],
 "controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]]
+
+"controllable_anatomy_size": [],
+"controllable_demographics": [["age", 55]]
+
+"controllable_anatomy_size": [],
+"controllable_demographics": [["sex", "M"], ["bmi", 24.5]]
 ```
 
-`controllable_demographics` is a list of `[name, value]` pairs in **original units** (not normalized). Any subset of the five fields may be provided; omitted fields default to `-1` (unspecified). Set to `null` or `[]` to disable demographic conditioning entirely.
+`controllable_demographics` accepts any non-empty subset of the supported fields — omitted fields are left unconditioned (`-1`). Set to `null` or `[]` to disable demographic conditioning entirely.
 
 ### Demographics field examples
 
