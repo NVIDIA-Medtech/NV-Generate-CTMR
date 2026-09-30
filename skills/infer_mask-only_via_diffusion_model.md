@@ -18,7 +18,7 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ```json
 // config_infer.json — Path A trigger, with demographics
 "controllable_anatomy_size": [["bone lesion", 0.5]],
-"controllable_demographics": [["age", 55], ["sex", "M"], ["weight", 80]]
+"controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]]
 ```
 
 `controllable_demographics` is a list of `[name, value]` pairs in **original units** (not normalized). Any subset of the five fields may be provided; omitted fields default to `-1` (unspecified). Set to `null` or `[]` to disable demographic conditioning entirely.
