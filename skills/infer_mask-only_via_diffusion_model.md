@@ -5,7 +5,7 @@ description: How to generate a synthetic mask from scratch using the v2 mask dif
 
 # Mask generation via diffusion model — v2 (Path A)
 
-Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaGN conditioning) to synthesise a brand-new mask conditioned on a 19-d vector: 14 anatomy size slots + 5 demographics slots. It is chosen automatically when `controllable_anatomy_size` in `config_infer.json` is **non-empty**. Demographics conditioning requires Path A to be active — set at least one anatomy entry (use size `-1` for free choice) alongside `controllable_demographics`.
+Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaGN conditioning) to synthesise a brand-new mask conditioned on a 19-d vector: 14 anatomy size slots + 5 demographics slots. It is chosen automatically when `controllable_anatomy_size` is **non-empty** or `controllable_demographics` is **non-null/non-empty**.
 
 ## When Path A runs
 
@@ -23,14 +23,11 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 
 ```json
 // config_infer.json — demographics only, no anatomy size constraint
-// Use size -1 to trigger Path A without pinning anatomy size
-"controllable_anatomy_size": [["liver", -1]],
+"controllable_anatomy_size": [],
 "controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]]
 ```
 
 `controllable_demographics` is a list of `[name, value]` pairs in **original units** (not normalized). Any subset of the five fields may be provided; omitted fields default to `-1` (unspecified). Set to `null` or `[]` to disable demographic conditioning entirely.
-
-> **Note:** `controllable_anatomy_size` must be non-empty to activate Path A. Demographics alone (with `controllable_anatomy_size: []`) falls through to Path B and demographics are ignored.
 
 ### Demographics field examples
 

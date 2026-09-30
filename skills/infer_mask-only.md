@@ -11,7 +11,7 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 
 | | **Path A — diffusion from scratch** | **Path B — real mask + augmentation** |
 |---|---|---|
-| Trigger | `controllable_anatomy_size` non-empty | `controllable_anatomy_size: []` |
+| Trigger | `controllable_anatomy_size` non-empty **or** `controllable_demographics` non-null/non-empty | both empty/null |
 | How | v2 mask DM (AdaGN) samples a new mask conditioned on a 19-d vector (14 anatomy + 5 demographics slots) | Looks up a real training mask matching `body_region` + `anatomy_list`; applies random augmentation |
 | Deep-dive | [`infer_mask-only_via_diffusion_model`](infer_mask-only_via_diffusion_model.md) | [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md) |
 
@@ -19,8 +19,8 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 
 | Key | Path | Notes |
 |-----|------|-------|
-| `controllable_anatomy_size` | switch | `[["organ_name", size]]` → Path A. `[]` → Path B. Use size `-1` to activate Path A without pinning anatomy size (e.g. for demographics-only conditioning). |
-| `controllable_demographics` | A | Only used when Path A is active. `null` or `[]` = no demographic conditioning. |
+| `controllable_anatomy_size` | switch | `[["organ_name", size]]` → Path A. `[]` → Path B (unless demographics also set). |
+| `controllable_demographics` | switch | Non-null/non-empty → Path A (even with empty anatomy size). `null` or `[]` = no demographic conditioning. |
 | `body_region` | B | Filters the mask DB, e.g. `["chest", "abdomen"]`. |
 | `anatomy_list` | A + B | Required organ label IDs; used by Path B filter and both paths' post-process. |
 | `output_size` | A | Fixed `[256, 256, 256]` for Path A. |

@@ -224,7 +224,8 @@ class LDMSampler:
         """
         modality_tensor = self.modality_tensor
         output_filenames = []
-        if len(self.controllable_anatomy_size) > 0:
+        use_diffusion = len(self.controllable_anatomy_size) > 0 or len(self.controllable_demographics) > 0
+        if use_diffusion:
             # we will use mask generation instead of finding candidate masks
             # create a dummy selected_mask_files for placeholder
             selected_mask_files = list(range(num_img))
@@ -267,7 +268,7 @@ class LDMSampler:
                 break
             logging.info("---- Start preparing masks... ----")
             start_time = time.time()
-            if len(self.controllable_anatomy_size) > 0:
+            if use_diffusion:
                 # generate a synthetic mask
                 (
                     combine_label_or,

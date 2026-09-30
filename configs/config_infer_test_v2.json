@@ -2,7 +2,7 @@
     "num_output_samples": 1,
     "body_region": ["chest"],
     "anatomy_list": ["bone lesion"],
-    "controllable_anatomy_size": [["liver", -1]],
+    "controllable_anatomy_size": [],
     "controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]],
     "num_inference_steps": 30,
     "mask_generation_num_inference_steps": 100,
