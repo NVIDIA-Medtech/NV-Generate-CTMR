@@ -269,13 +269,24 @@ class LDMSampler:
             logging.info("---- Start preparing masks... ----")
             start_time = time.time()
             if use_diffusion:
-                # generate a synthetic mask
-                (
-                    combine_label_or,
-                    top_region_index_tensor,
-                    bottom_region_index_tensor,
-                    spacing_tensor,
-                ) = self.prepare_one_mask_and_meta_info(anatomy_size_condition)
+                # generate a synthetic mask; retry if required labels are missing
+                max_retries = 5
+                for attempt in range(1, max_retries + 1):
+                    try:
+                        (
+                            combine_label_or,
+                            top_region_index_tensor,
+                            bottom_region_index_tensor,
+                            spacing_tensor,
+                        ) = self.prepare_one_mask_and_meta_info(anatomy_size_condition)
+                        break
+                    except ValueError as e:
+                        if attempt < max_retries:
+                            logging.warning(
+                                f"Mask generation attempt {attempt}/{max_retries} failed ({e}). Retrying..."
+                            )
+                        else:
+                            raise
             else:
                 # read in mask file
                 mask_file = item["mask_file"]
