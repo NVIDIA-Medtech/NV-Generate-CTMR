@@ -10,10 +10,18 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ## When Path A runs
 
 ```json
-// config_infer.json — Path A trigger
+// config_infer.json — Path A trigger, no demographics
 "controllable_anatomy_size": [["bone lesion", 0.5]],
 "controllable_demographics": null
 ```
+
+```json
+// config_infer.json — Path A trigger, with demographics
+"controllable_anatomy_size": [["bone lesion", 0.5]],
+"controllable_demographics": [["age", 55], ["sex", "M"], ["weight", 80]]
+```
+
+`controllable_demographics` is a list of `[name, value]` pairs in **original units** (not normalized). Any subset of the five fields may be provided; omitted fields default to `-1` (unspecified). Set to `null` or `[]` to disable demographic conditioning entirely.
 
 If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to Path B (real-mask DB lookup). See [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
 
