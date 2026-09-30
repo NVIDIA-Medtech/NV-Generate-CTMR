@@ -18,7 +18,7 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ```json
 // config_infer.json — Path A with anatomy size + demographics
 "controllable_anatomy_size": [["bone lesion", 0.5]],
-"controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]]
+"controllable_demographics": [["age", 55]]
 ```
 
 ```json
