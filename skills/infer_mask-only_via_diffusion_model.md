@@ -26,8 +26,10 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ### Demographics field examples
 
 ```json
-["age", 55]    // age in years (training range 19–87)
-["sex", "M"]   // "M" or "F"
+["age", 55]      // age in years (training range 19–87)
+["sex", "M"]     // "M" or "F"
+["bmi", 24.5]    // BMI in kg/m² (preferred over weight; training range 18–63)
+["weight", 72]   // body weight in kg (training range 22–144; prefer bmi instead)
 ```
 
 If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to Path B (real-mask DB lookup). See [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
@@ -84,14 +86,17 @@ A fixed 14-slot float vector; each slot is a normalised size in `[0, 1]` or `-1`
 
 Optional patient demographics, normalized to `[0, 1]`. Any unspecified slot uses `-1`.
 
-| Slot | Name | Units | Training range |
-|------|------|-------|----------------|
-| 14 | age | years | 19–87 |
-| 15 | sex | `"M"` / `"F"` | — |
-| 16–18 | weight, bmi, height | — | not claimed; pass `-1` |
+| Slot | Name | Units | Training range | Notes |
+|------|------|-------|----------------|-------|
+| 14 | age | years | 19–87 | supported |
+| 15 | sex | `"M"` / `"F"` | — | supported |
+| 16 | weight | kg | 22–144 | supported but prefer `bmi` |
+| 17 | bmi | kg/m² | 18–63 | supported; preferred over `weight` |
+| 18 | height | cm | — | slot exists but not trained; do not use |
 
 Rules:
-- Only `age` and `sex` are supported controllable demographics.
+- Provide `weight` OR `bmi`, not both.
+- Do not set `height` — the model was not trained with this field.
 - Demographics in `config_infer.json` use original units; the pipeline normalizes internally.
 
 ## Key config knobs
@@ -99,7 +104,7 @@ Rules:
 | Key | Default | Notes |
 |-----|---------|-------|
 | `controllable_anatomy_size` | `[["bone lesion", 0.5]]` | A single `[organ_name, size]` pair (list-of-lists). Non-empty triggers Path A. |
-| `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. Example: `[["age", 55], ["sex", "M"]]`. Valid names: `age` (yr), `sex` (`"M"`/`"F"`). |
+| `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. Example: `[["age", 55], ["sex", "M"], ["bmi", 24.5]]`. Valid names: `age` (yr), `sex` (`"M"`/`"F"`), `bmi` (kg/m²), `weight` (kg, prefer bmi). Do not set `height`. |
 | `mask_generation_num_inference_steps` | `100` | RFlow steps. **Do not set to 1000** — the v2 model uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | `2.0` | CFG scale. `0.0` disables guidance (unconditioned). |
 | `output_size` | `[256, 256, 256]` | **Fixed — do not change.** The v2 mask DM only supports 256³ output. |
