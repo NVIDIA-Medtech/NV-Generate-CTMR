@@ -106,7 +106,7 @@ Rules:
 | Key | Default | Notes |
 |-----|---------|-------|
 | `controllable_anatomy_size` | `[["bone lesion", 0.5]]` | A single `[organ_name, size]` pair (list-of-lists). Non-empty triggers Path A. |
-| `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. Examples: `[["age", 55]]`, `[["sex", "M"]]`, `[["weight", 72]]`, `[["bmi", 24.5]]`, `[["height", 170]]`. Provide `weight` OR `bmi`, not both. |
+| `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. Example: `[["age", 55], ["sex", "M"], ["weight", 72]]`. Valid names: `age` (yr), `sex` (`"M"`/`"F"`), `weight` (kg), `bmi` (kg/m²), `height` (cm). Provide `weight` OR `bmi`, not both. |
 | `mask_generation_num_inference_steps` | `100` | RFlow steps. **Do not set to 1000** — the v2 model uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | `2.0` | CFG scale. `0.0` disables guidance (unconditioned). |
 | `output_size` | `[256, 256, 256]` | **Fixed — do not change.** The v2 mask DM only supports 256³ output. |
