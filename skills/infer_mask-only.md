@@ -22,7 +22,7 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 | `controllable_anatomy_size` | A | Optional anatomy size to control, e.g. `[["bone lesion", 0.5]]`. |
 | `controllable_demographics` | A | Optional demographics, e.g. `[["age", 55], ["sex", "M"]]`. |
 | `anatomy_list` | A + B | Required organ label IDs; used by Path B filter and both paths' post-process. |
-| `output_size` | A | Fixed `[256, 256, 256]` for Path A. |
+| `output_size` | A + B | Path A: fixed `[256, 256, 256]`. Path B: flexible — closest mask is found then resampled/pad-cropped to target. |
 | `spacing` | A + B | Target voxel spacing in mm. |
 | `mask_generation_num_inference_steps` | A | **100** — v2 mask DM uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | A | CFG scale, default `2.0`. |
