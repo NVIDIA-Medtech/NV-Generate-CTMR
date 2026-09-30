@@ -1,17 +1,18 @@
 ---
 name: infer_mask-only_via_diffusion_model
-description: How to generate a synthetic mask from scratch using the mask diffusion model (Path A). Covers the controllable_anatomy_size conditioning vector, the 10-slot anatomy index, DDPM loop settings, and when this path is chosen vs the real-mask DB path. Trigger when the user asks "how do I generate a new mask with the diffusion model", "how does controllable_anatomy_size work", "how many inference steps for the mask", or wants to control organ/tumor sizes in a fully synthetic mask.
+description: How to generate a synthetic mask from scratch using the v2 mask diffusion model (Path A). Covers the 19-d conditioning vector (14 anatomy + 5 demographics), RFlow scheduler, CFG guidance, and when this path is chosen vs the real-mask DB path. Trigger when the user asks "how do I generate a new mask with the diffusion model", "how does controllable_anatomy_size work", "how many inference steps for the mask", or wants to control organ/tumor sizes or patient demographics in a fully synthetic mask.
 ---
 
-# Mask generation via diffusion model (Path A)
+# Mask generation via diffusion model — v2 (Path A)
 
-Path A runs the **mask diffusion UNet** to synthesise a brand-new mask conditioned on a user-specified organ/tumor size vector. It is chosen automatically when `controllable_anatomy_size` in `config_infer.json` is **non-empty**.
+Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaGN conditioning) to synthesise a brand-new mask conditioned on a 19-d vector: 14 anatomy size slots + 5 demographics slots. It is chosen automatically when `controllable_anatomy_size` in `config_infer.json` is **non-empty**.
 
 ## When Path A runs
 
 ```json
 // config_infer.json — Path A trigger
-"controllable_anatomy_size": ["bone lesion", 0.5]
+"controllable_anatomy_size": [["bone lesion", 0.5]],
+"controllable_demographics": null
 ```
 
 If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to Path B (real-mask DB lookup). See [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
@@ -19,16 +20,17 @@ If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to
 ## Workflow
 
 ```text
-controllable_anatomy_size
+controllable_anatomy_size + controllable_demographics
         │
         ▼
-prepare_anatomy_size_condition()
-  ├─ snap to nearest entry in configs/all_anatomy_size_conditions.json
-  └─ overwrite snapped slots with user's exact values
+prepare_anatomy_size_condition()   (LDMSampler, scripts/sample.py)
+  ├─ anatomy part: fill named slot(s), rest = -1
+  └─ demographics part: normalize to [0,1], missing = -1
         │
-        ▼ 10-d float vector
-[random noise] ──▶ [Mask Diffusion UNet] ──▶ [mask latent (4-ch)]
-                         DDPM, 1000 steps
+        ▼ 19-d float vector [anatomy(14) | demographics(5)]
+[random noise] ──▶ [Mask Diffusion UNet v2 (AdaGN)]  ──▶ [mask latent (4-ch)]
+                     RFlowScheduler, 100 steps
+                     CFG scale 2.0 (uncond + scale*(cond - uncond))
                                 │
                                 ▼ AE sliding-window decode
                     [125-ch softmax → argmax]
@@ -40,45 +42,70 @@ prepare_anatomy_size_condition()
                           [final mask]
 ```
 
-## The anatomy_size conditioning vector
+## The 19-d conditioning vector
 
-A fixed 10-slot float vector; each slot is a normalised size in `[0, 1]` or `-1` (no preference):
+### Anatomy slots (0–13)
 
-| Slot | Organ/Tumor |
-|------|-------------|
-| 0 | gallbladder |
-| 1 | liver |
+A fixed 14-slot float vector; each slot is a normalised size in `[0, 1]` or `-1` (no preference). **At most ONE slot may be set** — the v2 model is single-target conditioned.
+
+| Slot | Name |
+|------|------|
+| 0 | liver |
+| 1 | spleen |
 | 2 | stomach |
 | 3 | pancreas |
 | 4 | colon |
-| 5 | lung tumor |
-| 6 | pancreatic tumor |
-| 7 | hepatic tumor |
-| 8 | colon cancer primaries |
-| 9 | bone lesion |
+| 5 | left kidney |
+| 6 | right kidney |
+| 7 | lung |
+| 8 | gallbladder |
+| 9 | lung tumor |
+| 10 | pancreatic tumor |
+| 11 | hepatic tumor |
+| 12 | colon cancer primaries |
+| 13 | bone lesion |
+
+### Demographics slots (14–18)
+
+Optional patient demographics, normalized to `[0, 1]`. Any unspecified slot uses `-1`.
+
+| Slot | Name | Units | Normalization max | Training range |
+|------|------|-------|-------------------|----------------|
+| 14 | age | years | 120 | 19–87 |
+| 15 | sex | M=1 / F=0 | — | — |
+| 16 | weight | kg | 200 | 22–144 |
+| 17 | bmi | kg/m² | 75 | 18–63 |
+| 18 | height | cm | 200 | 160–190 |
 
 Rules:
-- Exactly **one `[organ_name, size]` pair** is accepted.
-- Unspecified organ slots default to `-1` (the model picks a size from the training distribution).
-- The pipeline snaps the full vector to the nearest real training-set entry first, then overwrites the specified slot with the user's exact value — this keeps the conditioning near the training distribution.
+- Provide **only one** of `weight` or `bmi` (not both).
+- `height` conditioning has unreliable effect — prefer `age`, `sex`, `weight`, or `bmi`.
+- Setting `controllable_anatomy_size` together with 3+ demographics is heavily constrained and out-of-distribution; generation quality is not guaranteed.
+- Demographics in `config_infer.json` use original units; the pipeline normalizes internally.
 
 ## Key config knobs
 
 | Key | Default | Notes |
 |-----|---------|-------|
-| `controllable_anatomy_size` | `["bone lesion", 0.5]` | A single `[organ_name, size]` pair. Non-empty triggers Path A. |
-| `mask_generation_num_inference_steps` | 1000 | **Always keep at 1000.** The mask DM is DDPM — lowering this silently degrades mask quality (unlike the image DM which supports DDIM/rFlow). |
-| `output_size` | `[512, 512, 512]` | Target shape; the mask DM was trained at 256³ so major upsampling degrades label boundaries. Stay close to 256³ when feasible. |
-| `spacing` | `[1.5, 1.5, 1.5]` | Voxel spacing in mm. Training spacing is 1.5 mm isotropic. |
+| `controllable_anatomy_size` | `[["bone lesion", 0.5]]` | A single `[organ_name, size]` pair (list-of-lists). Non-empty triggers Path A. |
+| `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. |
+| `mask_generation_num_inference_steps` | `100` | RFlow steps. **Do not set to 1000** — the v2 model uses RFlow, not DDPM. |
+| `mask_generation_cfg_guidance_scale` | `2.0` | CFG scale. `0.0` disables guidance (unconditioned). |
+| `output_size` | `[256, 256, 256]` | Target shape. The mask DM is trained at 256³ — stay close to this. |
+| `spacing` | `[1.5, 1.5, 2.0]` | Voxel spacing in mm. Training spacing is 1.5 mm isotropic; mild anisotropy is supported. |
+
+## Checkpoint
+
+`mask_generation_diffusion_unet_v2.pt` — `DiffusionModelUNetMaisiAdaGN` with AdaGN cross-attention. Not compatible with the v1 DDPM checkpoint.
 
 ## Relevant scripts
 
 | Script | Role |
 |--------|------|
-| `scripts/sample_mask.py` | Core sampler: `ldm_conditional_sample_one_mask` — DDPM loop → softmax/argmax → label remap → post-process. |
-| `scripts/sample.py` (`LDMSampler.prepare_anatomy_size_condition`) | Snaps user vector to training distribution, prepares the 10-d conditioning tensor. |
+| `scripts/sample_mask.py` | Core sampler: `ldm_conditional_sample_one_mask` — RFlow+CFG loop → softmax/argmax → label remap → post-process. Also defines `ANATOMY_SIZE_IDX` slot map and `_DEMOG_MAX` normalization. |
+| `scripts/sample.py` (`LDMSampler.prepare_anatomy_size_condition`) | Builds the 19-d conditioning tensor from user inputs. |
+| `scripts/adagn_unet.py` | `DiffusionModelUNetMaisiAdaGN` model definition. |
 | `scripts/inference.py` | CLI entry point that triggers Path A when `controllable_anatomy_size` is non-empty. |
-| `configs/all_anatomy_size_conditions.json` | Database of real training-set size vectors used for snapping. |
 
 ## Related skills
 
