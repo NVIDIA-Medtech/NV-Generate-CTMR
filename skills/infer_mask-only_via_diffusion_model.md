@@ -23,6 +23,16 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 
 `controllable_demographics` is a list of `[name, value]` pairs in **original units** (not normalized). Any subset of the five fields may be provided; omitted fields default to `-1` (unspecified). Set to `null` or `[]` to disable demographic conditioning entirely.
 
+### Demographics field examples
+
+```json
+["age", 55]          // age in years (training range 19–87)
+["sex", "M"]         // "M" or "F"
+["weight", 72]       // body weight in kg (training range 22–144)
+["bmi", 24.5]        // BMI in kg/m² (training range 18–63); use instead of weight, not both
+["height", 170]      // height in cm (training range 160–190); conditioning effect is unreliable
+```
+
 If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to Path B (real-mask DB lookup). See [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
 
 ## Workflow
