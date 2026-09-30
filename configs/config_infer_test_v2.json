@@ -1,7 +1,7 @@
 {
     "num_output_samples": 1,
     "body_region": ["chest"],
-    "anatomy_list": ["bone lesion"],
+    "anatomy_list": [],
     "controllable_anatomy_size": [],
     "controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]],
     "num_inference_steps": 30,
