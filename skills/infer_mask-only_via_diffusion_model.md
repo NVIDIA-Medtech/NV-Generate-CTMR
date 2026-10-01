@@ -22,17 +22,17 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ```
 
 ```json
+// config_infer.json — Path A trigger, only demographics
+"controllable_anatomy_size": [],
+"controllable_demographics": [["sex", "M"]]
+```
+
+```json
 // demographics can be any subset of fields is valid; examples:
 "controllable_anatomy_size": [],
 "controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]]  // all three
 "controllable_demographics": [["age", 55]]                                // age only
 "controllable_demographics": [["sex", "M"], ["bmi", 24.5]]               // sex + bmi
-```
-
-```json
-// config_infer.json — Path A trigger, only demographics
-"controllable_anatomy_size": [],
-"controllable_demographics": [["sex", "M"]]
 ```
 
 `controllable_demographics` accepts any non-empty subset of the supported fields — omitted fields are left unconditioned (`-1`). Set to `null` or `[]` to disable demographic conditioning entirely.
