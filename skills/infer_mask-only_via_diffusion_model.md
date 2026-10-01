@@ -120,7 +120,7 @@ Rules:
 
 Derive spacing from a realistic anatomy FOV:
 
-```
+```text
 spacing[i] = FOV[i] / output_size[i]
 ```
 

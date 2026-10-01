@@ -47,6 +47,7 @@ body_region + anatomy_list + spacing + output_size
 ## Filtering: `body_region` and `anatomy_list`
 
 `find_masks()` returns candidate masks that satisfy **all** of:
+
 - Contain every body region listed in `body_region` (e.g. `"chest"`, `"abdomen"`, `"pelvis"`).
 - Contain every anatomy label in `anatomy_list` (MAISI label IDs, e.g. `1`=spleen, `2`=right kidney).
 - If no tumor is in `anatomy_list`, the candidate must also be **tumor-free**.

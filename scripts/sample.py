@@ -146,6 +146,13 @@ class LDMSampler:
         self.mask_generation_cfg_guidance_scale = mask_generation_cfg_guidance_scale
         self.controllable_anatomy_size = controllable_anatomy_size
         self.controllable_demographics = controllable_demographics or []
+        # Validate organ names up-front so a typo (e.g. "lung" instead of a lobe) raises a
+        # clear ValueError instead of a cryptic KeyError later in __init__.
+        for organ_and_size in controllable_anatomy_size:
+            organ = organ_and_size[0]
+            if organ not in label_dict:
+                valid = sorted(label_dict.keys())
+                raise ValueError(f"controllable_anatomy_size organ '{organ}' is not in label_dict. Valid names: {valid}")
         # Label integers that must appear in the Path A output (empty when demographics-only)
         self.controllable_anatomy_size_labels = [label_dict[organ_and_size[0]] for organ_and_size in controllable_anatomy_size]
         self.image_output_ext = image_output_ext
