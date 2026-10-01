@@ -137,7 +137,9 @@ def ldm_conditional_sample_one_mask(
         lat_numel = int(latent_shape[1]) * int(latent_shape[2]) * int(latent_shape[3])
         noise_scheduler.set_timesteps(num_inference_steps=num_inference_steps, input_img_size_numel=lat_numel)
 
-        for t in noise_scheduler.timesteps:
+        timesteps = noise_scheduler.timesteps
+        for i, t in enumerate(timesteps):
+            next_t = timesteps[i + 1] if i + 1 < len(timesteps) else None
             t_batch = t.unsqueeze(0).to(device)
             if cfg_guidance_scale > 0:
                 x_in = torch.cat([latents, latents])
@@ -149,7 +151,7 @@ def ldm_conditional_sample_one_mask(
                 mo = mo_u + cfg_guidance_scale * (mo_c - mo_u)
             else:
                 mo = diffusion_unet(x=latents, timesteps=t_batch, context=cond, spacing_tensor=spacing_tensor)
-            out = noise_scheduler.step(mo, t, latents)
+            out = noise_scheduler.step(mo, t, latents, next_timestep=next_t)
             latents = out[0] if isinstance(out, (tuple, list)) else out
 
         inferer = SlidingWindowInferer(

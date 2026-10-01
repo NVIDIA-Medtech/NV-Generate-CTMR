@@ -327,8 +327,10 @@ class LDMSampler:
                 )
                 img_saver(synthetic_images[0])
                 synthetic_images_filename = os.path.join(self.output_dir, "sample_" + output_postfix + "_image" + self.image_output_ext)
-                # filter out the organs that are not in anatomy_list
-                synthetic_labels = filter_mask_with_organs(synthetic_labels, self.anatomy_list)
+                # Path B only: filter saved label to anatomy_list
+                # Path A (diffusion) always saves the full 132-label mask
+                if not use_diffusion:
+                    synthetic_labels = filter_mask_with_organs(synthetic_labels, self.anatomy_list)
                 label_saver = SaveImage(
                     output_dir=self.output_dir,
                     output_postfix=output_postfix + "_label",
@@ -464,12 +466,11 @@ class LDMSampler:
             tuple: A tuple containing the prepared mask and associated tensors.
         """
         combine_label_or = self.sample_one_mask(conditioning=anatomy_size_condition)
-        # TODO: current mask generation model only can generate 256^3 volumes with 1.5 mm spacing.
         affine = torch.zeros((4, 4))
-        affine[0, 0] = 1.5
-        affine[1, 1] = 1.5
-        affine[2, 2] = 1.5
-        affine[3, 3] = 1.0  # dummy
+        affine[0, 0] = self.spacing[0]
+        affine[1, 1] = self.spacing[1]
+        affine[2, 2] = self.spacing[2]
+        affine[3, 3] = 1.0
         combine_label_or = MetaTensor(combine_label_or, affine=affine)
         combine_label_or = self.ensure_output_size_and_spacing(combine_label_or, check_contains_target_labels=False)
 

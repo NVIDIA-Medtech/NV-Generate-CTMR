@@ -65,7 +65,7 @@ python -m scripts.inference \
 
 **Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (paired mask filtered to `anatomy_list`).
 
-For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a non-empty list of `(organ_name, size)` tuples, e.g. `[["pancreas", 0.5], ["hepatic tumor", 0.3]]`, and leave `body_region` empty. The dispatch flowchart below shows where this branches.
+For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a single `(organ_name, size)` entry, e.g. `[["pancreas", 0.5]]`, and leave `body_region` empty.
 
 ## Mask stage
 
