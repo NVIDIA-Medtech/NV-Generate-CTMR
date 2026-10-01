@@ -298,14 +298,18 @@ def diff_model_infer(
     """
     if generate_version is None:
         raise ValueError("generate_version is required. Choose from: 'rflow-ct', 'ddpm-ct', 'rflow-mr', 'rflow-mr-brain'.")
+    local_rank, world_size, device = initialize_distributed(num_gpus)
     directory = os.environ.get("MONAI_DATA_DIRECTORY")
     if directory is not None:
         os.makedirs(directory, exist_ok=True)
     root_dir = tempfile.mkdtemp() if directory is None else directory
-    download_model_data(generate_version, root_dir, model_only=True)
+    # Download on rank 0 only; other ranks wait at the barrier before loading.
+    if local_rank == 0:
+        download_model_data(generate_version, root_dir, model_only=True)
+    if dist.is_available() and dist.is_initialized():
+        dist.barrier()
 
     args = load_config(env_config_path, model_config_path, model_def_path, root_dir=root_dir)
-    local_rank, world_size, device = initialize_distributed(num_gpus)
     logger = setup_logging("inference")
     random_seed = set_random_seed(
         args.diffusion_unet_inference["random_seed"] + local_rank if "random_seed" in args.diffusion_unet_inference.keys() else None

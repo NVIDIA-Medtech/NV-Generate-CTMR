@@ -79,7 +79,7 @@ prepare_anatomy_size_condition()   (LDMSampler, scripts/sample.py)
 
 A fixed 14-slot float vector; each slot is a normalised size in `[0, 1]` or `-1` (no preference).
 
-> ⚠️ **At most ONE anatomy slot may be set.** The v2 model is single-target conditioned. Passing `[["liver", 0.5], ["pancreas", 0.7]]` will not raise an error but will produce incorrect results — only the first entry is used.
+> ⚠️ **At most ONE anatomy slot may be set.** The v2 model is single-target conditioned. Passing `[["liver", 0.5], ["pancreas", 0.7]]` raises a `ValueError` at startup — input validation rejects multiple entries before generation begins.
 
 | Slot | Name |
 |------|------|

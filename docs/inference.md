@@ -45,7 +45,8 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_${network}.json \
     -e ./configs/environment_maisi_diff_model_${generate_version}.json \
-    -c ./configs/config_maisi_diff_model_${generate_version}.json
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 ### MR image only (non-brain — `rflow-mr`)
@@ -58,7 +59,8 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_${network}.json \
     -e ./configs/environment_maisi_diff_model_${generate_version}.json \
-    -c ./configs/config_maisi_diff_model_${generate_version}.json
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 Set `"modality"` in `config_maisi_diff_model_rflow-mr.json` per the [Modality codes](#modality-codes) table below. For brain MRI prefer the dedicated `rflow-mr-brain` model.
@@ -73,7 +75,8 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_${network}.json \
     -e ./configs/environment_maisi_diff_model_${generate_version}.json \
-    -c ./configs/config_maisi_diff_model_${generate_version}.json
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 Whole-brain (modality 9, 10, 11, 20) and skull-stripped (29, 30, 31, 32) outputs are both supported — see [Modality codes](#modality-codes).

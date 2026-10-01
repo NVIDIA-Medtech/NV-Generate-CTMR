@@ -85,7 +85,7 @@ After each augmentation attempt the pipeline verifies all requested organs are s
 
 | Key | Default | Notes |
 |-----|---------|-------|
-| `controllable_anatomy_size` | `[]` | Must be `[]` to trigger Path B. |
+| `controllable_anatomy_size` | `[]` | Must be `[]` **and** `controllable_demographics` must be `null`/`[]` to trigger Path B. If either is non-empty, Path A (diffusion) runs instead. |
 | `body_region` | `["chest", "abdomen"]` | Filters candidate masks by body coverage. |
 | `anatomy_list` | `["spleen", "right kidney", "left kidney"]` | Organ names (from `label_dict.json`) that must be present in the candidate. **Path B only** — not used when Path A runs. Note: `"lung"` is a valid `controllable_anatomy_size` conditioning name but is **not** a valid `anatomy_list` entry (use the individual lobe names, e.g. `"left lung lower lobe"`). |
 | `output_size` | `[512, 512, 512]` | Exact match filter; mismatches trigger closest-match + resample. |

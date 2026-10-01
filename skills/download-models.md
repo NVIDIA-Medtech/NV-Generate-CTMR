@@ -79,9 +79,9 @@ The paths above are exactly what the `environment_<variant>.json` configs expect
 ## When to use `--model_only`
 
 - **Image-only inference** (`scripts.diff_model_infer`, no mask stage): pass `--model_only`. Neither the mask database nor `all_anatomy_size_conditions.json` are needed.
-- **Path A mask generation** (`controllable_anatomy_size` or `controllable_demographics` non-empty): **do NOT use `--model_only`**. Path A requires `all_anatomy_size_conditions.json` (downloaded with the full set) in addition to the model weights.
+- **Path A mask generation** (`controllable_anatomy_size` or `controllable_demographics` non-empty): pass `--model_only`. Path A builds its conditioning vector entirely from the 19-d slot map; it does not read `all_anatomy_size_conditions.json`.
 - **Path B mask generation** (`anatomy_list` + real-mask DB): **do NOT use `--model_only`**. Path B requires the mask database zip and index.
-- **Full download (default)**: omit `--model_only` whenever any mask stage runs (Path A or Path B).
+- **Full download (default)**: omit `--model_only` only when Path B runs.
 
 ## License gating
 

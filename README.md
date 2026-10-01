@@ -176,12 +176,12 @@ See also: [inference_tutorial.ipynb](inference_tutorial.ipynb)
 Generate a 3D CT body mask using the v2 mask diffusion model (`rflow-mask`). The mask always contains all 132 MAISI labels. Control anatomy size, tumors, and patient demographics via `controllable_anatomy_size` and `controllable_demographics` (Path A), or retrieve a training mask matching `body_region` + `anatomy_list` (Path B).
 
 ```bash
+# Set MONAI_DATA_DIRECTORY — weights and datasets are downloaded here automatically on first run.
+# For Path B (body_region / anatomy_list), a full download (~10 GB) is required; for Path A only model weights are needed.
 export MONAI_DATA_DIRECTORY="./temp_work_dir"
-# Download weights + datasets (one-time, ~10 GB). Omit --model_only to include mask DB for Path B.
-python -m scripts.download_model_data --version rflow-ct --root_dir "./"
 
-# Run: edit config_infer.json to set controllable_anatomy_size / controllable_demographics for Path A,
-#       or body_region / anatomy_list for Path B (leave controllable_* empty).
+# Edit config_infer.json: set controllable_anatomy_size / controllable_demographics for Path A,
+# or body_region / anatomy_list for Path B (leave controllable_* empty).
 python -m scripts.inference \
     -t ./configs/config_network_rflow.json \
     -i ./configs/config_infer.json \
