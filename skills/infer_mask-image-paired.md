@@ -172,7 +172,7 @@ Driven by the scheduler the variant uses, not by GPU memory:
 
 - `rflow-ct` → **30** (RFlow scheduler).
 - `ddpm-ct` → **1000** (DDPM scheduler). Lower values emit a warning and degrade quality — not optional.
-- `mask_generation_num_inference_steps` → always **1000**: the mask DM is DDPM regardless of which image-DM variant you pick.
+- `mask_generation_num_inference_steps` → always **100**: the v2 mask DM uses RFlow.
 
 ## Configuration knobs
 
@@ -193,7 +193,7 @@ Key `config_infer.json` knobs:
 | `spacing` | Target voxel spacing (mm). Hard constraints apply. |
 | `modality` | Modality code (1=CT, 8..32=MR variants). |
 | `num_inference_steps` | RFlow → 30, **DDPM → 1000**. ⚠️ For `ddpm-ct` you must set this to 1000; the notebook auto-applies this override in cell 12. |
-| `mask_generation_num_inference_steps` | **1000** — the mask DM always uses DDPM regardless of which image-DM variant you pick. Setting this lower silently degrades mask quality. |
+| `mask_generation_num_inference_steps` | **100** — the v2 mask DM uses RFlow (not DDPM). Do not set to 1000. |
 | `cfg_guidance_scale` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. The same key name in `config_maisi_diff_model_*.json` is the modality-CFG used by MR image-only inference — see [`infer_image-only`](infer_image-only.md). |
 
 ## Output
