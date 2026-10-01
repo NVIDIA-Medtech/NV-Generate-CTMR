@@ -29,6 +29,12 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 "controllable_demographics": [["sex", "M"], ["bmi", 24.5]]               // sex + bmi
 ```
 
+```json
+// single-field demographics example
+"controllable_anatomy_size": [],
+"controllable_demographics": [["sex", "M"]]
+```
+
 `controllable_demographics` accepts any non-empty subset of the supported fields — omitted fields are left unconditioned (`-1`). Set to `null` or `[]` to disable demographic conditioning entirely.
 
 ### Demographics field examples
