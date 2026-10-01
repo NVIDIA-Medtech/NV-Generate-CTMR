@@ -63,7 +63,7 @@ python -m scripts.inference \
     --random-seed 0 --version rflow-ct
 ```
 
-**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (paired mask filtered to `anatomy_list`).
+**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (full 132-label MAISI mask for Path A; filtered to `anatomy_list` for Path B).
 
 For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a single `(organ_name, size)` entry, e.g. `[["pancreas", 0.5]]`, and leave `body_region` empty.
 
@@ -152,7 +152,7 @@ Mask-stage knobs (`body_region`, `anatomy_list`, `controllable_anatomy_size`, `c
 For each successful generation, two files are saved to `output_dir`:
 
 - `sample_<timestamp>_image.nii.gz` — synthetic CT/MR
-- `sample_<timestamp>_label.nii.gz` — paired mask (filtered to `anatomy_list`)
+- `sample_<timestamp>_label.nii.gz` — full 132-label MAISI mask (Path A) or filtered to `anatomy_list` (Path B)
 
 ## Related scripts
 
