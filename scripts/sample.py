@@ -49,6 +49,7 @@ from .quality_check import is_outlier
 # Backward-compat re-exports — existing callers ``from scripts.sample import X``
 # keep working. ``X`` now physically lives in sample_mask / infer_image_from_mask.
 from .sample_mask import (  # noqa: F401  (re-exported)
+    ANATOMY_SIZE_IDX,
     ReconModel,
     check_input_ct,
     check_input_mr,
@@ -146,15 +147,18 @@ class LDMSampler:
         self.mask_generation_cfg_guidance_scale = mask_generation_cfg_guidance_scale
         self.controllable_anatomy_size = controllable_anatomy_size
         self.controllable_demographics = controllable_demographics or []
-        # Validate organ names up-front so a typo (e.g. "lung" instead of a lobe) raises a
-        # clear ValueError instead of a cryptic KeyError later in __init__.
+        # Validate against the 14 conditioning slot names, not label_dict.
+        # "lung" is a valid slot (idx 7) but has no single label_dict entry (only lobes exist).
         for organ_and_size in controllable_anatomy_size:
             organ = organ_and_size[0]
-            if organ not in label_dict:
-                valid = sorted(label_dict.keys())
-                raise ValueError(f"controllable_anatomy_size organ '{organ}' is not in label_dict. Valid names: {valid}")
-        # Label integers that must appear in the Path A output (empty when demographics-only)
-        self.controllable_anatomy_size_labels = [label_dict[organ_and_size[0]] for organ_and_size in controllable_anatomy_size]
+            if organ not in ANATOMY_SIZE_IDX:
+                valid = sorted(ANATOMY_SIZE_IDX.keys())
+                raise ValueError(f"controllable_anatomy_size organ '{organ}' is not a valid conditioning name. Valid names: {valid}")
+        # Label integers to verify presence in the generated mask; organs without a direct
+        # label_dict entry (e.g. "lung" — only lobes are labelled) are skipped here.
+        self.controllable_anatomy_size_labels = [
+            label_dict[organ_and_size[0]] for organ_and_size in controllable_anatomy_size if organ_and_size[0] in label_dict
+        ]
         self.image_output_ext = image_output_ext
         self.label_output_ext = label_output_ext
         # Set the default value for number of inference steps to 1000

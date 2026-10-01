@@ -5,18 +5,19 @@ description: How to generate a mask by looking up a real training mask and apply
 
 # Mask generation via real mask + augmentation (Path B)
 
-Path B retrieves a real training mask that matches the requested anatomy and applies random augmentation so the output is not a verbatim copy. It is chosen automatically when `controllable_anatomy_size` in `config_infer.json` is **empty**.
+Path B retrieves a real training mask that matches the requested anatomy and applies random augmentation so the output is not a verbatim copy. It is chosen automatically when **both** `controllable_anatomy_size` and `controllable_demographics` in `config_infer.json` are **empty / null**. If either is non-empty, Path A (diffusion) runs instead.
 
 ## When Path B runs
 
 ```json
 // config_infer.json — Path B trigger
 "controllable_anatomy_size": [],
+"controllable_demographics": null,
 "body_region": ["chest", "abdomen"],
-"anatomy_list": [1, 2, 3]
+"anatomy_list": ["spleen", "right kidney", "left kidney"]
 ```
 
-If `controllable_anatomy_size` is non-empty, Path A (diffusion from scratch) runs instead. See [`infer_mask-only_via_diffusion_model`](infer_mask-only_via_diffusion_model.md).
+Path A (diffusion) runs when **either** `controllable_anatomy_size` or `controllable_demographics` is non-empty. Both must be empty/null for Path B. See [`infer_mask-only_via_diffusion_model`](infer_mask-only_via_diffusion_model.md).
 
 ## Workflow
 
@@ -49,7 +50,7 @@ body_region + anatomy_list + spacing + output_size
 `find_masks()` returns candidate masks that satisfy **all** of:
 
 - Contain every body region listed in `body_region` (e.g. `"chest"`, `"abdomen"`, `"pelvis"`).
-- Contain every anatomy label in `anatomy_list` (MAISI label IDs, e.g. `1`=spleen, `2`=right kidney).
+- Contain every anatomy label in `anatomy_list` (organ names from `label_dict.json`, e.g. `"spleen"`, `"right kidney"`).
 - If no tumor is in `anatomy_list`, the candidate must also be **tumor-free**.
 - If `check_spacing_and_output_size=True` (exact match), spacing and output_size must also match.
 
@@ -85,7 +86,7 @@ After each augmentation attempt the pipeline verifies all requested organs are s
 |-----|---------|-------|
 | `controllable_anatomy_size` | `[]` | Must be `[]` to trigger Path B. |
 | `body_region` | `["chest", "abdomen"]` | Filters candidate masks by body coverage. |
-| `anatomy_list` | `[1, 2, 3]` | MAISI label IDs that must be present in the candidate. |
+| `anatomy_list` | `["spleen", "right kidney", "left kidney"]` | Organ names (from `label_dict.json`) that must be present in the candidate. **Path B only** — not used when Path A runs. Note: `"lung"` is a valid `controllable_anatomy_size` conditioning name but is **not** a valid `anatomy_list` entry (use the individual lobe names, e.g. `"left lung lower lobe"`). |
 | `output_size` | `[512, 512, 512]` | Exact match filter; mismatches trigger closest-match + resample. |
 | `spacing` | `[1.0, 1.0, 1.0]` | Exact match filter; mismatches trigger closest-match + resample. |
 | `all_mask_files_json` | set in config | Path to `configs/all_mask_files_*.json` — the mask DB index. |
