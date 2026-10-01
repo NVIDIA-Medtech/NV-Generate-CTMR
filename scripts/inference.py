@@ -64,6 +64,7 @@ def main():
         type=str,
         help="generate_version, choose from ['ddpm-ct', 'rflow-ct']",
     )
+    parser.add_argument("--low-vram", action="store_true", help="Move inactive models to CPU between inference stages.")
     args = parser.parse_args()
     # Step 0: configuration
     logger = logging.getLogger("maisi.inference")
@@ -157,30 +158,36 @@ def main():
 
     device = torch.device("cuda")
 
-    autoencoder = define_instance(args, "autoencoder_def").to(device)
-    checkpoint_autoencoder = torch.load(args.trained_autoencoder_path)
+    model_device = torch.device("cpu") if args.low_vram else device
+    autoencoder = define_instance(args, "autoencoder_def").to(model_device)
+    checkpoint_autoencoder = torch.load(args.trained_autoencoder_path, map_location=model_device)
     if "unet_state_dict" in checkpoint_autoencoder.keys():
         checkpoint_autoencoder = checkpoint_autoencoder["unet_state_dict"]
     autoencoder.load_state_dict(checkpoint_autoencoder)
+    del checkpoint_autoencoder
 
-    diffusion_unet = define_instance(args, "diffusion_unet_def").to(device)
-    checkpoint_diffusion_unet = torch.load(args.trained_diffusion_path, weights_only=False)
+    diffusion_unet = define_instance(args, "diffusion_unet_def").to(model_device)
+    checkpoint_diffusion_unet = torch.load(args.trained_diffusion_path, map_location=model_device, weights_only=False)
     diffusion_unet.load_state_dict(checkpoint_diffusion_unet["unet_state_dict"], strict=False)
-    scale_factor = checkpoint_diffusion_unet["scale_factor"].to(device)
+    scale_factor = checkpoint_diffusion_unet["scale_factor"].to(model_device)
+    del checkpoint_diffusion_unet
 
-    controlnet = define_instance(args, "controlnet_def").to(device)
-    checkpoint_controlnet = torch.load(args.trained_controlnet_path, weights_only=False)
+    controlnet = define_instance(args, "controlnet_def").to(model_device)
+    checkpoint_controlnet = torch.load(args.trained_controlnet_path, map_location=model_device, weights_only=False)
     monai.networks.utils.copy_model_state(controlnet, diffusion_unet.state_dict())
     controlnet.load_state_dict(checkpoint_controlnet["controlnet_state_dict"], strict=False)
+    del checkpoint_controlnet
 
-    mask_generation_autoencoder = define_instance(args, "mask_generation_autoencoder").to(device)
-    checkpoint_mask_generation_autoencoder = torch.load(args.trained_mask_generation_autoencoder_path, weights_only=True)
+    mask_generation_autoencoder = define_instance(args, "mask_generation_autoencoder").to(model_device)
+    checkpoint_mask_generation_autoencoder = torch.load(args.trained_mask_generation_autoencoder_path, map_location=model_device, weights_only=True)
     mask_generation_autoencoder.load_state_dict(checkpoint_mask_generation_autoencoder)
+    del checkpoint_mask_generation_autoencoder
 
-    mask_generation_diffusion_unet = define_instance(args, "mask_generation_diffusion").to(device)
-    checkpoint_mask_generation_diffusion_unet = torch.load(args.trained_mask_generation_diffusion_path, weights_only=False)
+    mask_generation_diffusion_unet = define_instance(args, "mask_generation_diffusion").to(model_device)
+    checkpoint_mask_generation_diffusion_unet = torch.load(args.trained_mask_generation_diffusion_path, map_location=model_device, weights_only=False)
     mask_generation_diffusion_unet.load_state_dict(checkpoint_mask_generation_diffusion_unet["unet_state_dict"])
-    mask_generation_scale_factor = checkpoint_mask_generation_diffusion_unet["scale_factor"]
+    mask_generation_scale_factor = checkpoint_mask_generation_diffusion_unet["scale_factor"].to(model_device)
+    del checkpoint_mask_generation_diffusion_unet
 
     logger.info("All the trained model weights have been loaded.")
 
@@ -218,6 +225,7 @@ def main():
         autoencoder_sliding_window_infer_size=args.autoencoder_sliding_window_infer_size,
         autoencoder_sliding_window_infer_overlap=args.autoencoder_sliding_window_infer_overlap,
         cfg_guidance_scale=args.cfg_guidance_scale,
+        low_vram=args.low_vram,
     )
 
     logger.info(f"The generated image/mask pairs will be saved in {args.output_dir}.")

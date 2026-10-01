@@ -102,6 +102,7 @@ class LDMSampler:
         autoencoder_sliding_window_infer_size=[96, 96, 96],
         autoencoder_sliding_window_infer_overlap=0.6667,
         cfg_guidance_scale=0.0,
+        low_vram=False,
     ) -> None:
         """
         Initialize the LDMSampler with various parameters and models.
@@ -139,6 +140,7 @@ class LDMSampler:
         self.output_dir = output_dir
         self.noise_factor = 1.0
         self.cfg_guidance_scale = cfg_guidance_scale
+        self.low_vram = low_vram
         self.controllable_anatomy_size = controllable_anatomy_size
         if len(self.controllable_anatomy_size):
             logging.info("controllable_anatomy_size is given, mask generation is triggered!")
@@ -392,6 +394,7 @@ class LDMSampler:
             autoencoder_sliding_window_infer_size=self.autoencoder_sliding_window_infer_size,
             autoencoder_sliding_window_infer_overlap=self.autoencoder_sliding_window_infer_overlap,
             cfg_guidance_scale=self.cfg_guidance_scale,
+            low_vram=self.low_vram,
         )
         return synthetic_images, synthetic_labels
 
@@ -499,6 +502,7 @@ class LDMSampler:
             num_inference_steps=self.mask_generation_num_inference_steps,
             autoencoder_sliding_window_infer_size=self.autoencoder_sliding_window_infer_size,
             autoencoder_sliding_window_infer_overlap=self.autoencoder_sliding_window_infer_overlap,
+            low_vram=self.low_vram,
         )
         return synthetic_mask
 
