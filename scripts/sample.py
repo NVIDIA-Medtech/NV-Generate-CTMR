@@ -53,7 +53,6 @@ from .sample_mask import (  # noqa: F401  (re-exported)
     ReconModel,
     check_input_ct,
     check_input_mr,
-    filter_mask_with_organs,
     initialize_noise_latents,
     ldm_conditional_sample_one_mask,
 )
@@ -348,10 +347,6 @@ class LDMSampler:
                 )
                 img_saver(synthetic_images[0])
                 synthetic_images_filename = os.path.join(self.output_dir, "sample_" + output_postfix + "_image" + self.image_output_ext)
-                # Path B only: filter saved label to anatomy_list
-                # Path A (diffusion) always saves the full 132-label mask
-                if not use_diffusion:
-                    synthetic_labels = filter_mask_with_organs(synthetic_labels, self.anatomy_list)
                 label_saver = SaveImage(
                     output_dir=self.output_dir,
                     output_postfix=output_postfix + "_label",
