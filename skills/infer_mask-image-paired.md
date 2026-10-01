@@ -111,16 +111,9 @@ Which path runs is driven by `controllable_anatomy_size` in `config_infer.json`:
 
 Both paths produce a MAISI-vocabulary mask that then feeds the image stage. For the per-path knobs and the `anatomy_size` slot table, see [`infer_mask-only`](infer_mask-only.md). The image stage that consumes the mask is documented in [`infer_image-from-mask`](infer_image-from-mask.md).
 
-## `dim` and `spacing` — same FOV rules as image-only
+## `output_size` and `spacing` — FOV matters
 
-> ⚠️ **FOV (= `dim × spacing`) is the #1 quality knob.** See the **"Why FOV matters"** section at the top of [`infer_image-only.md`](infer_image-only.md) — same warning applies here. Out-of-distribution FOVs produce unusable output even when the validator accepts the inputs.
-
-The mask + image pipeline uses **the same** `output_size` and `spacing` constraints as image-only inference — see the `infer_image-only` skill for the table of recommended `(dim, spacing)` per anatomical target and the hard constraints from `check_input_ct` / `check_input_mr`.
-
-Additional FOV considerations specific to the paired pipeline:
-
-- The **mask DM** was pretrained at **256³ × 1.5 mm iso** (= 384 mm cube FOV). Generating a mask at significantly different shape forces the `ensure_output_size_and_spacing` resampling, which degrades label boundaries. Stay at or near 256³ × 1.5mm for Path A.
-- For Path B (mask DB lookup), the candidate masks are themselves drawn from a training-FOV distribution — `find_closest_masks` picks the closest matches, but the closer your requested FOV is to a mode of that distribution, the less reshaping is needed.
+See [`infer_mask-only`](infer_mask-only.md#output_size-and-spacing--fov-matters) for FOV guidance (training FOV, spacing derivation, Path A vs Path B considerations). The same rules apply here.
 
 ## How to configure a run
 
