@@ -296,9 +296,9 @@ class LDMSampler:
                     if _attempt < _max_mask_retries - 1:
                         logging.warning(f"Conditioned labels {_missing} absent from generated mask, retry {_attempt + 1}/{_max_mask_retries}")
                     else:
-                        raise RuntimeError(
-                            f"Conditioned labels {_missing} still absent after {_max_mask_retries} attempts. "
-                            "Try adjusting controllable_anatomy_size, spacing, or output_size."
+                        logging.warning(
+                            f"Conditioned labels {_missing} still absent after {_max_mask_retries} attempts, proceeding. "
+                            "The saved label file may not contain the requested organ/tumor."
                         )
             else:
                 # read in mask file
