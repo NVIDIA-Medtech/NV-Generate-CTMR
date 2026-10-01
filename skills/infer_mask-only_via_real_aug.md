@@ -86,7 +86,7 @@ After each augmentation attempt the pipeline verifies all requested organs are s
 | `body_region` | `["chest", "abdomen"]` | Filters candidate masks by body coverage. |
 | `anatomy_list` | `[1, 2, 3]` | MAISI label IDs that must be present in the candidate. |
 | `output_size` | `[512, 512, 512]` | Exact match filter; mismatches trigger closest-match + resample. |
-| `spacing` | `[1.5, 1.5, 1.5]` | Exact match filter; mismatches trigger closest-match + resample. |
+| `spacing` | `[1.0, 1.0, 1.0]` | Exact match filter; mismatches trigger closest-match + resample. |
 | `all_mask_files_json` | set in config | Path to `configs/all_mask_files_*.json` — the mask DB index. |
 
 ## Relevant scripts

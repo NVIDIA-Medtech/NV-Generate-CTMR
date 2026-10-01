@@ -22,7 +22,7 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 | `controllable_anatomy_size` | A | Optional anatomy size to control, e.g. `[["bone lesion", 0.5]]`. |
 | `controllable_demographics` | A | Optional demographics, e.g. `[["age", 55], ["sex", "M"]]`. |
 | `anatomy_list` | B | Organ labels to filter the real-mask DB. Not used for Path A output. |
-| `output_size` | B | **Path A always outputs `[256, 256, 256]`** — `output_size` has no effect on Path A. Path B: closest mask is found then resampled/pad-cropped to `output_size`. In **paired** generation the Path A mask is resampled to `output_size` before conditioning the image LDM, so the final image/mask pair can be any size — but the raw mask DM output is always 256³. |
+| `output_size` | A + B | **Path A**: mask DM always generates at 256³ with 1.5 mm isotropic spacing (fixed by training). The result is then resampled to target `spacing`, then pad/cropped to `output_size` — so `output_size` × `spacing` defines the physical FOV of the final mask. For mask-only runs keep `output_size [256,256,256]`; for paired runs set to your desired output size. **Path B**: closest mask found then resampled/pad-cropped to `output_size`. |
 | `spacing` | A + B | Target voxel spacing in mm. |
 | `mask_generation_num_inference_steps` | A | **100** — v2 mask DM uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | A | CFG scale, default `2.0`. |

@@ -115,7 +115,7 @@ Rules:
 | `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. Example: `[["age", 55], ["sex", "M"], ["bmi", 24.5]]`. Valid names: `age` (yr), `sex` (`"M"`/`"F"`), `bmi` (kg/m²), `weight` (kg, prefer bmi). Do not set `height`. |
 | `mask_generation_num_inference_steps` | `100` | RFlow steps. **Do not set to 1000** — the v2 model uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | `2.0` | CFG scale. `0.0` disables guidance (unconditioned). |
-| `output_size` | `[256, 256, 256]` | **Fixed for mask-only generation — do not change.** The v2 mask DM only supports 256³ output. In **paired** generation the generated mask is resampled to `output_size` before conditioning the image LDM, so the final image/mask pair can be any size — but the raw mask DM output is always 256³. |
+| `output_size` | `[256, 256, 256]` | The mask DM always generates at 256³ with 1.5 mm isotropic spacing (fixed by training). The result is resampled: (1) spacing → target `spacing`, (2) pad/crop → `output_size`. So `output_size` × `spacing` defines the physical FOV of the final mask. For mask-only runs keep `[256, 256, 256]`; for paired runs set to your desired output volume. |
 | `spacing` | `[1.5, 1.5, 2.0]` | Voxel spacing in mm. Training spacing is 1.5 mm isotropic; mild anisotropy is supported. |
 
 ## Checkpoint
