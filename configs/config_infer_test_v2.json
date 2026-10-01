@@ -1,24 +1,16 @@
 {
     "num_output_samples": 1,
     "body_region": ["chest"],
-    "anatomy_list": [],
+    "anatomy_list": ["bone lesion"],
     "controllable_anatomy_size": [],
     "controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]],
     "num_inference_steps": 30,
     "mask_generation_num_inference_steps": 100,
     "mask_generation_cfg_guidance_scale": 2.0,
-    "output_size": [
-        256,
-        256,
-        256
-    ],
+    "output_size": [256, 256, 256],
     "image_output_ext": ".nii.gz",
     "label_output_ext": ".nii.gz",
-    "spacing": [
-        1.5,
-        1.5,
-        2.0
-    ],
+    "spacing": [1.5, 1.5, 2.0],
     "autoencoder_sliding_window_infer_size": [48,48,48],
     "autoencoder_sliding_window_infer_overlap": 0.6666,
     "controlnet": "$@controlnet_def",
