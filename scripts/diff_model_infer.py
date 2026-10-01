@@ -302,7 +302,7 @@ def diff_model_infer(
     if directory is not None:
         os.makedirs(directory, exist_ok=True)
     root_dir = tempfile.mkdtemp() if directory is None else directory
-    download_model_data(generate_version, root_dir)
+    download_model_data(generate_version, root_dir, model_only=True)
 
     args = load_config(env_config_path, model_config_path, model_def_path, root_dir=root_dir)
     local_rank, world_size, device = initialize_distributed(num_gpus)
