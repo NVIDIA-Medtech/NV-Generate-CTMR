@@ -26,9 +26,10 @@ body_region + anatomy_list + spacing + output_size
         │
         ▼ find_masks() — exact match
   candidate_mask_files
-        │ (empty?)
+        │ (fewer than num_img candidates?)
         ├─ No  → select_mask() → shuffle + always if_aug=True
         └─ Yes → find_closest_masks() → resample to output_size/spacing
+                  (anatomy/region filter ignored in fallback — mask may not contain requested organs)
                         │
                         ▼
               read_mask_information(mask_file)
@@ -89,7 +90,7 @@ After each augmentation attempt the pipeline verifies all requested organs are s
 | `anatomy_list` | `["spleen", "right kidney", "left kidney"]` | Organ names (from `label_dict.json`) that must be present in the candidate. **Path B only** — not used when Path A runs. Note: `"lung"` is a valid `controllable_anatomy_size` conditioning name but is **not** a valid `anatomy_list` entry (use the individual lobe names, e.g. `"left lung lower lobe"`). |
 | `output_size` | `[512, 512, 512]` | Exact match filter; mismatches trigger closest-match + resample. |
 | `spacing` | `[1.0, 1.0, 1.0]` | Exact match filter; mismatches trigger closest-match + resample. |
-| `all_mask_files_json` | set in config | Path to `configs/all_mask_files_*.json` — the mask DB index. |
+| `all_mask_files_json` | set in env config | Path to the mask DB index, e.g. `datasets/candidate_masks_flexible_size_and_spacing_4000.json`. Set in `environment_rflow-ct.json`; downloaded automatically when `--model_only` is not passed to `download_model_data`. |
 
 ## Relevant scripts
 

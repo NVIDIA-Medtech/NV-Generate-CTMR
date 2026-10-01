@@ -77,7 +77,9 @@ prepare_anatomy_size_condition()   (LDMSampler, scripts/sample.py)
 
 ### Anatomy slots (0–13)
 
-A fixed 14-slot float vector; each slot is a normalised size in `[0, 1]` or `-1` (no preference). **At most ONE slot may be set** — the v2 model is single-target conditioned.
+A fixed 14-slot float vector; each slot is a normalised size in `[0, 1]` or `-1` (no preference).
+
+> ⚠️ **At most ONE anatomy slot may be set.** The v2 model is single-target conditioned. Passing `[["liver", 0.5], ["pancreas", 0.7]]` will not raise an error but will produce incorrect results — only the first entry is used.
 
 | Slot | Name |
 |------|------|
@@ -124,13 +126,13 @@ Derive spacing from a realistic anatomy FOV:
 spacing[i] = FOV[i] / output_size[i]
 ```
 
-Example: chest-to-pelvis CT at 512×512×768 → FOV ≈ 410×410×768 mm → `spacing = [0.8, 0.8, 1.0]`.
+Example (for **paired inference** where `output_size = [512, 512, 768]`): chest-to-pelvis CT → FOV ≈ 410×410×768 mm → `spacing = [0.8, 0.8, 1.0]`. For mask-only runs keep `output_size = [256, 256, 256]` and pick `spacing` from the desired anatomy FOV.
 
 ## Key config knobs
 
 | Key | Default | Notes |
 |-----|---------|-------|
-| `controllable_anatomy_size` | `[["bone lesion", 0.5]]` | A single `[organ_name, size]` pair (list-of-lists). Non-empty triggers Path A. |
+| `controllable_anatomy_size` | `[]` (empty = Path B) | A single `[organ_name, size]` pair (list-of-lists), e.g. `[["bone lesion", 0.5]]`. Non-empty triggers Path A. Only one entry is supported. |
 | `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. Example: `[["age", 55], ["sex", "M"], ["bmi", 24.5]]`. Valid names: `age` (yr), `sex` (`"M"`/`"F"`), `bmi` (kg/m²), `weight` (kg, prefer bmi). Do not set `height`. |
 | `mask_generation_num_inference_steps` | `100` | RFlow steps. **Do not set to 1000** — the v2 model uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | `2.0` | CFG scale. `0.0` disables guidance (unconditioned). |

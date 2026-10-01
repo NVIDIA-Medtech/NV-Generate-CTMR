@@ -21,7 +21,7 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 |-----|------|-------|
 | `controllable_anatomy_size` | A | Optional anatomy size to control, e.g. `[["bone lesion", 0.5]]`. |
 | `controllable_demographics` | A | Optional demographics, e.g. `[["age", 55], ["sex", "M"]]`. |
-| `anatomy_list` | B | Organ labels to filter the real-mask DB. Not used for Path A output. |
+| `anatomy_list` | B | Organ name strings from `label_dict.json` to filter the real-mask DB. Not used in Path A. ⚠️ `"lung"` is **not** a valid `anatomy_list` entry (only lobe names like `"left lung lower lobe"` exist in `label_dict.json`); `"lung"` is only valid as a `controllable_anatomy_size` conditioning name (slot 7, Path A). |
 | `output_size` | A + B | **Path A**: mask DM always generates at 256³. The result is resampled to target `spacing`, then pad/cropped to `output_size` — so `output_size` × `spacing` defines the physical FOV of the final mask. For mask-only runs keep `output_size [256,256,256]`; for paired runs set to your desired output size. **Path B**: closest mask found then resampled/pad-cropped to `output_size`. |
 | `spacing` | A + B | Target voxel spacing in mm. |
 | `mask_generation_num_inference_steps` | A | **100** — v2 mask DM uses RFlow, not DDPM. |

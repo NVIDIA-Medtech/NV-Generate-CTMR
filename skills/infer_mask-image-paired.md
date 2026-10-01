@@ -48,7 +48,7 @@ python -m scripts.download_model_data --version rflow-ct --root_dir "./"
 #    For 24 GB + 512×512×128 chest CT, use config_infer_24g_512x512x128.json.
 #    Edit it to set:
 #      "body_region":                   ["chest"],
-#      "anatomy_list":                  ["liver", "spleen", "lung"],   # whatever organs you need
+#      "anatomy_list":                  ["liver", "spleen", "right lung lower lobe"],   # organ names from label_dict.json; "lung" is NOT valid here
 #      "controllable_anatomy_size":     [],                            # empty list → Path B
 #      "num_output_samples":            1,
 #      # leave the AE knobs, output_size, spacing, cfg_guidance_scale,
@@ -63,7 +63,7 @@ python -m scripts.inference \
     --random-seed 0 --version rflow-ct
 ```
 
-**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (full 132-label MAISI mask for Path A; filtered to `anatomy_list` for Path B).
+**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (full 132-label MAISI mask for both Path A and Path B — `anatomy_list` filters which training masks are *eligible*, not which labels appear in the output).
 
 For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a single `(organ_name, size)` entry, e.g. `[["pancreas", 0.5]]`, and leave `body_region` empty.
 

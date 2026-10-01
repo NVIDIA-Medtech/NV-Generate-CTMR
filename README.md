@@ -56,10 +56,11 @@ synthesis.
   - [2.1 Installation](#21-installation)
   - [2.2 MR Brain Image Generation](#22-mr-brain-image-generation)
   - [2.3 CT Paired Image/Mask Generation](#23-ct-paired-imagemask-generation)
-  - [2.4 CT Image Generation](#24-ct-image-generation)
-  - [2.5 MR Image Generation](#25-mr-image-generation)
-  - [2.6 CT Image Generation from Your Own Mask](#26-ct-image-generation-from-your-own-mask)
-  - [2.7 Example Applications (Community)](#27-example-applications-community)
+  - [2.4 Body Mask Generation](#24-body-mask-generation)
+  - [2.5 CT Image Generation](#25-ct-image-generation)
+  - [2.6 MR Image Generation](#26-mr-image-generation)
+  - [2.7 CT Image Generation from Your Own Mask](#27-ct-image-generation-from-your-own-mask)
+  - [2.8 Example Applications (Community)](#28-example-applications-community)
 - [3. Documentation: details of data preparation, training, and inference tutorials](#3-documentation-details-of-data-preparation-training-and-inference-tutorials)
 - [4. Performance: accuracy, speed, and GPU memory usage](#4-performance-accuracy-speed-and-gpu-memory-usage)
 - [5. License](#5-license)
@@ -145,10 +146,14 @@ You can also run it in command line to generate MR image without mask. Please ch
 ```
 
 ```bash
+export MONAI_DATA_DIRECTORY="./temp_work_dir"
 network="rflow"
 generate_version="rflow-mr-brain"
-python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
-python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
+python -m scripts.diff_model_infer \
+    -t ./configs/config_network_${network}.json \
+    -e ./configs/environment_maisi_diff_model_${generate_version}.json \
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 ### 2.3 CT Paired Image/Mask Generation
@@ -164,31 +169,74 @@ python -m scripts.inference -t ./configs/config_network_${network}.json -i ./con
 
 See also: [inference_tutorial.ipynb](inference_tutorial.ipynb)
 
-### 2.4 CT Image Generation
+### 2.4 Body Mask Generation
+
+**Skill:** [`infer_mask-only`](skills/infer_mask-only.md) — feed this file to an AI coding agent to run the workflow below end-to-end.
+
+Generate a 3D CT body mask using the v2 mask diffusion model (`rflow-mask`). The mask always contains all 132 MAISI labels. Control anatomy size, tumors, and patient demographics via `controllable_anatomy_size` and `controllable_demographics` (Path A), or retrieve a training mask matching `body_region` + `anatomy_list` (Path B).
+
+```bash
+export MONAI_DATA_DIRECTORY="./temp_work_dir"
+# Download weights + datasets (one-time, ~10 GB). Omit --model_only to include mask DB for Path B.
+python -m scripts.download_model_data --version rflow-ct --root_dir "./"
+
+# Run: edit config_infer.json to set controllable_anatomy_size / controllable_demographics for Path A,
+#       or body_region / anatomy_list for Path B (leave controllable_* empty).
+python -m scripts.inference \
+    -t ./configs/config_network_rflow.json \
+    -i ./configs/config_infer.json \
+    -e ./configs/environment_rflow-ct.json \
+    --random-seed 0 --version rflow-ct
+```
+
+The paired image is also generated (mask stage + image stage cannot be separated in the current CLI). The mask is saved as `sample_<timestamp>_label.nii.gz`.
+
+**Path A example** — control bone-lesion size and patient demographics:
+
+```json
+{
+  "controllable_anatomy_size": [["bone lesion", 0.5]],
+  "controllable_demographics": [["age", 55], ["sex", "M"], ["bmi", 24.5]],
+  "output_size": [256, 256, 256],
+  "spacing": [1.5, 1.5, 2.0]
+}
+```
+
+> ⚠️ `controllable_anatomy_size` accepts conditioning slot names (`"liver"`, `"spleen"`, `"lung"`, `"bone lesion"`, …) — **not** `anatomy_list` organ names. `"lung"` is a valid conditioning name (slot 7) but is **not** valid in `anatomy_list`. See `ANATOMY_SIZE_IDX` in `scripts/sample_mask.py` for all 14 valid names.
+
+### 2.5 CT Image Generation
 
 **Skill:** [`infer_image-only`](skills/infer_image-only.md) — feed this file to an AI coding agent to run the workflow below end-to-end.
 
 ```bash
+export MONAI_DATA_DIRECTORY="./temp_work_dir"
 network="rflow"
 generate_version="rflow-ct" # can change to "ddpm-ct"
-python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
-python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
+python -m scripts.diff_model_infer \
+    -t ./configs/config_network_${network}.json \
+    -e ./configs/environment_maisi_diff_model_${generate_version}.json \
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
-### 2.5 MR Image Generation
+### 2.6 MR Image Generation
 
 **Skill:** [`infer_image-only`](skills/infer_image-only.md) — feed this file to an AI coding agent to run the workflow below end-to-end.
 
 Change `"modality"` in [configs/config_maisi_diff_model_rflow-mr.json](configs/config_maisi_diff_model_rflow-mr.json) according to [configs/modality_mapping.json](configs/modality_mapping.json) to control the output MR contrast. Supported contrasts: T1/T2 brain, FLAIR skull-stripped brain, T2 prostate, T1 breast, T1/T2 abdomen. But if you are going to synthesize brain images, we recommend using `rflow-mr-brain` model instead. Please see [2.2 MR Brain Image Generation](#22-mr-brain-image-generation). Different body region has different recommended FOV, please see [detailed inference guide](./docs/inference.md#recommended-fov-for-mr-rflow-mr-model).
 
 ```bash
+export MONAI_DATA_DIRECTORY="./temp_work_dir"
 network="rflow"
 generate_version="rflow-mr"
-python -m scripts.download_model_data --version ${generate_version} --root_dir "./" --model_only
-python -m scripts.diff_model_infer -t ./configs/config_network_${network}.json -e ./configs/environment_maisi_diff_model_${generate_version}.json -c ./configs/config_maisi_diff_model_${generate_version}.json
+python -m scripts.diff_model_infer \
+    -t ./configs/config_network_${network}.json \
+    -e ./configs/environment_maisi_diff_model_${generate_version}.json \
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
-### 2.6 CT Image Generation from Your Own Mask
+### 2.7 CT Image Generation from Your Own Mask
 
 **Skill:** [`infer_image-from-mask`](skills/infer_image-from-mask.md) — feed this file to an AI coding agent to run the workflow below end-to-end (including mask preprocessing).
 
@@ -214,7 +262,7 @@ python -m scripts.infer_image_from_mask \
 
 For batch generation from many masks listed in a JSON, see [`scripts.infer_image_from_mask_batch`](scripts/infer_image_from_mask_batch.py).
 
-### 2.7 Example Applications (Community)
+### 2.8 Example Applications (Community)
 
 > ⚠️ Independently developed by their respective authors; **not endorsed, maintained, or audited** by NVIDIA or the NV-Generate-CTMR maintainers — use at your own risk and review each project's license + clinical disclaimers. See [`docs/applications.md`](docs/applications.md) for the full disclaimer.
 

@@ -282,7 +282,7 @@ def diff_model_infer(
     model_def_path: str,
     num_gpus: int,
     low_vram: bool = False,
-    generate_version: str = "rflow-ct",
+    generate_version: str | None = None,
 ) -> None:
     """
     Main function to run the diffusion model inference.
@@ -293,8 +293,11 @@ def diff_model_infer(
         model_def_path (str): Path to the model definition file.
         num_gpus (int): Number of GPUs to use.
         low_vram (bool): Move inactive models to CPU between stages.
-        generate_version (str): Model variant to download (e.g. ``"rflow-ct"``).
+        generate_version (str): Model variant to download — required.
+            Choose from ``"rflow-ct"``, ``"ddpm-ct"``, ``"rflow-mr"``, ``"rflow-mr-brain"``.
     """
+    if generate_version is None:
+        raise ValueError("generate_version is required. Choose from: 'rflow-ct', 'ddpm-ct', 'rflow-mr', 'rflow-mr-brain'.")
     directory = os.environ.get("MONAI_DATA_DIRECTORY")
     if directory is not None:
         os.makedirs(directory, exist_ok=True)
@@ -382,9 +385,9 @@ if __name__ == "__main__":
     parser.add_argument("--low-vram", action="store_true", help="Move inactive models to CPU between inference stages.")
     parser.add_argument(
         "--version",
-        default="rflow-ct",
+        required=True,
         type=str,
-        help="Model variant to download, e.g. 'rflow-ct', 'ddpm-ct', 'rflow-mr', 'rflow-mr-brain'.",
+        help="Model variant to download: 'rflow-ct', 'ddpm-ct', 'rflow-mr', or 'rflow-mr-brain'.",
     )
 
     args = parser.parse_args()
