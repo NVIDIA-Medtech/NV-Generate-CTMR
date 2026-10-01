@@ -67,49 +67,9 @@ python -m scripts.inference \
 
 For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a non-empty list of `(organ_name, size)` tuples, e.g. `[["pancreas", 0.5], ["hepatic tumor", 0.3]]`, and leave `body_region` empty. The dispatch flowchart below shows where this branches.
 
-## How `LDMSampler.sample_multiple_images` chooses the mask path
+## Mask stage
 
-```text
-controllable_anatomy_size non-empty?
-            │
-   ┌────────┴─────────┐
-  YES                 NO
-   │                   │
-   ▼                   ▼
-prepare_anatomy_size_  find_masks(body_region, anatomy_list, ...)
-condition()            (look up real training masks; resample if needed)
-   │                   │
-   ▼                   ▼
-sample_one_mask()      read_mask_information(mask_file)
-(diffusion-generated)  (no diffusion, just load + transform)
-   │                   │
-   └────────┬──────────┘
-            ▼
-   prepare_one_mask_and_meta_info()  (assign 1.5mm iso affine, derive
-                                      top/bottom_region_index)
-            │
-            ▼
-   sample_one_pair()  (ControlNet + image DM — see infer_image-from-mask skill)
-            │
-            ▼
-   quality_check_ct(image, mask)
-            │
-        passed?
-            │
-   ┌────────┴────────┐
-  YES               NO
-   │                 │
-save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
-```
-
-### Two paths to obtain a mask
-
-Which path runs is driven by `controllable_anatomy_size` in `config_infer.json`:
-
-- **Path A — diffusion from scratch** (`controllable_anatomy_size` non-empty): the user provides `(organ, size)` tuples; the mask DM samples a new mask conditioned on the resulting `anatomy_size` 10-d vector. Use this when you want to *control* organ/tumor presence and size.
-- **Path B — training-mask database lookup** (`controllable_anatomy_size` empty): a real training mask matching `body_region` + `anatomy_list` + `spacing` + `output_size` is retrieved and lightly augmented so the output isn't a verbatim copy. No diffusion runs in the mask stage. Use this when you only need a plausible mask of the right anatomy and don't care about controlling specific organ sizes.
-
-Both paths produce a MAISI-vocabulary mask that then feeds the image stage. For the per-path knobs and the `anatomy_size` slot table, see [`infer_mask-only`](infer_mask-only.md). The image stage that consumes the mask is documented in [`infer_image-from-mask`](infer_image-from-mask.md).
+See [`infer_mask-only`](infer_mask-only.md) for how the mask is generated (Path A vs Path B, conditioning, FOV/spacing rules, config knobs). The generated mask feeds directly into the image stage ([`infer_image-from-mask`](infer_image-from-mask.md)).
 
 ## `output_size` and `spacing` — FOV matters
 
@@ -177,16 +137,14 @@ Live in the three configs:
 
 Key `config_infer.json` knobs:
 
+Mask-stage knobs (`body_region`, `anatomy_list`, `controllable_anatomy_size`, `controllable_demographics`, `mask_generation_num_inference_steps`, `mask_generation_cfg_guidance_scale`) — see [`infer_mask-only`](infer_mask-only.md).
+
 | Key | Effect |
 |---|---|
-| `body_region` | List of regions present in the requested mask: any of `["head", "chest", "thorax", "abdomen", "pelvis", "lower"]`. Used by Path B only (`find_masks` filter). |
-| `anatomy_list` | List of organ names from `configs/label_dict.json` that must be present. Used by `find_masks` (Path B) AND as the post-process filter (`filter_mask_with_organs`) for both paths. |
-| `controllable_anatomy_size` | Empty list → Path B. Non-empty list of `(organ_name, size)` tuples → Path A (diffusion-generated mask). At most 10 entries; at most 1 tumor. |
 | `output_size` | Target volume shape. Hard constraints apply (see `infer_image-only` skill). |
 | `spacing` | Target voxel spacing (mm). Hard constraints apply. |
 | `modality` | Modality code (1=CT, 8..32=MR variants). |
 | `num_inference_steps` | RFlow → 30, **DDPM → 1000**. ⚠️ For `ddpm-ct` you must set this to 1000; the notebook auto-applies this override in cell 12. |
-| `mask_generation_num_inference_steps` | **100** — the v2 mask DM uses RFlow (not DDPM). Do not set to 1000. |
 | `cfg_guidance_scale` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. The same key name in `config_maisi_diff_model_*.json` is the modality-CFG used by MR image-only inference — see [`infer_image-only`](infer_image-only.md). |
 
 ## Output
