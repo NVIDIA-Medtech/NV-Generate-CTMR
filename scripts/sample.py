@@ -269,24 +269,13 @@ class LDMSampler:
             logging.info("---- Start preparing masks... ----")
             start_time = time.time()
             if use_diffusion:
-                # generate a synthetic mask; retry if required labels are missing
-                max_retries = 5
-                for attempt in range(1, max_retries + 1):
-                    try:
-                        (
-                            combine_label_or,
-                            top_region_index_tensor,
-                            bottom_region_index_tensor,
-                            spacing_tensor,
-                        ) = self.prepare_one_mask_and_meta_info(anatomy_size_condition)
-                        break
-                    except ValueError as e:
-                        if attempt < max_retries:
-                            logging.warning(
-                                f"Mask generation attempt {attempt}/{max_retries} failed ({e}). Retrying..."
-                            )
-                        else:
-                            raise
+                # generate a synthetic mask
+                (
+                    combine_label_or,
+                    top_region_index_tensor,
+                    bottom_region_index_tensor,
+                    spacing_tensor,
+                ) = self.prepare_one_mask_and_meta_info(anatomy_size_condition)
             else:
                 # read in mask file
                 mask_file = item["mask_file"]
@@ -482,7 +471,7 @@ class LDMSampler:
         affine[2, 2] = 1.5
         affine[3, 3] = 1.0  # dummy
         combine_label_or = MetaTensor(combine_label_or, affine=affine)
-        combine_label_or = self.ensure_output_size_and_spacing(combine_label_or)
+        combine_label_or = self.ensure_output_size_and_spacing(combine_label_or, check_contains_target_labels=False)
 
         top_region_index, bottom_region_index = get_body_region_index_from_mask(combine_label_or)
 

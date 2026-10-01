@@ -353,16 +353,6 @@ def check_input_ct(
                 raise ValueError(
                     f"body_region components must be in {available_body_region}, got {region!r}."
                 )
-        tumor_labels = {
-            "lung tumor", "pancreatic tumor", "hepatic tumor",
-            "colon cancer primaries", "bone lesion",
-        }
-        for anatomy in anatomy_list:
-            if anatomy in tumor_labels:
-                raise ValueError(
-                    f"anatomy_list must not contain tumor labels (got {anatomy!r}). "
-                    "Use controllable_anatomy_size to request a specific tumor."
-                )
         with open(label_dict_json) as f:
             label_dict = json.load(f)
         for anatomy in anatomy_list:
