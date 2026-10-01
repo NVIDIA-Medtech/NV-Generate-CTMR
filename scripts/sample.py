@@ -146,6 +146,8 @@ class LDMSampler:
         self.mask_generation_cfg_guidance_scale = mask_generation_cfg_guidance_scale
         self.controllable_anatomy_size = controllable_anatomy_size
         self.controllable_demographics = controllable_demographics or []
+        # Label integers that must appear in the Path A output (empty when demographics-only)
+        self.controllable_anatomy_size_labels = [label_dict[organ_and_size[0]] for organ_and_size in controllable_anatomy_size]
         self.image_output_ext = image_output_ext
         self.label_output_ext = label_output_ext
         # Set the default value for number of inference steps to 1000
@@ -265,13 +267,25 @@ class LDMSampler:
             logging.info("---- Start preparing masks... ----")
             start_time = time.time()
             if use_diffusion:
-                # generate a synthetic mask
-                (
-                    combine_label_or,
-                    top_region_index_tensor,
-                    bottom_region_index_tensor,
-                    spacing_tensor,
-                ) = self.prepare_one_mask_and_meta_info(anatomy_size_condition)
+                # generate a synthetic mask; retry if conditioned organs are absent
+                _max_mask_retries = 5
+                for _attempt in range(_max_mask_retries):
+                    (
+                        combine_label_or,
+                        top_region_index_tensor,
+                        bottom_region_index_tensor,
+                        spacing_tensor,
+                    ) = self.prepare_one_mask_and_meta_info(anatomy_size_condition)
+                    if not self.controllable_anatomy_size_labels:
+                        break  # demographics-only — no label check needed
+                    _contained = torch.unique(combine_label_or)
+                    _missing = [lb for lb in self.controllable_anatomy_size_labels if lb not in _contained]
+                    if not _missing:
+                        break
+                    if _attempt < _max_mask_retries - 1:
+                        logging.warning(f"Conditioned labels {_missing} absent from generated mask, retry {_attempt + 1}/{_max_mask_retries}")
+                    else:
+                        logging.warning(f"Conditioned labels {_missing} still absent after {_max_mask_retries} attempts, proceeding")
             else:
                 # read in mask file
                 mask_file = item["mask_file"]
