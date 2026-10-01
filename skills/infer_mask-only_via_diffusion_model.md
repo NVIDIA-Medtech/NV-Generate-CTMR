@@ -81,22 +81,22 @@ A fixed 14-slot float vector; each slot is a normalised size in `[0, 1]` or `-1`
 
 > ⚠️ **At most ONE anatomy slot may be set.** The v2 model is single-target conditioned. Passing `[["liver", 0.5], ["pancreas", 0.7]]` raises a `ValueError` at startup — input validation rejects multiple entries before generation begins.
 
-| Slot | Name |
-|------|------|
-| 0 | liver |
-| 1 | spleen |
-| 2 | stomach |
-| 3 | pancreas |
-| 4 | colon |
-| 5 | left kidney |
-| 6 | right kidney |
-| 7 | lung |
-| 8 | gallbladder |
-| 9 | lung tumor |
-| 10 | pancreatic tumor |
-| 11 | hepatic tumor |
-| 12 | colon cancer primaries |
-| 13 | bone lesion |
+| Slot | Name | Notes |
+|------|------|-------|
+| 0 | liver | |
+| 1 | spleen | |
+| 2 | stomach | |
+| 3 | pancreas | |
+| 4 | colon | |
+| 5 | left kidney | |
+| 6 | right kidney | |
+| 7 | lung | |
+| 8 | gallbladder | |
+| 9 | lung tumor | |
+| 10 | pancreatic tumor | |
+| 11 | hepatic tumor | ⚠️ Low recall — the model rarely generates this label reliably. Avoid using this slot; results are unpredictable. |
+| 12 | colon cancer primaries | |
+| 13 | bone lesion | |
 
 ### Demographics slots (14–18)
 
