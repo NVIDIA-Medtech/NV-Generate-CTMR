@@ -22,7 +22,7 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 | `controllable_anatomy_size` | A | Optional anatomy size to control, e.g. `[["bone lesion", 0.5]]`. |
 | `controllable_demographics` | A | Optional demographics, e.g. `[["age", 55], ["sex", "M"]]`. |
 | `anatomy_list` | B | Organ labels to filter the real-mask DB. Not used for Path A output. |
-| `output_size` | A + B | **Path A**: mask DM always generates at 256³ with 1.5 mm isotropic spacing (fixed by training). The result is then resampled to target `spacing`, then pad/cropped to `output_size` — so `output_size` × `spacing` defines the physical FOV of the final mask. For mask-only runs keep `output_size [256,256,256]`; for paired runs set to your desired output size. **Path B**: closest mask found then resampled/pad-cropped to `output_size`. |
+| `output_size` | A + B | **Path A**: mask DM always generates at 256³. The result is resampled to target `spacing`, then pad/cropped to `output_size` — so `output_size` × `spacing` defines the physical FOV of the final mask. For mask-only runs keep `output_size [256,256,256]`; for paired runs set to your desired output size. **Path B**: closest mask found then resampled/pad-cropped to `output_size`. |
 | `spacing` | A + B | Target voxel spacing in mm. |
 | `mask_generation_num_inference_steps` | A | **100** — v2 mask DM uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | A | CFG scale, default `2.0`. |
@@ -31,7 +31,7 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 
 > ⚠️ **FOV (= `output_size × spacing`) is the #1 quality knob.** Out-of-distribution FOVs produce unusable output even when inputs pass validation.
 
-- **Path A**: mask DM was pretrained at **256³ × 1.5 mm iso** (= 384 mm cube FOV). Larger deviations force more aggressive resampling in `ensure_output_size_and_spacing`, which degrades label boundaries. Choose `spacing = FOV / output_size` from a realistic anatomy FOV; stay close to 384 mm cube when possible.
+- **Path A**: v2 mask DM generates at **256³** with flexible spacing. Choose `spacing = FOV / output_size` from a realistic anatomy FOV.
 - **Path B**: candidate masks come from the training-FOV distribution. The closer your requested FOV is to that distribution, the less reshaping is needed.
 
 To derive spacing: pick a target anatomy FOV (e.g. 384 × 384 × 768 mm for chest-to-pelvis), divide by your `output_size` element-wise.
