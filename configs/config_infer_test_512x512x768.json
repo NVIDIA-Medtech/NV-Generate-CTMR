@@ -1,7 +1,7 @@
 {
     "num_output_samples": 1,
     "body_region": ["chest", "abdomen"],
-    "anatomy_list": ["liver", "spleen", "lung"],
+    "anatomy_list": ["liver", "spleen", "left lung lower lobe", "right lung lower lobe"],
     "controllable_anatomy_size": [],
     "controllable_demographics": null,
     "num_inference_steps": 30,
