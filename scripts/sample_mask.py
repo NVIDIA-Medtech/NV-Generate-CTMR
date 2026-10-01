@@ -71,7 +71,7 @@ ANATOMY_SIZE_IDX = {
     "bone lesion": 13,
 }
 N_ANATOMY = 14  # 9 organs + 5 tumors
-N_DEMOG = 5     # age, sex, weight, bmi, height
+N_DEMOG = 5  # age, sex, weight, bmi, height
 N_COND = N_ANATOMY + N_DEMOG  # 19
 
 
@@ -152,7 +152,7 @@ def ldm_conditional_sample_one_mask(
             else:
                 mo = diffusion_unet(x=latents, timesteps=t_batch, context=cond, spacing_tensor=spacing_tensor)
             out = noise_scheduler.step(mo, t, latents, next_timestep=next_t)
-            latents = out[0] if isinstance(out, (tuple, list)) else out
+            latents = out[0] if isinstance(out, tuple | list) else out
 
         inferer = SlidingWindowInferer(
             roi_size=autoencoder_sliding_window_infer_size,
@@ -242,21 +242,15 @@ def check_input_ct(
     if output_size[0] != output_size[1]:
         raise ValueError(f"The first two components of output_size need to be equal, yet got {output_size}.")
     if (output_size[0] not in [256, 384, 512]) or (output_size[2] not in [128, 256, 384, 512, 640, 768]):
-        raise ValueError(
-            f"output_size[0] must be in [256, 384, 512] and output_size[2] in [128, 256, 384, 512, 640, 768], "
-            f"got {output_size}."
-        )
+        raise ValueError(f"output_size[0] must be in [256, 384, 512] and output_size[2] in [128, 256, 384, 512, 640, 768], got {output_size}.")
     if spacing[0] != spacing[1]:
         raise ValueError(f"The first two components of spacing need to be equal, yet got {spacing}.")
     if spacing[0] < 0.5 or spacing[0] > 3.0 or spacing[2] < 0.5 or spacing[2] > 5.0:
-        raise ValueError(
-            f"spacing[0] must be in [0.5, 3.0] mm and spacing[2] in [0.5, 5.0] mm, got {spacing}."
-        )
+        raise ValueError(f"spacing[0] must be in [0.5, 3.0] mm and spacing[2] in [0.5, 5.0] mm, got {spacing}.")
     if output_size[0] * spacing[0] < 256:
         FOV = [output_size[axis] * spacing[axis] for axis in range(3)]  # noqa: N806
         raise ValueError(
-            f"spacing ({spacing} mm) × output_size ({output_size}) gives FOV {FOV} mm. "
-            "Recommend FOV ≥ 256 mm in x/y (≥ 384 mm for abdomen)."
+            f"spacing ({spacing} mm) × output_size ({output_size}) gives FOV {FOV} mm. Recommend FOV ≥ 256 mm in x/y (≥ 384 mm for abdomen)."
         )
 
     # Validate controllable_demographics (optional; None/[] = no demographic conditioning).
@@ -269,9 +263,7 @@ def check_input_ct(
         for demographics_pair in controllable_demographics:
             name, value = demographics_pair[0], demographics_pair[1]
             if name not in available_demographics:
-                raise ValueError(
-                    f"controllable_demographics name must be one of {available_demographics}, got {name!r}."
-                )
+                raise ValueError(f"controllable_demographics name must be one of {available_demographics}, got {name!r}.")
             if name in seen_demographics:
                 raise ValueError(f"Duplicate controllable_demographics field: {name!r}.")
             if name == "sex":
@@ -280,26 +272,17 @@ def check_input_ct(
             else:
                 if value < 0 or value > demographics_max[name]:
                     units = {"age": "yr", "weight": "kg", "bmi": "kg/m²", "height": "cm"}[name]
-                    raise ValueError(
-                        f"controllable_demographics '{name}'={value} is outside [0, {demographics_max[name]:g}] {units}."
-                    )
+                    raise ValueError(f"controllable_demographics '{name}'={value} is outside [0, {demographics_max[name]:g}] {units}.")
                 obs_lo, obs_hi = demographics_observed[name]
                 if value < obs_lo or value > obs_hi:
                     logging.warning(
-                        f"controllable_demographics '{name}'={value} is outside the training range "
-                        f"[{obs_lo}, {obs_hi}]; the model may extrapolate."
+                        f"controllable_demographics '{name}'={value} is outside the training range [{obs_lo}, {obs_hi}]; the model may extrapolate."
                     )
             seen_demographics.append(name)
         if "weight" in seen_demographics and "bmi" in seen_demographics:
-            raise ValueError(
-                "Provide only ONE of 'weight' or 'bmi' in controllable_demographics — "
-                "they co-occur in <0.4% of training data."
-            )
+            raise ValueError("Provide only ONE of 'weight' or 'bmi' in controllable_demographics — they co-occur in <0.4% of training data.")
         if "height" in seen_demographics:
-            logging.warning(
-                "'height' is present in only ~0.4% of training data; "
-                "its conditioning effect is unreliable. Prefer age/sex/weight/bmi."
-            )
+            logging.warning("'height' is present in only ~0.4% of training data; its conditioning effect is unreliable. Prefer age/sex/weight/bmi.")
         if controllable_anatomy_size and len(seen_demographics) >= 3:
             logging.warning(
                 f"controllable_anatomy_size set together with {len(seen_demographics)} demographics "
@@ -319,49 +302,47 @@ def check_input_ct(
         )
 
     available_controllable_organ = [
-        "liver", "spleen", "stomach", "pancreas", "colon",
-        "left kidney", "right kidney", "lung", "gallbladder",
+        "liver",
+        "spleen",
+        "stomach",
+        "pancreas",
+        "colon",
+        "left kidney",
+        "right kidney",
+        "lung",
+        "gallbladder",
     ]
     available_controllable_tumor = [
-        "lung tumor", "pancreatic tumor", "hepatic tumor",
-        "colon cancer primaries", "bone lesion",
+        "lung tumor",
+        "pancreatic tumor",
+        "hepatic tumor",
+        "colon cancer primaries",
+        "bone lesion",
     ]
     available_controllable_anatomy = available_controllable_organ + available_controllable_tumor
 
     for pair in controllable_anatomy_size:
         if pair[0] not in available_controllable_anatomy:
-            raise ValueError(
-                f"controllable_anatomy must be one of {available_controllable_anatomy}, got {pair[0]!r}."
-            )
+            raise ValueError(f"controllable_anatomy must be one of {available_controllable_anatomy}, got {pair[0]!r}.")
         size = pair[1]
         if size != -1 and (size < 0 or size > 1.0):
-            raise ValueError(
-                f"Controllable size must be in [0, 1] or -1, got {size}."
-            )
+            raise ValueError(f"Controllable size must be in [0, 1] or -1, got {size}.")
 
     if len(controllable_anatomy_size) > 0:
         logging.info(
-            f"`controllable_anatomy_size` is set: Path A (diffusion) with {controllable_anatomy_size}. "
-            "body_region and anatomy_list will be ignored."
+            f"`controllable_anatomy_size` is set: Path A (diffusion) with {controllable_anatomy_size}. body_region and anatomy_list will be ignored."
         )
     else:
-        logging.info(
-            f"`controllable_anatomy_size` is empty: Path B (real mask DB) with "
-            f"body_region={body_region}, anatomy_list={anatomy_list}."
-        )
+        logging.info(f"`controllable_anatomy_size` is empty: Path B (real mask DB) with body_region={body_region}, anatomy_list={anatomy_list}.")
         available_body_region = ["head", "chest", "thorax", "abdomen", "pelvis", "lower"]
         for region in body_region:
             if region not in available_body_region:
-                raise ValueError(
-                    f"body_region components must be in {available_body_region}, got {region!r}."
-                )
+                raise ValueError(f"body_region components must be in {available_body_region}, got {region!r}.")
         with open(label_dict_json) as f:
             label_dict = json.load(f)
         for anatomy in anatomy_list:
             if anatomy not in label_dict.keys():
-                raise ValueError(
-                    f"anatomy_list components must be in label_dict keys, got {anatomy!r}."
-                )
+                raise ValueError(f"anatomy_list components must be in label_dict keys, got {anatomy!r}.")
     logging.info(f"Output: spacing={spacing} mm, size={output_size}.")
 
 

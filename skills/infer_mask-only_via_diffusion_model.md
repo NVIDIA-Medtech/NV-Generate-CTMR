@@ -109,6 +109,7 @@ Optional patient demographics, normalized to `[0, 1]`. Any unspecified slot uses
 | 18 | height | cm | — | slot exists but not trained; do not use |
 
 Rules:
+
 - Provide `weight` OR `bmi`, not both.
 - Do not set `height` — the model was not trained with this field.
 - Demographics in `config_infer.json` use original units; the pipeline normalizes internally.

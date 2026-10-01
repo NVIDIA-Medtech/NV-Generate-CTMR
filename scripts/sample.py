@@ -427,7 +427,7 @@ class LDMSampler:
         Returns:
             list: 19-d conditioning vector.
         """
-        from .sample_mask import ANATOMY_SIZE_IDX, N_ANATOMY, N_COND, _DEMOG_MAX
+        from .sample_mask import _DEMOG_MAX, ANATOMY_SIZE_IDX, N_ANATOMY
 
         # --- anatomy part (slots 0-13) ---
         anatomy_vec = [-1.0] * N_ANATOMY
@@ -439,7 +439,7 @@ class LDMSampler:
         # --- demographics part (slots 14-18: age, sex, weight, bmi, height) ---
         demog_vec = [-1.0] * 5
         demog_slot = {"age": 0, "sex": 1, "weight": 2, "bmi": 3, "height": 4}
-        for pair in (controllable_demographics or []):
+        for pair in controllable_demographics or []:
             name, value = pair[0], pair[1]
             slot = demog_slot[name]
             if name == "sex":
