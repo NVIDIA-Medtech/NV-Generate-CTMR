@@ -146,10 +146,6 @@ class LDMSampler:
         self.mask_generation_cfg_guidance_scale = mask_generation_cfg_guidance_scale
         self.controllable_anatomy_size = controllable_anatomy_size
         self.controllable_demographics = controllable_demographics or []
-        if len(self.controllable_anatomy_size):
-            logging.info("controllable_anatomy_size is given, mask generation is triggered!")
-            # overwrite the anatomy_list by given organs in self.controllable_anatomy_size
-            self.anatomy_list = [label_dict[organ_and_size[0]] for organ_and_size in self.controllable_anatomy_size]
         self.image_output_ext = image_output_ext
         self.label_output_ext = label_output_ext
         # Set the default value for number of inference steps to 1000
