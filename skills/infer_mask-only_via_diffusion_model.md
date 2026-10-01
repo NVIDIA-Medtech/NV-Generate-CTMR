@@ -40,7 +40,7 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ["weight", 72]   // body weight in kg (training range 22–144; prefer bmi instead)
 ```
 
-If `controllable_anatomy_size` is an empty list `[]`, the pipeline falls back to Path B (real-mask DB lookup). See [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
+Path A is triggered when **either** `controllable_anatomy_size` or `controllable_demographics` is non-empty. Both may be empty to fall back to Path B (real-mask DB lookup); see [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md).
 
 ## Workflow
 
@@ -115,7 +115,7 @@ Rules:
 | `controllable_demographics` | `null` | Optional list of `[name, value]` pairs in original units, or `null`. Example: `[["age", 55], ["sex", "M"], ["bmi", 24.5]]`. Valid names: `age` (yr), `sex` (`"M"`/`"F"`), `bmi` (kg/m²), `weight` (kg, prefer bmi). Do not set `height`. |
 | `mask_generation_num_inference_steps` | `100` | RFlow steps. **Do not set to 1000** — the v2 model uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | `2.0` | CFG scale. `0.0` disables guidance (unconditioned). |
-| `output_size` | `[256, 256, 256]` | **Fixed — do not change.** The v2 mask DM only supports 256³ output. |
+| `output_size` | `[256, 256, 256]` | **Fixed for mask-only generation — do not change.** The v2 mask DM only supports 256³ output. In **paired** generation the generated mask is resampled to `output_size` before conditioning the image LDM, so the final image/mask pair can be any size — but the raw mask DM output is always 256³. |
 | `spacing` | `[1.5, 1.5, 2.0]` | Voxel spacing in mm. Training spacing is 1.5 mm isotropic; mild anisotropy is supported. |
 
 ## Checkpoint
