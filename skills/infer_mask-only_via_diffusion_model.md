@@ -10,7 +10,7 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ## When Path A runs
 
 ```json
-// config_infer.json — Path A trigger, no demographics
+// config_infer.json — Path A trigger, only anatomy size
 "controllable_anatomy_size": [["bone lesion", 0.5]],
 "controllable_demographics": null
 ```
