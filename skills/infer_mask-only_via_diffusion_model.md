@@ -30,7 +30,7 @@ Path A runs the **v2 mask diffusion UNet** (`DiffusionModelUNetMaisiAdaGN`, AdaG
 ```
 
 ```json
-// single-field demographics example
+// config_infer.json — Path A trigger, only demographics
 "controllable_anatomy_size": [],
 "controllable_demographics": [["sex", "M"]]
 ```
