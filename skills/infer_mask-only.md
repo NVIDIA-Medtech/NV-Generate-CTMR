@@ -27,6 +27,15 @@ The mask-generation stage runs inside `scripts.inference` (not a standalone CLI 
 | `mask_generation_num_inference_steps` | A | **100** — v2 mask DM uses RFlow, not DDPM. |
 | `mask_generation_cfg_guidance_scale` | A | CFG scale, default `2.0`. |
 
+## `output_size` and `spacing` — FOV matters
+
+> ⚠️ **FOV (= `output_size × spacing`) is the #1 quality knob.** Out-of-distribution FOVs produce unusable output even when inputs pass validation.
+
+- **Path A**: mask DM was pretrained at **256³ × 1.5 mm iso** (= 384 mm cube FOV). Larger deviations force more aggressive resampling in `ensure_output_size_and_spacing`, which degrades label boundaries. Choose `spacing = FOV / output_size` from a realistic anatomy FOV; stay close to 384 mm cube when possible.
+- **Path B**: candidate masks come from the training-FOV distribution. The closer your requested FOV is to that distribution, the less reshaping is needed.
+
+To derive spacing: pick a target anatomy FOV (e.g. 384 × 384 × 768 mm for chest-to-pelvis), divide by your `output_size` element-wise.
+
 ## Output
 
 A 3D integer NIfTI of MAISI labels (1–132 with gaps) plus body envelope `200`, saved as `sample_<timestamp>_label.nii.gz` alongside the paired image.

@@ -113,6 +113,18 @@ Rules:
 - Do not set `height` — the model was not trained with this field.
 - Demographics in `config_infer.json` use original units; the pipeline normalizes internally.
 
+## `output_size` and `spacing` — FOV matters
+
+> ⚠️ **FOV (= `output_size × spacing`) is the #1 quality knob.** The mask DM was pretrained at **256³ × 1.5 mm iso** (= 384 mm cube FOV). Larger deviations force more aggressive resampling in `ensure_output_size_and_spacing`, which degrades label boundaries.
+
+Derive spacing from a realistic anatomy FOV:
+
+```
+spacing[i] = FOV[i] / output_size[i]
+```
+
+Example: chest-to-pelvis CT at 512×512×768 → FOV ≈ 410×410×768 mm → `spacing = [0.8, 0.8, 1.0]`.
+
 ## Key config knobs
 
 | Key | Default | Notes |
