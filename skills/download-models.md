@@ -27,7 +27,7 @@ Always downloaded (`models/`):
 
 - `autoencoder_v1.pt` (image AE) — from `nvidia/NV-Generate-CT`
 - `mask_generation_autoencoder.pt` — from `nvidia/NV-Generate-CT`
-- `mask_generation_diffusion_unet.pt` — from `nvidia/NV-Generate-CT`
+- `mask_generation_diffusion_unet_v2.pt` — from `nvidia/NV-Generate-CT`
 - `diff_unet_3d_rflow-ct.pt` (image DM) — from `nvidia/NV-Generate-CT`
 - `controlnet_3d_rflow-ct.pt` — from `nvidia/NV-Generate-CT`
 
@@ -65,7 +65,7 @@ Only the image-DM stack (no mask DM, no ControlNet):
 │   ├── autoencoder_v1.pt                      # image AE (CT + MR-Brain)
 │   ├── autoencoder_v2.pt                      # image AE (MR)
 │   ├── mask_generation_autoencoder.pt         # mask AE (CT only)
-│   ├── mask_generation_diffusion_unet.pt      # mask DM (CT only)
+│   ├── mask_generation_diffusion_unet_v2.pt   # mask DM v2 (CT only)
 │   ├── diff_unet_3d_<variant>.pt              # image DM
 │   └── controlnet_3d_<variant>.pt             # ControlNet (CT only)
 └── datasets/
@@ -78,8 +78,10 @@ The paths above are exactly what the `environment_<variant>.json` configs expect
 
 ## When to use `--model_only`
 
-- **Skip auxiliary data**: pass `--model_only` if you only intend to use `controllable_anatomy_size` (Path A, diffusion-generated masks). The mask database (`all_masks_flexible_size_and_spacing_4000.zip` etc.) is only needed for Path B (real-mask retrieval).
-- **Full download (default)**: omit `--model_only` for the full paired-inference pipeline so both mask paths work.
+- **Image-only inference** (`scripts.diff_model_infer`, no mask stage): pass `--model_only`. Neither the mask database nor `all_anatomy_size_conditions.json` are needed.
+- **Path A mask generation** (`controllable_anatomy_size` or `controllable_demographics` non-empty): pass `--model_only`. Path A builds its conditioning vector entirely from the 19-d slot map; it does not read `all_anatomy_size_conditions.json`.
+- **Path B mask generation** (`anatomy_list` + real-mask DB): **do NOT use `--model_only`**. Path B requires the mask database zip and index.
+- **Full download (default)**: omit `--model_only` only when Path B runs.
 
 ## License gating
 

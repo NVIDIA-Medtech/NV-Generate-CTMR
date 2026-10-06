@@ -482,12 +482,10 @@ def add_body_envelope(
             erode→LCC→dilate (step 4). Default 5 (slightly larger than
             ``closing_kernel`` so the body fully separates from the bed
             before the LCC selects it).
-        table_frac_thresh: step-8 removes EVERY air-in-body connected component
-            (body voxels with ``CT < hu_threshold``) that is >= this fraction
-            of the body, treating each as CT table. Default 0.05 (a table piece
-            is empirically 8-28% of the body vs <0.3% clean, so any value in
-            ~0.02-0.10 separates them). Multiple table-sized components are all
-            removed (a table often splits into rails/pads).
+        table_frac_thresh: minimum fraction of the body a single air-in-body
+            component must occupy to be removed as CT table. Lower → more
+            aggressive (removes smaller pieces too); higher → more conservative.
+            Default 0.05.
         seg_has_lung: whether ``seg_mask`` labels the lungs. True (default) runs
             step 8 (table removal). Set False when the seg has no lungs — step 8
             is then skipped, since lung air would otherwise be indistinguishable

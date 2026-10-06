@@ -33,6 +33,8 @@ python -m scripts.inference \
 
 > ⚠️ `ddpm-ct` requires `"num_inference_steps": 1000` in `config_infer.json`. `rflow-ct` uses `30`. Lower DDPM step counts emit a warning and produce low-quality output.
 
+Add `-x ./configs/config_trt.json` to enable TensorRT acceleration — see [Accelerated inference with TensorRT](#accelerated-inference-with-tensorrt-ct-only) below.
+
 There is currently no ControlNet for MRI — MR variability is too large to train one whole-body model. See [inference_tutorial.ipynb](../inference_tutorial.ipynb) for an end-to-end notebook walkthrough of the CT paired case.
 
 ### CT image only (no mask)
@@ -45,7 +47,8 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_${network}.json \
     -e ./configs/environment_maisi_diff_model_${generate_version}.json \
-    -c ./configs/config_maisi_diff_model_${generate_version}.json
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 ### MR image only (non-brain — `rflow-mr`)
@@ -58,7 +61,8 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_${network}.json \
     -e ./configs/environment_maisi_diff_model_${generate_version}.json \
-    -c ./configs/config_maisi_diff_model_${generate_version}.json
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 Set `"modality"` in `config_maisi_diff_model_rflow-mr.json` per the [Modality codes](#modality-codes) table below. For brain MRI prefer the dedicated `rflow-mr-brain` model.
@@ -73,7 +77,8 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_${network}.json \
     -e ./configs/environment_maisi_diff_model_${generate_version}.json \
-    -c ./configs/config_maisi_diff_model_${generate_version}.json
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 Whole-brain (modality 9, 10, 11, 20) and skull-stripped (29, 30, 31, 32) outputs are both supported — see [Modality codes](#modality-codes).

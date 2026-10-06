@@ -35,6 +35,10 @@ Three configs are passed:
 - `-i` inference parameters (`config_infer.json` — `body_region`, `anatomy_list`, `output_size`, `spacing`, `controllable_anatomy_size`, etc.).
 - `-e` environment paths (`environment_rflow-ct.json` or `environment_ddpm-ct.json` — checkpoint paths, label dicts, mask database).
 
+An optional fourth config is available:
+
+- `-x` / `--extra-config-file` — overrides any key already set by the above configs. Used for **TensorRT acceleration**: pass `-x ./configs/config_trt.json` to enable TRT compilation of select modules via `trt_compile()` (CT only). See [`docs/inference.md#accelerated-inference-with-tensorrt-ct-only`](../docs/inference.md#accelerated-inference-with-tensorrt-ct-only) for the full TRT command and which modules are compiled.
+
 ### End-to-end example: paired chest CT (Path B — training-mask DB lookup)
 
 Concrete worked example for a 24 GB GPU. Path B is the simpler default — you ask for a chest CT and the pipeline finds a matching training mask, augments it, and synthesizes the paired image.
@@ -48,7 +52,7 @@ python -m scripts.download_model_data --version rflow-ct --root_dir "./"
 #    For 24 GB + 512×512×128 chest CT, use config_infer_24g_512x512x128.json.
 #    Edit it to set:
 #      "body_region":                   ["chest"],
-#      "anatomy_list":                  ["liver", "spleen", "lung"],   # whatever organs you need
+#      "anatomy_list":                  ["liver", "spleen", "right lung lower lobe"],   # organ names from label_dict.json; "lung" is NOT valid here
 #      "controllable_anatomy_size":     [],                            # empty list → Path B
 #      "num_output_samples":            1,
 #      # leave the AE knobs, output_size, spacing, cfg_guidance_scale,
@@ -63,64 +67,17 @@ python -m scripts.inference \
     --random-seed 0 --version rflow-ct
 ```
 
-**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz` (paired mask filtered to `anatomy_list`).
+**Expected output**: a pair of NIfTIs under the `output_dir` set in `environment_rflow-ct.json` — `sample_<timestamp>_image.nii.gz` (synthesized CT, HU `[-1000, 1000]`) and `sample_<timestamp>_label.nii.gz`. **Path A**: full 132-label MAISI mask. **Path B**: label filtered to `anatomy_list` (only the requested organs are kept in the saved label).
 
-For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a non-empty list of `(organ_name, size)` tuples, e.g. `[["pancreas", 0.5], ["hepatic tumor", 0.3]]`, and leave `body_region` empty. The dispatch flowchart below shows where this branches.
+For **Path A** (control organ/tumor size), set `controllable_anatomy_size` to a single `(organ_name, size)` entry, e.g. `[["pancreas", 0.5]]`, and leave `body_region` empty.
 
-## How `LDMSampler.sample_multiple_images` chooses the mask path
+## Mask stage
 
-```text
-controllable_anatomy_size non-empty?
-            │
-   ┌────────┴─────────┐
-  YES                 NO
-   │                   │
-   ▼                   ▼
-prepare_anatomy_size_  find_masks(body_region, anatomy_list, ...)
-condition()            (look up real training masks; resample if needed)
-   │                   │
-   ▼                   ▼
-sample_one_mask()      read_mask_information(mask_file)
-(diffusion-generated)  (no diffusion, just load + transform)
-   │                   │
-   └────────┬──────────┘
-            ▼
-   prepare_one_mask_and_meta_info()  (assign 1.5mm iso affine, derive
-                                      top/bottom_region_index)
-            │
-            ▼
-   sample_one_pair()  (ControlNet + image DM — see infer_image-from-mask skill)
-            │
-            ▼
-   quality_check_ct(image, mask)
-            │
-        passed?
-            │
-   ┌────────┴────────┐
-  YES               NO
-   │                 │
-save image+label   re-generate (up to LDMSampler.max_try_time=2 retries)
-```
+See [`infer_mask-only`](infer_mask-only.md) for how the mask is generated (Path A vs Path B, conditioning, FOV/spacing rules, config knobs). The generated mask feeds directly into the image stage ([`infer_image-from-mask`](infer_image-from-mask.md)).
 
-### Two paths to obtain a mask
+## `output_size` and `spacing` — FOV matters
 
-Which path runs is driven by `controllable_anatomy_size` in `config_infer.json`:
-
-- **Path A — diffusion from scratch** (`controllable_anatomy_size` non-empty): the user provides `(organ, size)` tuples; the mask DM samples a new mask conditioned on the resulting `anatomy_size` 10-d vector. Use this when you want to *control* organ/tumor presence and size.
-- **Path B — training-mask database lookup** (`controllable_anatomy_size` empty): a real training mask matching `body_region` + `anatomy_list` + `spacing` + `output_size` is retrieved and lightly augmented so the output isn't a verbatim copy. No diffusion runs in the mask stage. Use this when you only need a plausible mask of the right anatomy and don't care about controlling specific organ sizes.
-
-Both paths produce a MAISI-vocabulary mask that then feeds the image stage. For the per-path knobs and the `anatomy_size` slot table, see [`infer_mask-only`](infer_mask-only.md). The image stage that consumes the mask is documented in [`infer_image-from-mask`](infer_image-from-mask.md).
-
-## `dim` and `spacing` — same FOV rules as image-only
-
-> ⚠️ **FOV (= `dim × spacing`) is the #1 quality knob.** See the **"Why FOV matters"** section at the top of [`infer_image-only.md`](infer_image-only.md) — same warning applies here. Out-of-distribution FOVs produce unusable output even when the validator accepts the inputs.
-
-The mask + image pipeline uses **the same** `output_size` and `spacing` constraints as image-only inference — see the `infer_image-only` skill for the table of recommended `(dim, spacing)` per anatomical target and the hard constraints from `check_input_ct` / `check_input_mr`.
-
-Additional FOV considerations specific to the paired pipeline:
-
-- The **mask DM** was pretrained at **256³ × 1.5 mm iso** (= 384 mm cube FOV). Generating a mask at significantly different shape forces the `ensure_output_size_and_spacing` resampling, which degrades label boundaries. Stay at or near 256³ × 1.5mm for Path A.
-- For Path B (mask DB lookup), the candidate masks are themselves drawn from a training-FOV distribution — `find_closest_masks` picks the closest matches, but the closer your requested FOV is to a mode of that distribution, the less reshaping is needed.
+See [`infer_mask-only`](infer_mask-only.md#output_size-and-spacing--fov-matters) for FOV guidance (training FOV, spacing derivation, Path A vs Path B considerations). The same rules apply here.
 
 ## How to configure a run
 
@@ -172,7 +129,7 @@ Driven by the scheduler the variant uses, not by GPU memory:
 
 - `rflow-ct` → **30** (RFlow scheduler).
 - `ddpm-ct` → **1000** (DDPM scheduler). Lower values emit a warning and degrade quality — not optional.
-- `mask_generation_num_inference_steps` → always **1000**: the mask DM is DDPM regardless of which image-DM variant you pick.
+- `mask_generation_num_inference_steps` → always **100**: the v2 mask DM uses RFlow.
 
 ## Configuration knobs
 
@@ -184,16 +141,14 @@ Live in the three configs:
 
 Key `config_infer.json` knobs:
 
+Mask-stage knobs (`body_region`, `anatomy_list`, `controllable_anatomy_size`, `controllable_demographics`, `mask_generation_num_inference_steps`, `mask_generation_cfg_guidance_scale`) — see [`infer_mask-only`](infer_mask-only.md).
+
 | Key | Effect |
 |---|---|
-| `body_region` | List of regions present in the requested mask: any of `["head", "chest", "thorax", "abdomen", "pelvis", "lower"]`. Used by Path B only (`find_masks` filter). |
-| `anatomy_list` | List of organ names from `configs/label_dict.json` that must be present. Used by `find_masks` (Path B) AND as the post-process filter (`filter_mask_with_organs`) for both paths. |
-| `controllable_anatomy_size` | Empty list → Path B. Non-empty list of `(organ_name, size)` tuples → Path A (diffusion-generated mask). At most 10 entries; at most 1 tumor. |
 | `output_size` | Target volume shape. Hard constraints apply (see `infer_image-only` skill). |
 | `spacing` | Target voxel spacing (mm). Hard constraints apply. |
 | `modality` | Modality code (1=CT, 8..32=MR variants). |
 | `num_inference_steps` | RFlow → 30, **DDPM → 1000**. ⚠️ For `ddpm-ct` you must set this to 1000; the notebook auto-applies this override in cell 12. |
-| `mask_generation_num_inference_steps` | **1000** — the mask DM always uses DDPM regardless of which image-DM variant you pick. Setting this lower silently degrades mask quality. |
 | `cfg_guidance_scale` | Strengthens **tumor** signal (this pipeline is CT-only). `0` (default) = off; `1..5` = stronger tumor enforcement, more artifact risk. The same key name in `config_maisi_diff_model_*.json` is the modality-CFG used by MR image-only inference — see [`infer_image-only`](infer_image-only.md). |
 
 ## Output
@@ -201,7 +156,7 @@ Key `config_infer.json` knobs:
 For each successful generation, two files are saved to `output_dir`:
 
 - `sample_<timestamp>_image.nii.gz` — synthetic CT/MR
-- `sample_<timestamp>_label.nii.gz` — paired mask (filtered to `anatomy_list`)
+- `sample_<timestamp>_label.nii.gz` — full 132-label MAISI mask (Path A) or filtered to `anatomy_list` (Path B)
 
 ## Related scripts
 

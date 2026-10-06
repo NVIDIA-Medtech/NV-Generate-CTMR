@@ -87,7 +87,14 @@ def main():
     root_dir = tempfile.mkdtemp() if directory is None else directory
     logger.info(f"Data directory: {root_dir}")
 
-    download_model_data(generate_version, root_dir)
+    # Path A (diffusion) does not need the mask database — skip that download.
+    # Path B (real-mask lookup) does need it, so download everything.
+    _infer_cfg = {}
+    if os.path.exists(args.inference_file):
+        with open(args.inference_file) as _f:
+            _infer_cfg = json.load(_f)
+    _path_a = bool(_infer_cfg.get("controllable_anatomy_size") or _infer_cfg.get("controllable_demographics"))
+    download_model_data(generate_version, root_dir, model_only=_path_a)
 
     # ## Read in environment setting, including data directory, model directory, and output directory
     # The information for data directory, model directory, and output directory are saved in ./configs/environment.json
@@ -130,6 +137,11 @@ def main():
         for k, v in extra_config_dict.items():
             setattr(args, k, v)
             logger.info(f"{k}: {v}")
+    if not hasattr(args, "controllable_demographics"):
+        args.controllable_demographics = None
+    if not hasattr(args, "mask_generation_cfg_guidance_scale"):
+        args.mask_generation_cfg_guidance_scale = 2.0
+
     if args.modality >= 1 and args.modality <= 7:
         check_input_ct(
             args.body_region,
@@ -138,6 +150,7 @@ def main():
             args.output_size,
             args.spacing,
             args.controllable_anatomy_size,
+            args.controllable_demographics,
         )
     elif args.modality >= 8 and args.modality <= 20:
         check_input_mr(
@@ -226,6 +239,8 @@ def main():
         autoencoder_sliding_window_infer_overlap=args.autoencoder_sliding_window_infer_overlap,
         cfg_guidance_scale=args.cfg_guidance_scale,
         low_vram=args.low_vram,
+        controllable_demographics=args.controllable_demographics,
+        mask_generation_cfg_guidance_scale=args.mask_generation_cfg_guidance_scale,
     )
 
     logger.info(f"The generated image/mask pairs will be saved in {args.output_dir}.")

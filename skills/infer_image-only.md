@@ -48,7 +48,8 @@ python -m scripts.download_model_data --version ${generate_version} --root_dir "
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_${network}.json \
     -e ./configs/environment_maisi_diff_model_${generate_version}.json \
-    -c ./configs/config_maisi_diff_model_${generate_version}.json
+    -c ./configs/config_maisi_diff_model_${generate_version}.json \
+    --version ${generate_version}
 ```
 
 For `ddpm-ct`: use `network="ddpm"` and the corresponding `config_network_ddpm.json` / `environment_maisi_diff_model_ddpm-ct.json` / `config_maisi_diff_model_ddpm-ct.json`.
@@ -76,7 +77,8 @@ python -m scripts.download_model_data --version rflow-mr-brain --root_dir "./" -
 python -m scripts.diff_model_infer \
     -t ./configs/config_network_rflow.json \
     -e ./configs/environment_maisi_diff_model_rflow-mr-brain.json \
-    -c ./configs/config_maisi_diff_model_rflow-mr-brain.json
+    -c ./configs/config_maisi_diff_model_rflow-mr-brain.json \
+    --version rflow-mr-brain
 ```
 
 **Expected output**: a NIfTI under the `output_dir` set in `environment_maisi_diff_model_rflow-mr-brain.json`, named like `unet_3d_seed0_size256x256x128_spacing0.94x0.94x1.36_<timestamp>_rank0_modality9.nii.gz`.

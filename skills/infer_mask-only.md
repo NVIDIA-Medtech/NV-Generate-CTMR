@@ -1,94 +1,49 @@
 ---
 name: infer_mask-only
-description: Explains the mask-generation stage of NV-Generate-CTMR — how to drive it via config_infer.json (Path A "diffusion from scratch" vs Path B "training-mask database"), the anatomy_size conditioning vector, and the output mask format. Trigger when the user asks "how do I control the mask shape", "what does controllable_anatomy_size do", "how does Path A / Path B differ", or wants to understand the mask stage of the paired pipeline.
+description: Overview of the mask-generation stage in NV-Generate-CTMR — Path A (diffusion from scratch) vs Path B (training-mask DB lookup), key config knobs, and output format. Trigger when the user asks "how do I control the mask shape", "what does controllable_anatomy_size do", or "how does Path A / Path B differ".
 ---
 
 # Mask-only generation (NV-Generate-CTMR)
 
-This skill covers the **mask-generation stage** that runs inside the paired pipeline (`scripts.inference`). It is not a standalone CLI — masks come out of the same `python -m scripts.inference` invocation that generates the paired image (see [`infer_mask-image-paired`](infer_mask-image-paired.md) for the run command).
+The mask-generation stage runs inside `scripts.inference` (not a standalone CLI — see [`infer_mask-image-paired`](infer_mask-image-paired.md)). It produces a 3D MAISI-labeled volume that conditions the image LDM. **CT-only.**
 
-The mask stage produces a 3D MAISI-labeled volume that subsequently conditions the image LDM. **CT-only** — the mask DM was trained on CT masks, and there is no MR equivalent.
+## Path A vs Path B
 
-## Workflow
-
-```text
-[anatomy_size  ──┐
- (10-d vector)]   │  cross-attention conditioning
-                  ▼
-[random noise]──▶[Mask Diffusion UNet]──▶[mask latent (4-ch)]
-                        DDPM loop
-                                              │
-                                              ▼ sliding-window AE decode
-                                  [125-channel softmax]
-                                              │ argmax
-                                              ▼
-                                       [labels 0..124]
-                                              │ remap_labels via label_dict_124_to_132.json
-                                              ▼
-                            [MAISI 132-class label NIfTI (with body=200)]
-                                              │ tumor-aware + general post-process
-                                              ▼
-                                          [final mask]
-```
-
-## Configuration: Path A vs Path B
-
-The mask stage has two paths, dispatched by `controllable_anatomy_size` in `config_infer.json`:
-
-| Path | Trigger | What happens |
+| | **Path A — diffusion from scratch** | **Path B — real mask + augmentation** |
 |---|---|---|
-| **Path A** — diffusion from scratch | `controllable_anatomy_size` non-empty | Mask DM samples a new mask conditioned on the anatomy_size vector. |
-| **Path B** — training-mask DB lookup | `controllable_anatomy_size` empty | Look up a real training mask from `configs/all_mask_files_*.json` matching `body_region` + `anatomy_list` + `spacing` + `output_size`; apply light augmentation so the output isn't a verbatim copy. |
+| Trigger | Either `controllable_anatomy_size` or `controllable_demographics` is non-empty | Both are empty/null |
+| How | v2 mask DM (AdaGN) samples a new mask conditioned on a 19-d vector (14 anatomy + 5 demographics slots) | Looks up a real training mask matching `body_region` + `anatomy_list`; applies random augmentation |
+| Deep-dive | [`infer_mask-only_via_diffusion_model`](infer_mask-only_via_diffusion_model.md) | [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md) |
 
-Knobs that drive these:
+## Key config knobs
 
-| Knob | Path | Effect |
-|---|---|---|
-| `controllable_anatomy_size` | A vs B switch | Non-empty list of `(organ_name, size)` tuples — at most 10 entries, at most 1 tumor — triggers Path A. Empty triggers Path B. |
-| `body_region` | B | Filters the mask DB. Any subset of `["head", "chest", "thorax", "abdomen", "pelvis", "lower"]`. |
-| `anatomy_list` | A and B | Required organs. Used by Path B's `find_masks` filter; also used by both paths as the post-process `filter_mask_with_organs` (only listed organs survive in the output). |
-| `output_size`, `spacing` | A and B | Target shape and voxel spacing — see [`infer_mask-image-paired`](infer_mask-image-paired.md) for the GPU-memory presets table. |
-| `mask_generation_num_inference_steps` | A | Always **1000** — the mask DM is DDPM regardless of the image-DM variant; lowering it silently degrades mask quality. |
+| Key | Path | Notes |
+|-----|------|-------|
+| `controllable_anatomy_size` | A | Optional anatomy size to control, e.g. `[["bone lesion", 0.5]]`. ⚠️ `"hepatic tumor"` (slot 11) has low recall — avoid it; results are unpredictable. |
+| `controllable_demographics` | A | Optional demographics, e.g. `[["age", 55], ["sex", "M"]]`. |
+| `anatomy_list` | B | Organ name strings from `label_dict.json` to filter the real-mask DB **and** the saved output label (only the requested organs are kept in the paired label). Not used in Path A. ⚠️ `"lung"` is **not** a valid `anatomy_list` entry (only lobe names like `"left lung lower lobe"` exist in `label_dict.json`); `"lung"` is only valid as a `controllable_anatomy_size` conditioning name (slot 7, Path A). |
+| `output_size` | A + B | **Path A**: mask DM always generates at 256³. The result is resampled to target `spacing`, then pad/cropped to `output_size` — so `output_size` × `spacing` defines the physical FOV of the final mask. For mask-only runs keep `output_size [256,256,256]`; for paired runs set to your desired output size. **Path B**: closest mask found then resampled/pad-cropped to `output_size`. |
+| `spacing` | A + B | Target voxel spacing in mm. |
+| `mask_generation_num_inference_steps` | A | **100** — v2 mask DM uses RFlow, not DDPM. |
+| `mask_generation_cfg_guidance_scale` | A | CFG scale, default `2.0`. |
 
-## Input: the `anatomy_size` slot vector (Path A only)
+## `output_size` and `spacing` — FOV matters
 
-When Path A runs, the user-specified `(organ_name, size)` tuples are turned into a 10-d vector with fixed slots:
+> ⚠️ **FOV (= `output_size × spacing`) is the #1 quality knob.** Out-of-distribution FOVs produce unusable output even when inputs pass validation.
 
-| Index | Organ | Index | Tumor |
-|---|---|---|---|
-| 0 | gallbladder | 5 | lung tumor |
-| 1 | liver | 6 | pancreatic tumor |
-| 2 | stomach | 7 | hepatic tumor |
-| 3 | pancreas | 8 | colon cancer primaries |
-| 4 | colon | 9 | bone lesion |
+- **Path A**: v2 mask DM generates at **256³** with flexible spacing. Choose `spacing = FOV / output_size` from a realistic anatomy FOV.
+- **Path B**: candidate masks come from the training-FOV distribution. The closer your requested FOV is to that distribution, the less reshaping is needed.
 
-Each slot value is either:
-
-- A float in `[0, 1]` — desired size on a normalized scale, **or**
-- `-1.0` — "no preference / don't care".
-
-The pipeline snaps the user-specified vector to the closest entry in `configs/all_anatomy_size_conditions.json` (a database of size vectors from real training cases), then **overwrites** the user-specified slots with the user's exact values. This keeps the conditioning vector near the training distribution while honouring user intent.
+To derive spacing: pick a target anatomy FOV (e.g. 384 × 384 × 768 mm for chest-to-pelvis), divide by your `output_size` element-wise.
 
 ## Output
 
-A 3D integer NIfTI of MAISI labels with shape `(H, W, D)`. Contains MAISI organ labels (1..132 with gaps) and the body envelope `200`. Saved by the paired CLI as `sample_<timestamp>_label.nii.gz` alongside the paired image.
-
-## Output-size and spacing constraints
-
-The pretrained mask DM was trained at **256×256×256 × 1.5 mm isotropic** (Path A). Resampling to your requested `output_size` and `spacing` happens automatically; major upsampling degrades label boundaries, so stay close to 256³ × 1.5 mm when feasible. For Path B, mask candidates are drawn from a training-FOV distribution — the closer your requested FOV is to a mode of that distribution, the less reshaping is needed.
-
-## Related scripts
-
-| Script | Role |
-|---|---|
-| `scripts/sample_mask.py` | Path A core sampler: `ldm_conditional_sample_one_mask` (DDPM → softmax/argmax → label remap → post-process). |
-| `scripts/find_masks.py` | Path B exact-match DB lookup: `find_masks(body_region, anatomy_list, spacing, output_size, ...)`. |
-| `scripts/sample.py` (`LDMSampler`) | Orchestrator: chooses Path A or B based on `controllable_anatomy_size`, then chains the image stage. Hosts `LDMSampler.find_closest_masks` for Path B's closest-match fallback. |
-| `scripts/inference.py` | CLI entry point for the paired pipeline (mask stage + image stage together). |
-| `scripts/utils.py` | Label utilities: `binarize_labels`, `remap_labels`, `general_mask_generation_post_process`. |
+A 3D integer NIfTI of MAISI labels (1–132 with gaps) plus body envelope `200`, saved as `sample_<timestamp>_label.nii.gz` alongside the paired image.
 
 ## Related skills
 
+- [`infer_mask-only_via_diffusion_model`](infer_mask-only_via_diffusion_model.md) — Path A: 19-d conditioning, RFlow settings, demographics format.
+- [`infer_mask-only_via_real_aug`](infer_mask-only_via_real_aug.md) — Path B: DB filtering, closest-match fallback, augmentation pipeline.
 - [`infer_mask-image-paired`](infer_mask-image-paired.md) — the CLI that drives this stage end-to-end.
 - [`infer_image-from-mask`](infer_image-from-mask.md) — what happens to the mask after this stage.
 - [`infer_image-only`](infer_image-only.md) — image-only generation (no mask DM involved).

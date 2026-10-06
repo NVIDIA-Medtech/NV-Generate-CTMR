@@ -15,6 +15,7 @@ import argparse
 import logging
 import os
 import random
+import tempfile
 from datetime import datetime
 
 import nibabel as nib
@@ -27,6 +28,7 @@ from monai.utils import set_determinism
 from tqdm import tqdm
 
 from .diff_model_setting import initialize_distributed, load_config, setup_logging
+from .download_model_data import download_model_data
 from .sample import ReconModel, check_input_ct
 from .utils import define_instance, dynamic_infer
 from .utils_infer import move_models
@@ -274,7 +276,14 @@ def save_image(
 
 
 @torch.inference_mode()
-def diff_model_infer(env_config_path: str, model_config_path: str, model_def_path: str, num_gpus: int, low_vram=False) -> None:
+def diff_model_infer(
+    env_config_path: str,
+    model_config_path: str,
+    model_def_path: str,
+    num_gpus: int,
+    low_vram: bool = False,
+    generate_version: str | None = None,
+) -> None:
     """
     Main function to run the diffusion model inference.
 
@@ -282,8 +291,25 @@ def diff_model_infer(env_config_path: str, model_config_path: str, model_def_pat
         env_config_path (str): Path to the environment configuration file.
         model_config_path (str): Path to the model configuration file.
         model_def_path (str): Path to the model definition file.
+        num_gpus (int): Number of GPUs to use.
+        low_vram (bool): Move inactive models to CPU between stages.
+        generate_version (str | None): If provided, download model weights for this variant before inference.
+            Choose from ``"rflow-ct"``, ``"ddpm-ct"``, ``"rflow-mr"``, ``"rflow-mr-brain"``.
+            If ``None``, skip the download and use checkpoint paths already present in the config.
     """
+    root_dir = None
+    if generate_version is not None:
+        directory = os.environ.get("MONAI_DATA_DIRECTORY")
+        if directory is not None:
+            os.makedirs(directory, exist_ok=True)
+        root_dir = tempfile.mkdtemp() if directory is None else directory
+        download_model_data(generate_version, root_dir, model_only=True)
+
     args = load_config(env_config_path, model_config_path, model_def_path)
+    if root_dir is not None:
+        for k, v in vars(args).items():
+            if isinstance(v, str) and "datasets/" in v:
+                setattr(args, k, os.path.join(root_dir, v))
     local_rank, world_size, device = initialize_distributed(num_gpus)
     logger = setup_logging("inference")
     random_seed = set_random_seed(
@@ -362,6 +388,13 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--model_def", type=str, required=True)
     parser.add_argument("-g", "--num_gpus", type=int, default=1, help="Number of GPUs to use for training")
     parser.add_argument("--low-vram", action="store_true", help="Move inactive models to CPU between inference stages.")
+    parser.add_argument(
+        "--version",
+        default=None,
+        type=str,
+        help="Model variant to download before inference: 'rflow-ct', 'ddpm-ct', 'rflow-mr', or 'rflow-mr-brain'. "
+        "If omitted, weights are not downloaded and the checkpoint paths in the config are used as-is.",
+    )
 
     args = parser.parse_args()
-    diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus, args.low_vram)
+    diff_model_infer(args.env_config, args.model_config, args.model_def, args.num_gpus, args.low_vram, args.version)
