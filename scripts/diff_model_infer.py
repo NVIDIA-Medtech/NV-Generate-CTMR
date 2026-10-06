@@ -293,16 +293,17 @@ def diff_model_infer(
         model_def_path (str): Path to the model definition file.
         num_gpus (int): Number of GPUs to use.
         low_vram (bool): Move inactive models to CPU between stages.
-        generate_version (str): Model variant to download — required.
+        generate_version (str | None): If provided, download model weights for this variant before inference.
             Choose from ``"rflow-ct"``, ``"ddpm-ct"``, ``"rflow-mr"``, ``"rflow-mr-brain"``.
+            If ``None``, skip the download and use checkpoint paths already present in the config.
     """
-    if generate_version is None:
-        raise ValueError("generate_version is required. Choose from: 'rflow-ct', 'ddpm-ct', 'rflow-mr', 'rflow-mr-brain'.")
-    directory = os.environ.get("MONAI_DATA_DIRECTORY")
-    if directory is not None:
-        os.makedirs(directory, exist_ok=True)
-    root_dir = tempfile.mkdtemp() if directory is None else directory
-    download_model_data(generate_version, root_dir, model_only=True)
+    root_dir = None
+    if generate_version is not None:
+        directory = os.environ.get("MONAI_DATA_DIRECTORY")
+        if directory is not None:
+            os.makedirs(directory, exist_ok=True)
+        root_dir = tempfile.mkdtemp() if directory is None else directory
+        download_model_data(generate_version, root_dir, model_only=True)
 
     args = load_config(env_config_path, model_config_path, model_def_path, root_dir=root_dir)
     local_rank, world_size, device = initialize_distributed(num_gpus)
@@ -385,9 +386,10 @@ if __name__ == "__main__":
     parser.add_argument("--low-vram", action="store_true", help="Move inactive models to CPU between inference stages.")
     parser.add_argument(
         "--version",
-        required=True,
+        default=None,
         type=str,
-        help="Model variant to download: 'rflow-ct', 'ddpm-ct', 'rflow-mr', or 'rflow-mr-brain'.",
+        help="Model variant to download before inference: 'rflow-ct', 'ddpm-ct', 'rflow-mr', or 'rflow-mr-brain'. "
+        "If omitted, weights are not downloaded and the checkpoint paths in the config are used as-is.",
     )
 
     args = parser.parse_args()
