@@ -35,6 +35,10 @@ Three configs are passed:
 - `-i` inference parameters (`config_infer.json` — `body_region`, `anatomy_list`, `output_size`, `spacing`, `controllable_anatomy_size`, etc.).
 - `-e` environment paths (`environment_rflow-ct.json` or `environment_ddpm-ct.json` — checkpoint paths, label dicts, mask database).
 
+An optional fourth config is available:
+
+- `-x` / `--extra-config-file` — overrides any key already set by the above configs. Used for **TensorRT acceleration**: pass `-x ./configs/config_trt.json` to compile the ControlNet, UNet, and autoencoder with `trt_compile()` before inference (CT only). See `docs/inference.md#accelerated-inference-with-tensorrt-ct-only` for the full TRT command.
+
 ### End-to-end example: paired chest CT (Path B — training-mask DB lookup)
 
 Concrete worked example for a 24 GB GPU. Path B is the simpler default — you ask for a chest CT and the pipeline finds a matching training mask, augments it, and synthesizes the paired image.

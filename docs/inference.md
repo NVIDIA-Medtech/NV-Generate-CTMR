@@ -33,6 +33,8 @@ python -m scripts.inference \
 
 > ⚠️ `ddpm-ct` requires `"num_inference_steps": 1000` in `config_infer.json`. `rflow-ct` uses `30`. Lower DDPM step counts emit a warning and produce low-quality output.
 
+Add `-x ./configs/config_trt.json` to enable TensorRT acceleration — see [Accelerated inference with TensorRT](#accelerated-inference-with-tensorrt-ct-only) below.
+
 There is currently no ControlNet for MRI — MR variability is too large to train one whole-body model. See [inference_tutorial.ipynb](../inference_tutorial.ipynb) for an end-to-end notebook walkthrough of the CT paired case.
 
 ### CT image only (no mask)
