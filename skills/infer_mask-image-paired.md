@@ -37,7 +37,7 @@ Three configs are passed:
 
 An optional fourth config is available:
 
-- `-x` / `--extra-config-file` — overrides any key already set by the above configs. Used for **TensorRT acceleration**: pass `-x ./configs/config_trt.json` to compile the ControlNet, UNet, and autoencoder with `trt_compile()` before inference (CT only). See `docs/inference.md#accelerated-inference-with-tensorrt-ct-only` for the full TRT command.
+- `-x` / `--extra-config-file` — overrides any key already set by the above configs. Used for **TensorRT acceleration**: pass `-x ./configs/config_trt.json` to enable TRT compilation of select modules via `trt_compile()` (CT only). See [`docs/inference.md#accelerated-inference-with-tensorrt-ct-only`](../docs/inference.md#accelerated-inference-with-tensorrt-ct-only) for the full TRT command and which modules are compiled.
 
 ### End-to-end example: paired chest CT (Path B — training-mask DB lookup)
 
