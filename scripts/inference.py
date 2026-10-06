@@ -87,7 +87,14 @@ def main():
     root_dir = tempfile.mkdtemp() if directory is None else directory
     logger.info(f"Data directory: {root_dir}")
 
-    download_model_data(generate_version, root_dir)
+    # Path A (diffusion) does not need the mask database — skip that download.
+    # Path B (real-mask lookup) does need it, so download everything.
+    _infer_cfg = {}
+    if os.path.exists(args.inference_file):
+        with open(args.inference_file) as _f:
+            _infer_cfg = json.load(_f)
+    _path_a = bool(_infer_cfg.get("controllable_anatomy_size") or _infer_cfg.get("controllable_demographics"))
+    download_model_data(generate_version, root_dir, model_only=_path_a)
 
     # ## Read in environment setting, including data directory, model directory, and output directory
     # The information for data directory, model directory, and output directory are saved in ./configs/environment.json
