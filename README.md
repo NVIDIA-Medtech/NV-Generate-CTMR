@@ -340,7 +340,7 @@ This project will download and install additional third-party open source softwa
 - [MAISI Live Demo](https://huggingface.co/spaces/nvidia/nv-generate) -- Try online without GPU
 - [MAISI-v1 Paper (WACV 2025)](https://arxiv.org/pdf/2409.11169)
 - [MAISI-v2 Paper (AAAI 2026)](https://arxiv.org/pdf/2508.05772)
-- Built with [MONAI](https://monai.io/) -- Medical Open Network for AI
+- Built with [MONAI](https://project-monai.github.io/) -- Medical Open Network for AI
 
 ## 8. Acknowledgements
 
