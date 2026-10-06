@@ -89,10 +89,14 @@ def main():
 
     # Path A (diffusion) does not need the mask database — skip that download.
     # Path B (real-mask lookup) does need it, so download everything.
+    # Merge inference-file + extra-config-file overrides to get the effective config.
     _infer_cfg = {}
     if os.path.exists(args.inference_file):
         with open(args.inference_file) as _f:
             _infer_cfg = json.load(_f)
+    if args.extra_config_file is not None and os.path.exists(args.extra_config_file):
+        with open(args.extra_config_file) as _f:
+            _infer_cfg.update(json.load(_f))
     _path_a = bool(_infer_cfg.get("controllable_anatomy_size") or _infer_cfg.get("controllable_demographics"))
     download_model_data(generate_version, root_dir, model_only=_path_a)
 
