@@ -305,7 +305,11 @@ def diff_model_infer(
         root_dir = tempfile.mkdtemp() if directory is None else directory
         download_model_data(generate_version, root_dir, model_only=True)
 
-    args = load_config(env_config_path, model_config_path, model_def_path, root_dir=root_dir)
+    args = load_config(env_config_path, model_config_path, model_def_path)
+    if root_dir is not None:
+        for k, v in vars(args).items():
+            if isinstance(v, str) and "datasets/" in v:
+                setattr(args, k, os.path.join(root_dir, v))
     local_rank, world_size, device = initialize_distributed(num_gpus)
     logger = setup_logging("inference")
     random_seed = set_random_seed(

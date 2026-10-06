@@ -44,7 +44,7 @@ def setup_logging(logger_name: str = "") -> logging.Logger:
     return logger
 
 
-def load_config(env_config_path: str, model_config_path: str, model_def_path: str, root_dir: str | None = None) -> argparse.Namespace:
+def load_config(env_config_path: str, model_config_path: str, model_def_path: str) -> argparse.Namespace:
     """
     Load configuration from JSON files.
 
@@ -52,8 +52,6 @@ def load_config(env_config_path: str, model_config_path: str, model_def_path: st
         env_config_path (str): Path to the environment configuration file.
         model_config_path (str): Path to the model configuration file.
         model_def_path (str): Path to the model definition file.
-        root_dir (str | None): If provided, prepend to any env-config value that
-            contains ``"datasets/"`` (mirrors the path-fixup in ``inference.py``).
 
     Returns:
         argparse.Namespace: Loaded configuration.
@@ -63,8 +61,6 @@ def load_config(env_config_path: str, model_config_path: str, model_def_path: st
     with open(env_config_path) as f:
         env_config = json.load(f)
     for k, v in env_config.items():
-        if root_dir is not None and isinstance(v, str) and "datasets/" in v:
-            v = os.path.join(root_dir, v)
         setattr(args, k, v)
 
     with open(model_config_path) as f:
