@@ -170,7 +170,10 @@ def process_file(
             # Move preprocessed volume to device, add batch and channel dims -> [1,1,X,Y,Z]
             pt_nda = torch.from_numpy(nda_image).float().to(device).unsqueeze(0).unsqueeze(0)
 
-            # Forward through autoencoder's stage-2 encoder to get latent z.
+            # Forward through autoencoder encoder to get the posterior mean z_mu.
+            # encode() returns (z_mu, z_sigma); we store z_mu only so the diffusion
+            # model trains on a deterministic target instead of a noisy sample
+            # (encode_stage_2_inputs would add sigma*eps, raising the L1 floor).
             inferer = SlidingWindowInferer(
                 roi_size=[320, 320, 160],
                 sw_batch_size=1,
@@ -180,9 +183,7 @@ def process_file(
                 sw_device=device,
                 device=device,
             )
-            z = dynamic_infer(inferer, autoencoder.encode_stage_2_inputs, pt_nda)
-
-            # z = autoencoder.encode_stage_2_inputs(pt_nda)
+            z = dynamic_infer(inferer, lambda x: autoencoder.encode(x)[0], pt_nda)
             logger.info(f"z: {z.size()}, {z.dtype}")
 
             # Convert latent to NumPy, permute to [X,Y,Z,C], and save as NIfTI with the new affine.
