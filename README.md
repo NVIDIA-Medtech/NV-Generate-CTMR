@@ -6,6 +6,7 @@
 [![HuggingFace MR-Brain](https://img.shields.io/badge/HuggingFace-NV--Generate--MR--Brain-yellow.svg)](https://huggingface.co/nvidia/NV-Generate-MR-Brain)
 [![arXiv MAISI-v1](https://img.shields.io/badge/arXiv-2409.11169-red.svg)](https://arxiv.org/abs/2409.11169)
 [![arXiv MAISI-v2](https://img.shields.io/badge/arXiv-2508.05772-red.svg)](https://arxiv.org/abs/2508.05772)
+[![arXiv NV-Generate-Body](https://img.shields.io/badge/arXiv-2610.24153-red.svg)](https://arxiv.org/abs/2610.24153)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
 3D Latent Diffusion Models (LDM) for generating large CT and MRI images with corresponding segmentation masks. Supports variable volume size and voxel spacing with precise control of organ/tumor size.
@@ -14,6 +15,7 @@ Please cite all the following papers if you are using code or model from this re
 
 - [MAISI-v1 Paper (WACV 2025)](https://arxiv.org/pdf/2409.11169)
 - [MAISI-v2 Paper (AAAI 2026)](https://arxiv.org/pdf/2508.05772)
+- [NV-Generate-Body Paper (arXiv 2026)](https://arxiv.org/pdf/2610.24153) — for body mask generation (`rflow-mask`)
 
 | | | |
 |:---:|:---:|:---:|
@@ -77,7 +79,7 @@ This repository provides **five model variants** for medical image generation: `
 | **Modality** | MRI (Brain) | MRI | CT | CT | CT (mask only) |
 | **Model Weights** | [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
 | **Architecture** | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow) | MAISI-v1 (DDPM) | MAISI-v2 (Rectified Flow, AdaGN) |
-| **Paper** | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+| **Paper** | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [NV-Generate-Body](https://arxiv.org/abs/2610.24153) |
 | **Inference Steps** | 30 | 30 | 30 | 1000 | 100 |
 | **Max Volume** | 512x512x256 | 512x512x128 | 512x512x768 | 512x512x768 | 256x256x256 |
 | **Use Case** | MR Brain multi-contrast synthesis | MR image-only generation | CT image/mask pair generation | CT image/mask pair generation | CT body mask with controllable anatomy, tumor, and demographics |
@@ -94,7 +96,7 @@ This repository provides **five model variants** for medical image generation: `
 | **Model Weights**  | [NV-Generate-MR-Brain](https://huggingface.co/nvidia/NV-Generate-MR-Brain) | [NV-Generate-MR](https://huggingface.co/nvidia/NV-Generate-MR) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) | [NV-Generate-CT](https://huggingface.co/nvidia/NV-Generate-CT) |
 | **Quick Start**    | [2.2 MR Brain Image Generation](#22-mr-brain-image-generation) | [2.6 MR Image Generation](#26-mr-image-generation) | [2.3 CT Paired Image/Mask](#23-ct-paired-imagemask-generation), [2.5 CT Image](#25-ct-image-generation) | [2.3 CT Paired Image/Mask](#23-ct-paired-imagemask-generation) | [2.4 Body Mask Generation](#24-body-mask-generation) |
 | **Architecture**   | MAISI-v2 (Rectified Flow) | MAISI-v2 (Rectified Flow)            | MAISI-v2 (Rectified Flow)         | MAISI-v1 (DDPM)      | MAISI-v2 (Rectified Flow, AdaGN) |
-| **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [MAISI-v2](https://arxiv.org/abs/2508.05772) |
+| **Paper**          | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v2](https://arxiv.org/abs/2508.05772) | [MAISI-v1](https://arxiv.org/abs/2409.11169) | [NV-Generate-Body](https://arxiv.org/abs/2610.24153) |
 | **Network Detail** | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_rflow.json](./configs/config_network_rflow.json) | [config_network_ddpm.json](./configs/config_network_ddpm.json) | `DiffusionModelUNetMaisiAdaGN` |
 | **Inference Steps**| 30                  | 30                                    | 30 (**33× faster than `ddpm-ct`**)               | 1000                 | 100                  |
 | **Max Volume**     | 512×512×256         | 512×512×128                           | 512×512×768                       | 512×512×768          | 256×256×256          |
@@ -331,6 +333,15 @@ This project will download and install additional third-party open source softwa
 }
 ```
 
+```bibtex
+@article{zhao2026nvgeneratebody,
+  title={NV-Generate-Body: 3D Latent Diffusion Model for Controllable Anatomy, Tumor, and Demographic Body Mask Synthesis},
+  author={Zhao, Can and Guo, Pengfei and Yang, Dong and He, Yufan and Tang, Yucheng and Harouni, Ahmed and Simon, Benjamin and Belue, Mason and Harmon, Stephanie and Turkbey, Baris and Xu, Daguang},
+  journal={arXiv preprint arXiv:2610.24153},
+  year={2026}
+}
+```
+
 ## 7. Resources
 
 - [NV-Generate-CT on HuggingFace](https://huggingface.co/nvidia/NV-Generate-CT) -- CT model weights and model card
@@ -340,6 +351,7 @@ This project will download and install additional third-party open source softwa
 - [MAISI Live Demo](https://huggingface.co/spaces/nvidia/nv-generate) -- Try online without GPU
 - [MAISI-v1 Paper (WACV 2025)](https://arxiv.org/pdf/2409.11169)
 - [MAISI-v2 Paper (AAAI 2026)](https://arxiv.org/pdf/2508.05772)
+- [NV-Generate-Body Paper (arXiv 2026)](https://arxiv.org/pdf/2610.24153) — body mask generation with controllable anatomy, tumor, and demographics
 - Built with [MONAI](https://project-monai.github.io/) -- Medical Open Network for AI
 
 ## 8. Acknowledgements
